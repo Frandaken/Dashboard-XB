@@ -1,0 +1,23 @@
+# Docker Compose configuration for Dashboard-XB
+# Context: https://github.com/Frandaken/Dashboard-XB
+
+version: '3.8'
+
+services:
+  dashboard-xb:
+    container_name: dashboard-xb-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dashboard-xb:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    labels:
+      org.opencontainers.image.title: "Dashboard Jadwal Kelas XB"
+      org.opencontainers.image.source: "https://github.com/Frandaken/Dashboard-XB"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
