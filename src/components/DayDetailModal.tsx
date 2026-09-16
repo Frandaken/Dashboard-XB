@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Music } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
+import { getSongForDate } from '../data/songSchedule';
 import { TaskBanner } from './TaskBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
 
@@ -41,6 +42,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const d = new Date(isoDate + 'T00:00:00');
   const dow = DOW_ID[d.getDay()];
   const formattedDate = `${dow}, ${d.getDate()} ${MONTH_ID[d.getMonth()]} ${d.getFullYear()}`;
+  const daySong = getSongForDate(d);
 
   return (
     <div
@@ -74,6 +76,26 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
         {/* Modal Content */}
         <div className="p-4 overflow-y-auto space-y-3">
+          {/* Lagu Nasional Minggu Ini */}
+          <div className="p-2.5 bg-[#FAF6EE] border border-[#E4DDCE] rounded-xl flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-[#EBF3EE] text-[#2C4E3A] flex items-center justify-center flex-shrink-0">
+                <Music className="w-3.5 h-3.5" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block leading-tight">
+                  Lagu Wajib (Minggu ke-{daySong.week})
+                </span>
+                <span className="text-xs font-bold text-stone-900 truncate block leading-tight">
+                  {daySong.song !== '-' ? daySong.song : '— (Tidak ada lagu wajib)'}
+                </span>
+              </div>
+            </div>
+            <span className="text-[10px] font-medium text-stone-600 bg-white px-2 py-0.5 rounded border border-[#E4DDCE] flex-shrink-0">
+              1 Pekan
+            </span>
+          </div>
+
           {/* Birthday Alert for this day (only if birthday exists) */}
           {birthdays.length > 0 && (
             <div className="p-2.5 bg-[#FBE6DA] border border-[#F4CCA8] rounded-xl flex items-center gap-2">

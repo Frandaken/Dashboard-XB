@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { TaskBanner } from './components/TaskBanner';
 import { ScheduleBlocks } from './components/ScheduleBlocks';
 import { CalendarSection } from './components/CalendarSection';
+import { SongScheduleList } from './components/SongScheduleList';
 import { DayDetailModal } from './components/DayDetailModal';
 import { StatusBanner } from './components/StatusBanner';
 import { ClassDataStore } from './types';
@@ -261,7 +262,7 @@ export default function App() {
             />
           </section>
 
-          {/* RIGHT: CALENDAR & BIRTHDAYS */}
+          {/* RIGHT: CALENDAR, BIRTHDAYS & SONG SCHEDULE */}
           <aside className="lg:col-span-5 xl:col-span-4 flex flex-col min-h-fit lg:min-h-0 w-full pb-6 lg:pb-0">
             <CalendarSection
               viewYear={viewYear}
@@ -276,6 +277,13 @@ export default function App() {
               hasTaskFn={hasTasksForISO}
               hasBirthdayFn={getBirthdaysForISO}
               birthdaysToday={todayBirthdays}
+            />
+
+            {/* List lagu mingguan untuk bulan yang sedang dilihat */}
+            <SongScheduleList
+              viewYear={viewYear}
+              viewMonth={viewMonth}
+              currentDate={currentDate}
             />
           </aside>
         </main>
