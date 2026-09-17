@@ -284,6 +284,7 @@ export default function App() {
               viewYear={viewYear}
               viewMonth={viewMonth}
               currentDate={currentDate}
+              selectedISO={selectedISO}
             />
           </aside>
         </main>

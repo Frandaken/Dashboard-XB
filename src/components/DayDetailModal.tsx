@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
-import { X, Music } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Music, BookOpen } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
 import { getSongForDate } from '../data/songSchedule';
 import { TaskBanner } from './TaskBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
+import { SongLyricsModal } from './SongLyricsModal';
 
 interface DayDetailModalProps {
   isoDate: string | null;
@@ -27,15 +28,21 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   tasks = [],
   birthdays = []
 }) => {
+  const [showLyricsModal, setShowLyricsModal] = useState(false);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        if (showLyricsModal) {
+          setShowLyricsModal(false);
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, showLyricsModal]);
 
   if (!isoDate) return null;
 
@@ -77,23 +84,56 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         {/* Modal Content */}
         <div className="p-4 overflow-y-auto space-y-3">
           {/* Lagu Nasional Minggu Ini */}
-          <div className="p-2.5 bg-[#FAF6EE] border border-[#E4DDCE] rounded-xl flex items-center justify-between gap-2">
+          <div
+            onClick={() => {
+              if (daySong.song !== '-') setShowLyricsModal(true);
+            }}
+            role={daySong.song !== '-' ? 'button' : undefined}
+            tabIndex={daySong.song !== '-' ? 0 : undefined}
+            onKeyDown={e => {
+              if (daySong.song !== '-' && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                setShowLyricsModal(true);
+              }
+            }}
+            title={daySong.song !== '-' ? 'Klik untuk melihat lirik lagu' : undefined}
+            className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition select-none ${
+              daySong.song !== '-'
+                ? 'bg-[#FAF6EE] border-[#E4DDCE] hover:bg-[#F5EFE3] hover:border-[#2C4E3A]/40 cursor-pointer shadow-2xs group'
+                : 'bg-[#FAF6EE]/70 border-[#E4DDCE]/60 cursor-default'
+            }`}
+          >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded-lg bg-[#EBF3EE] text-[#2C4E3A] flex items-center justify-center flex-shrink-0">
+              <div
+                className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 transition ${
+                  daySong.song !== '-'
+                    ? 'bg-[#2C4E3A] text-white group-hover:bg-[#203a2a]'
+                    : 'bg-stone-200 text-stone-400'
+                }`}
+              >
                 <Music className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block leading-tight">
                   Lagu Wajib (Minggu ke-{daySong.week})
                 </span>
-                <span className="text-xs font-bold text-stone-900 truncate block leading-tight">
+                <span
+                  className={`text-xs font-bold truncate block leading-tight ${
+                    daySong.song !== '-'
+                      ? 'text-stone-900 group-hover:text-[#2C4E3A]'
+                      : 'text-stone-400 italic'
+                  }`}
+                >
                   {daySong.song !== '-' ? daySong.song : '— (Tidak ada lagu wajib)'}
                 </span>
               </div>
             </div>
-            <span className="text-[10px] font-medium text-stone-600 bg-white px-2 py-0.5 rounded border border-[#E4DDCE] flex-shrink-0">
-              1 Pekan
-            </span>
+            {daySong.song !== '-' && (
+              <span className="text-[10px] font-medium text-[#2C4E3A] bg-white px-2 py-0.5 rounded border border-[#E4DDCE] flex items-center gap-1 flex-shrink-0 group-hover:border-[#2C4E3A]/30">
+                <BookOpen className="w-3 h-3" />
+                <span>Lirik</span>
+              </span>
+            )}
           </div>
 
           {/* Birthday Alert for this day (only if birthday exists) */}
@@ -120,6 +160,16 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           />
         </div>
       </div>
+
+      {/* Pop Up Lirik Lagu */}
+      {daySong.song !== '-' && (
+        <SongLyricsModal
+          isOpen={showLyricsModal}
+          onClose={() => setShowLyricsModal(false)}
+          songTitle={daySong.song}
+          weekNumber={daySong.week}
+        />
+      )}
     </div>
   );
 };

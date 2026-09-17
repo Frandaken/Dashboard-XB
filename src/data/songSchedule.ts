@@ -7,6 +7,75 @@ export interface WeeklySongItem {
   isAvailable: boolean;
 }
 
+export interface SongDetail {
+  title: string;
+  composer?: string;
+  stanzas: string[];
+}
+
+// Data lirik lagu wajib nasional
+export const SONG_LYRICS: Record<string, SongDetail> = {
+  'Garuda Pancasila': {
+    title: 'Garuda Pancasila',
+    composer: 'Sudharnoto',
+    stanzas: [
+      'Garuda Pancasila\nAkulah pendukungmu\nPatriot proklamasi\nSedia berkorban untukmu',
+      'Pancasila dasar negara\nRakyat adil makmur sentosa\nPribadi bangsaku\nAyo maju maju\nAyo maju maju\nAyo maju maju'
+    ]
+  },
+  'Satu Nusa Satu Bangsa': {
+    title: 'Satu Nusa Satu Bangsa',
+    composer: 'L. Manik',
+    stanzas: [
+      'Satu nusa\nSatu bangsa\nSatu bahasa kita',
+      'Tanah air\nPasti jaya\nUntuk selama-lamanya',
+      'Indonesia pusaka\nIndonesia tercinta\nNusa bangsa\nDan bahasa\nKita bela bersama'
+    ]
+  },
+  'Dari Sabang Sampai Merauke': {
+    title: 'Dari Sabang Sampai Merauke',
+    composer: 'R. Suharjo',
+    stanzas: [
+      'Dari Sabang sampai Merauke\nBerjajar pulau-pulau\nSambung-menyambung menjadi satu\nItulah Indonesia',
+      'Indonesia tanah airku\nAku berjanji padamu\nMenjunjung tanah airku\nTanah airku Indonesia'
+    ]
+  },
+  'Bagimu Negeri': {
+    title: 'Bagimu Negeri',
+    composer: 'Kusbini',
+    stanzas: [
+      'Padamu negeri kami berjanji\nPadamu negeri kami berbakti\nPadamu negeri kami mengabdi\nBagimu negeri jiwa raga kami'
+    ]
+  },
+  'Hari Merdeka': {
+    title: 'Hari Merdeka',
+    composer: 'H. Mutahar',
+    stanzas: [
+      'Tujuh belas Agustus tahun empat lima\nItulah hari kemerdekaan kita\nHari merdeka nusa dan bangsa\nHari lahirnya bangsa Indonesia\nMerdeka!',
+      'Sekali merdeka tetap merdeka\nSelama hayat masih dikandung badan\nKita tetap setia tetap sedia\nMempertahankan Indonesia\nKita tetap setia tetap sedia\nMembela negara kita'
+    ]
+  },
+  'Maju Tak Gentar': {
+    title: 'Maju Tak Gentar',
+    composer: 'Cornel Simanjuntak',
+    stanzas: [
+      'Maju tak gentar\nMembela yang benar\nMaju tak gentar\nHak kita diserang',
+      'Maju serentak\nMengusir penyerang\nMaju serentak\nTentu kita menang',
+      'Bergerak bergerak\nSerentak serentak\nMenerkam menerjang terkam',
+      'Tak gentar tak gentar\nMenyerang menyerang\nMajulah majulah menang'
+    ]
+  }
+};
+
+/**
+ * Mengambil informasi detail lirik lagu berdasarkan judul
+ */
+export function getSongLyrics(title: string): SongDetail | null {
+  if (!title || title === '-') return null;
+  const key = title.trim();
+  return SONG_LYRICS[key] || null;
+}
+
 // Data sesuai ketetapan jadwal semester 1 & 2
 export const SONG_SCHEDULE: Record<number, Record<number, string>> = {
   // Bulan: 0 = Januari, 1 = Februari, dst.

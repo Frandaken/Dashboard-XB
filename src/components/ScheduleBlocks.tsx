@@ -103,11 +103,11 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         </div>
 
         {/* BACAAN INJIL: TEKS BESAR & FONT LEGIBLE */}
-        <div className="mb-2.5 px-3 py-2 bg-[#EBF3EE] border border-[#C6DEC0] rounded-lg flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
-          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#3F6E52] flex-shrink-0">
+        <div className="mb-2.5 px-3 py-2.5 bg-[#EBF3EE] border border-[#C6DEC0] rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#3F6E52] flex-shrink-0">
             Bacaan Injil:
           </span>
-          <span className="font-display font-bold text-lg sm:text-xl md:text-2xl text-[#1B4332] tracking-tight">
+          <span className="font-sans font-extrabold text-xl sm:text-2xl md:text-3xl text-[#143425] tracking-tight leading-none">
             {bacaanText || '—'}
           </span>
         </div>

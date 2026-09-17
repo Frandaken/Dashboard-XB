@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Music } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { MONTH_ID } from '../data/demoData';
 import { getWeekOfMonth, getSongForWeek } from '../data/songSchedule';
 
@@ -37,21 +37,6 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
 
   const blanks = Array.from({ length: firstDow }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  // Menentukan nomor minggu dan lagu yang aktif di kalender
-  let activeWeek = 1;
-  if (selectedISO) {
-    const [selY, selM, selD] = selectedISO.split('-').map(Number);
-    if (selY === viewYear && selM - 1 === viewMonth) {
-      activeWeek = getWeekOfMonth(selY, selM - 1, selD);
-    }
-  } else if (todayISO) {
-    const [todY, todM, todD] = todayISO.split('-').map(Number);
-    if (todY === viewYear && todM - 1 === viewMonth) {
-      activeWeek = getWeekOfMonth(todY, todM - 1, todD);
-    }
-  }
-  const songInView = getSongForWeek(viewMonth, activeWeek);
 
   return (
     <div
@@ -175,28 +160,6 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               </button>
             );
           })}
-        </div>
-
-        {/* Lagu Nasional Minggu Ini (Di Dalam Kalender) */}
-        <div className="mt-3 pt-2 border-t border-[#E4DDCE]/70">
-          <div className="flex items-center justify-between gap-1.5 p-2 rounded-lg bg-[#FAF6EE] border border-[#E4DDCE]/70">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-5 h-5 rounded bg-[#EBF3EE] text-[#2C4E3A] flex items-center justify-center flex-shrink-0">
-                <Music className="w-3 h-3" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wide block leading-tight">
-                  Lagu Minggu ke-{activeWeek}:
-                </span>
-                <span className="font-bold text-stone-900 text-xs truncate block leading-tight">
-                  {songInView !== '-' ? songInView : '— (Tidak ada lagu wajib)'}
-                </span>
-              </div>
-            </div>
-            <span className="text-[10px] font-semibold text-[#2C4E3A] bg-[#EBF3EE] px-1.5 py-0.5 rounded border border-[#C6DEC0]/70 flex-shrink-0">
-              1 Pekan
-            </span>
-          </div>
         </div>
       </div>
 
