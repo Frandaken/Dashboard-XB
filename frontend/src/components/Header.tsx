@@ -44,13 +44,20 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </button>
 
-        <div>
-          <h1 className="font-display font-bold text-lg sm:text-xl lg:text-2xl text-stone-900 dark:text-white tracking-tight leading-none">
-            Jadwal Kelas XB
-          </h1>
-          <p className="text-[11px] sm:text-xs font-semibold text-stone-600 dark:text-stone-400 mt-1 leading-none">
-            {wibInfo.formattedDate}
-          </p>
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <img
+            src="/icon.svg"
+            alt="Logo Kelas XB"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg shadow-xs object-cover flex-shrink-0 border border-[#D8D2C5] dark:border-[#3A4555]"
+          />
+          <div>
+            <h1 className="font-display font-bold text-lg sm:text-xl lg:text-2xl text-stone-900 dark:text-white tracking-tight leading-none">
+              Jadwal Kelas XB
+            </h1>
+            <p className="text-[11px] sm:text-xs font-semibold text-stone-600 dark:text-stone-400 mt-1 leading-none">
+              {wibInfo.formattedDate}
+            </p>
+          </div>
         </div>
       </div>
 

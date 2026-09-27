@@ -46,9 +46,11 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#D8D2C5] dark:border-[#2E3744] bg-white dark:bg-[#1C212A] flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#2C4E3A] dark:bg-[#34D399] text-white dark:text-[#0F172A] flex items-center justify-center shadow-xs">
-              <Clock className="w-4 h-4" />
-            </div>
+            <img
+              src="/icon.svg"
+              alt="Logo Kelas XB"
+              className="w-8 h-8 rounded-lg object-cover shadow-xs border border-[#D8D2C5] dark:border-[#3A4555]"
+            />
             <div>
               <h2
                 id="menu-modal-title"
