@@ -100,6 +100,8 @@ export function parsePelajaranICS(
       ? ICAL.Time.fromJSDate(rangeEnd)
       : ICAL.Time.fromJSDate(new Date(2027, 11, 31));
 
+    const consumedOverrides = new Set<string>();
+
     for (const event of baseEvents) {
       if (event.isRecurring()) {
         try {
@@ -111,9 +113,20 @@ export function parsePelajaranICS(
             if (next.compare(rEnd) > 0) break;
             if (next.compare(rStart) >= 0) {
               const dKey = `${next.year}-${String(next.month).padStart(2, '0')}-${String(next.day).padStart(2, '0')}`;
-              const ev = overrides.get(`${event.uid}_${dKey}`) || event;
-              const timeStr = formatPeriodTime(ev, next);
-              addPeriod(dKey, ev, timeStr);
+              const overrideKey = `${event.uid}_${dKey}`;
+              const overrideEv = overrides.get(overrideKey);
+
+              if (overrideEv) {
+                consumedOverrides.add(overrideKey);
+                // When an instance has a recurrence override in Google Calendar,
+                // use the override event's modified start time rather than the original recurring start time
+                const timeToUse = overrideEv.startDate || next;
+                const timeStr = formatPeriodTime(overrideEv, timeToUse);
+                addPeriod(dKey, overrideEv, timeStr);
+              } else {
+                const timeStr = formatPeriodTime(event, next);
+                addPeriod(dKey, event, timeStr);
+              }
             }
           }
         } catch (iterErr) {
@@ -129,20 +142,29 @@ export function parsePelajaranICS(
       }
     }
 
-    // Also include any standalone overrides that weren't captured in recurring base loops
+    // Include any standalone overrides whose base recurring events were not expanded in the loop
     overrides.forEach((ev, key) => {
-      const parts = key.split('_');
-      const dKey = parts[parts.length - 1];
-      const st = ev.startDate;
-      const timeStr = st ? formatPeriodTime(ev, st) : '';
-      if (dKey && !pelajaranByDate[dKey]?.some(p => p.rawSummary === ev.summary && p.time === timeStr)) {
-        addPeriod(dKey, ev, timeStr);
+      if (!consumedOverrides.has(key)) {
+        const parts = key.split('_');
+        const dKey = parts[parts.length - 1];
+        const st = ev.startDate;
+        if (st && st.compare(rStart) >= 0 && st.compare(rEnd) <= 0) {
+          const timeStr = formatPeriodTime(ev, st);
+          addPeriod(dKey, ev, timeStr);
+        }
       }
     });
 
-    // Keep all scheduled periods SEPARATE (do not merge same-name subjects with different schedule times)
-    // Sort strictly chronologically by schedule start time
+    // Deduplicate any identical entries and sort chronologically by schedule start time
     for (const key of Object.keys(pelajaranByDate)) {
+      const seen = new Set<string>();
+      pelajaranByDate[key] = pelajaranByDate[key].filter(p => {
+        const dedupeId = `${p.rawSummary}_${p.time}`;
+        if (seen.has(dedupeId)) return false;
+        seen.add(dedupeId);
+        return true;
+      });
+
       pelajaranByDate[key].sort((a, b) => {
         const timeA = a.time || '';
         const timeB = b.time || '';

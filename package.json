@@ -6,8 +6,6 @@
   "scripts": {
     "dev": "PORT=3000 tsx server.ts",
     "build": "vite build frontend --outDir ../dist && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "build:backend": "esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-backend/server.mjs",
-    "start:backend": "node dist-backend/server.mjs",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
