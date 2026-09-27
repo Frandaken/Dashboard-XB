@@ -36,12 +36,9 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onOpenMenu}
           aria-label="Buka Menu Navigasi"
           title="Buka Menu Navigasi"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#222935] text-stone-800 dark:text-stone-100 transition cursor-pointer shadow-2xs group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+          className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#222935] flex items-center justify-center text-stone-800 dark:text-stone-100 transition cursor-pointer shadow-2xs group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
         >
           <Menu className="w-4 h-4 text-[#2C4E3A] dark:text-[#34D399] group-hover:scale-110 transition-transform" />
-          <span className="hidden sm:inline text-xs font-bold">
-            Menu
-          </span>
         </button>
 
         <div className="flex items-center gap-2.5 sm:gap-3">

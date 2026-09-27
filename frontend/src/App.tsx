@@ -42,13 +42,33 @@ export default function App() {
   // All songs lyrics modal
   const [isAllSongsOpen, setIsAllSongsOpen] = useState<boolean>(false);
 
-  const [dataStore, setDataStore] = useState<ClassDataStore>({
-    doaByDate: {},
-    mbgByDate: {},
-    piketByDow: {},
-    pelajaranByDate: {},
-    tasksByDate: {},
-    birthdayByMonthDay: {}
+  const [dataStore, setDataStore] = useState<ClassDataStore>(() => {
+    try {
+      const doaRows = parseCSV(DEMO_CSV.doa);
+      const doaByDate = parseDoaRows(doaRows);
+      const mbgRows = parseCSV(DEMO_CSV.mbg);
+      const mbgByDate = parseMbgRows(mbgRows);
+      const piketRows = parseCSV(DEMO_CSV.piket);
+      const piketByDow = parsePiketRows(piketRows);
+
+      return {
+        doaByDate,
+        mbgByDate,
+        piketByDow,
+        pelajaranByDate: {},
+        tasksByDate: {},
+        birthdayByMonthDay: {}
+      };
+    } catch {
+      return {
+        doaByDate: {},
+        mbgByDate: {},
+        piketByDow: {},
+        pelajaranByDate: {},
+        tasksByDate: {},
+        birthdayByMonthDay: {}
+      };
+    }
   });
 
   const [status, setStatus] = useState<{ type: 'loading' | 'error' | 'success'; message: string } | null>(null);
@@ -194,6 +214,9 @@ export default function App() {
           if (hasSchoolData(prev, newStore)) {
             return prev;
           }
+          if (hasSchoolData(defaultSchoolISO, newStore)) {
+            return defaultSchoolISO;
+          }
           return findBestActiveDate(defaultSchoolISO, newStore);
         }
         return prev;
@@ -215,7 +238,12 @@ export default function App() {
         birthdayByMonthDay: {}
       };
       setDataStore(fallbackStore);
-      setActiveISO(prev => findBestActiveDate(isManualDate ? prev : defaultSchoolISO, fallbackStore));
+      setActiveISO(prev => {
+        if (isManualDate) return prev;
+        if (hasSchoolData(prev, fallbackStore)) return prev;
+        if (hasSchoolData(defaultSchoolISO, fallbackStore)) return defaultSchoolISO;
+        return findBestActiveDate(defaultSchoolISO, fallbackStore);
+      });
     }
   }, [defaultSchoolISO, findBestActiveDate, hasSchoolData, isManualDate]);
 
@@ -351,7 +379,10 @@ export default function App() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#2E3744] flex-shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="w-3 h-3 rounded-full bg-[#2C4E3A] dark:bg-[#34D399] ring-2 ring-[#2C4E3A]/20" />
-                <h2 className="font-display font-bold text-lg sm:text-xl text-stone-900 dark:text-white tracking-tight leading-tight">
+                <h2
+                  key={activeISO}
+                  className="font-display font-bold text-lg sm:text-xl text-stone-900 dark:text-white tracking-tight leading-tight animate-fade-in"
+                >
                   {activeInfo.formattedDate}
                 </h2>
                 {activeISO === todayWIB.iso ? (
@@ -403,42 +434,39 @@ export default function App() {
               </div>
             </div>
 
-            {/* Smart Notice if displayed date differs from WIB date */}
-            {activeISO !== todayWIB.iso && !isManualDate && (
-              <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#142A1E] border border-emerald-300 dark:border-[#205C38] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center justify-between gap-2 flex-shrink-0 shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
-                  <span className="font-medium">
-                    {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
-                      ? `Hari ini akhir pekan (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]}). Menampilkan jadwal hari sekolah terdekat: ${activeInfo.formattedDate}.`
-                      : `Menampilkan jadwal semester aktif (${activeInfo.formattedDate}).`}
-                  </span>
+            {/* Dynamic Day Content with smooth fade-in */}
+            <div
+              key={activeISO}
+              className="flex-1 flex flex-col gap-2.5 min-h-0 animate-fade-in"
+            >
+              {/* Smart Notice if displayed date differs from WIB date */}
+              {activeISO !== todayWIB.iso && !isManualDate && (
+                <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#142A1E] border border-emerald-300 dark:border-[#205C38] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center gap-2 flex-shrink-0 shadow-2xs">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
+                    <span className="font-medium">
+                      {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
+                        ? `Hari ini hari libur sekolah (${todayWIB.formattedDate}). Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`
+                        : `Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`}
+                    </span>
+                  </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setActiveISO(todayWIB.iso);
-                    setIsManualDate(true);
-                  }}
-                  className="text-emerald-900 dark:text-[#34D399] hover:underline font-bold cursor-pointer text-xs flex-shrink-0"
-                >
-                  Lihat Hari Ini ({todayWIB.dowName}, {todayWIB.day} {MONTH_ID[todayWIB.month]})
-                </button>
-              </div>
-            )}
+              )}
 
-            {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
-            {activeTasks.length > 0 && (
-              <TaskBanner tasks={activeTasks} />
-            )}
+              {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
+              {activeTasks.length > 0 && (
+                <TaskBanner tasks={activeTasks} />
+              )}
 
-            {/* Schedule Blocks (MBG, Piket, Doa & Bacaan Injil, Jadwal Pelajaran) */}
-            <ScheduleBlocks
-              mbg={activeMbg}
-              piket={activePiket}
-              doa={activeDoa}
-              pelajaran={activePelajaran}
-              dowName={activeDow}
-            />
+              {/* Schedule Blocks (MBG, Piket, Doa & Bacaan Injil, Jadwal Pelajaran) */}
+              <ScheduleBlocks
+                mbg={activeMbg}
+                piket={activePiket}
+                doa={activeDoa}
+                pelajaran={activePelajaran}
+                dowName={activeDow}
+              />
+            </div>
           </section>
 
           {/* RIGHT: CALENDAR, BIRTHDAYS & SONG SCHEDULE (Col Span 4-5) */}

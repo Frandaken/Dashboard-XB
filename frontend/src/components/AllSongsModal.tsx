@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { X, Music, User, Calendar, Check, Search } from 'lucide-react';
-import { SONG_LYRICS_DB, ALL_SONGS_LIST, MONTHLY_SONG_SCHEDULE } from '../data/songSchedule';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Music, User, Calendar, Search } from 'lucide-react';
+import { SONG_LYRICS_DB, ALL_SONGS_LIST, MONTHLY_SONG_SCHEDULE, formatLyricsVerses } from '../data/songSchedule';
 import { MONTH_ID } from '../data/demoData';
 
 interface AllSongsModalProps {
@@ -33,13 +33,17 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const currentSongData = SONG_LYRICS_DB[activeSongTitle] || {
     title: activeSongTitle,
     composer: 'Nasional',
     lyrics: []
   };
+
+  const verses = useMemo(() => {
+    return formatLyricsVerses(currentSongData.lyrics);
+  }, [currentSongData.lyrics]);
+
+  if (!isOpen) return null;
 
   // Find when this song is scheduled across the school year
   const scheduledOccurrences: { monthName: string; week: number }[] = [];
@@ -83,9 +87,6 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
               >
                 Koleksi Lirik Lagu Wajib Nasional
               </h2>
-              <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
-                Pilih lagu untuk melihat lirik lengkap dan jadwal pemutarannya
-              </p>
             </div>
           </div>
 
@@ -125,15 +126,15 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => setActiveSongTitle(title)}
-                    className={`w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A] ${
+                    className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex items-center justify-between gap-2 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A] group ${
                       isSelected
-                        ? 'bg-[#2C4E3A] text-white border-[#2C4E3A] shadow-xs'
-                        : 'bg-white dark:bg-[#1C212A] hover:bg-stone-100 dark:hover:bg-[#252C37] text-stone-900 dark:text-stone-100 border-[#D8D2C5] dark:border-[#2E3744]'
+                        ? 'bg-[#2C4E3A] text-white border-[#2C4E3A] shadow-xs translate-x-0.5'
+                        : 'bg-white dark:bg-[#1C212A] hover:bg-[#F3EFE6] dark:hover:bg-[#252C37] text-stone-900 dark:text-stone-100 border-[#D8D2C5] dark:border-[#2E3744] hover:border-[#2C4E3A]/40 dark:hover:border-[#34D399]/40 hover:translate-x-1 hover:shadow-xs active:scale-[0.99]'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
-                        className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                        className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-xs font-bold transition-transform duration-200 group-hover:scale-110 ${
                           isSelected
                             ? 'bg-white/20 text-white'
                             : 'bg-stone-100 dark:bg-[#2A313C] text-stone-600 dark:text-stone-300'
@@ -145,10 +146,6 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
                         {title}
                       </span>
                     </div>
-
-                    {isSelected && (
-                      <Check className="w-4 h-4 text-emerald-300 flex-shrink-0" />
-                    )}
                   </button>
                 );
               })}
@@ -190,32 +187,34 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
               </div>
             </div>
 
-            {/* Lyrics Body */}
-            <div className="py-4 space-y-4 flex-1">
-              {currentSongData.lyrics.map((verse, vIdx) => (
-                <div
-                  key={vIdx}
-                  className="p-4 rounded-xl bg-[#FAF7F2] dark:bg-[#1C212A] border border-[#D8D2C5] dark:border-[#2E3744] shadow-2xs"
-                >
-                  {verse.map((line, lIdx) => (
-                    <p
-                      key={lIdx}
-                      className="text-sm sm:text-base font-semibold text-stone-900 dark:text-stone-100 leading-relaxed tracking-wide"
-                    >
-                      {line}
-                    </p>
+            {/* Lyrics Body: Single container div, verses separated by newline, compact lines */}
+            <div className="py-4 flex-1">
+              {verses.length > 0 ? (
+                <div className="p-4 sm:p-5 rounded-xl bg-[#FAF7F2] dark:bg-[#1C212A] border border-[#D8D2C5] dark:border-[#2E3744] shadow-2xs">
+                  {verses.map((verse, vIdx) => (
+                    <div key={vIdx} className={vIdx > 0 ? "mt-3.5 pt-0.5" : ""}>
+                      {verse.map((line, lIdx) => (
+                        <p
+                          key={lIdx}
+                          className="text-sm sm:text-base font-semibold text-stone-900 dark:text-stone-100 leading-snug tracking-wide"
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   ))}
                 </div>
-              ))}
+              ) : (
+                <div className="p-4 rounded-xl bg-[#FAF7F2] dark:bg-[#1C212A] border border-[#D8D2C5] dark:border-[#2E3744] text-center text-sm text-stone-500 italic">
+                  Lirik untuk lagu ini belum tersedia.
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#2E3744] bg-[#FAF7F2] dark:bg-[#1C212A] flex items-center justify-between flex-shrink-0">
-          <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-            Diputar pada apel pagi setiap hari sekolah aktif
-          </span>
+        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#2E3744] bg-[#FAF7F2] dark:bg-[#1C212A] flex items-center justify-end flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-stone-200 dark:bg-[#252C37] hover:bg-stone-300 dark:hover:bg-[#2E3744] text-stone-800 dark:text-stone-200 text-xs font-bold transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"

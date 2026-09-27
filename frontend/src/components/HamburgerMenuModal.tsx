@@ -1,22 +1,19 @@
 import React, { useEffect } from 'react';
-import { X, Music, Calendar, Moon, Sun, BookOpen, Clock, ShieldCheck, ChevronRight } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenSongLyrics: () => void;
-  onJumpToToday: () => void;
-  darkMode: boolean;
-  onToggleDarkMode: () => void;
+  onJumpToToday?: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   isOpen,
   onClose,
-  onOpenSongLyrics,
-  onJumpToToday,
-  darkMode,
-  onToggleDarkMode
+  onOpenSongLyrics
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -73,7 +70,7 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body - Clean real navigation items only, NO placeholders */}
+        {/* Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 min-h-0">
           {/* Action 1: Koleksi Lagu Wajib */}
           <button
@@ -105,79 +102,47 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-[#2C4E3A] dark:group-hover:text-[#34D399] transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          {/* Action 2: Lompat ke Jadwal Hari Ini */}
-          <button
-            type="button"
+          {/* Action 2: Sinkronisasi Otomatis (Klik untuk Refresh Halaman & Data) */}
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => {
-              onJumpToToday();
-              onClose();
+              window.location.reload();
             }}
-            className="w-full text-left p-3.5 rounded-xl border border-[#D8D2C5] dark:border-[#2E3744] bg-white dark:bg-[#1C212A] hover:border-[#2C4E3A] dark:hover:border-[#34D399] hover:bg-[#FAF7F2] dark:hover:bg-[#222935] shadow-xs transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                window.location.reload();
+              }
+            }}
+            aria-label="Sinkronisasi Otomatis. Klik untuk merefresh halaman."
+            title="Klik untuk merefresh halaman dan memuat data terbaru"
+            className="p-3.5 rounded-xl border border-[#D8D2C5] dark:border-[#2E3744] bg-[#FAF7F2] dark:bg-[#14181F] hover:bg-[#F2ECE1] dark:hover:bg-[#1C212A] hover:border-[#2C4E3A]/50 dark:hover:border-[#34D399]/50 shadow-2xs transition-all duration-150 cursor-pointer group flex items-start justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#E0F2FE] dark:bg-[#142A3D] text-[#0369A1] dark:text-[#38BDF8] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                <Calendar className="w-5 h-5" />
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-[#163825] text-emerald-800 dark:text-[#34D399] flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                <ShieldCheck className="w-4 h-4" />
               </div>
-              <div className="min-w-0">
-                <span className="text-sm font-bold text-stone-900 dark:text-stone-50 block">
-                  Lompat ke Jadwal Hari Ini
-                </span>
-                <p className="text-xs text-stone-600 dark:text-stone-300 font-normal mt-0.5">
-                  Tampilkan langsung jadwal pelajaran, doa, MBG, dan piket tanggal hari ini.
+              <div className="text-xs space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-stone-800 dark:text-stone-100 block">
+                    Sinkronisasi Otomatis
+                  </span>
+                  <span className="text-[10px] font-semibold text-[#14532D] dark:text-[#34D399] bg-[#DCFCE7] dark:bg-[#163825] px-2 py-0.5 rounded-md border border-[#86EFAC] dark:border-[#265E3E]">
+                    Klik untuk Refresh
+                  </span>
+                </div>
+                <p className="text-stone-600 dark:text-stone-300 font-normal leading-relaxed">
+                  Jadwal pelajaran, penugasan, petugas MBG, doa, dan piket diperbarui otomatis dari Google Calendar & Google Sheets resmi kelas XB.
                 </p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-[#0369A1] dark:group-hover:text-[#38BDF8] transition-transform group-hover:translate-x-0.5" />
-          </button>
-
-          {/* Action 3: Pengaturan Tema (Light / Dark Mode) */}
-          <div className="p-3.5 rounded-xl border border-[#D8D2C5] dark:border-[#2E3744] bg-white dark:bg-[#1C212A] shadow-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] dark:bg-[#342A16] text-[#B45309] dark:text-[#FBBF24] flex items-center justify-center flex-shrink-0">
-                {darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              </div>
-              <div className="min-w-0">
-                <span className="text-sm font-bold text-stone-900 dark:text-stone-50 block">
-                  Mode Tampilan
-                </span>
-                <p className="text-xs text-stone-600 dark:text-stone-300 font-normal mt-0.5">
-                  Saat ini: <strong className="font-semibold text-stone-800 dark:text-stone-200">{darkMode ? 'Mode Gelap (Dark)' : 'Mode Terang (Light)'}</strong>
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={onToggleDarkMode}
-              aria-label={darkMode ? 'Ubah ke Mode Terang' : 'Ubah ke Mode Gelap'}
-              className="px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-[#FAF7F2] dark:bg-[#252C37] hover:bg-stone-200 dark:hover:bg-[#2E3744] text-xs font-semibold text-stone-800 dark:text-stone-200 transition cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
-            >
-              {darkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-stone-700" />}
-              <span>{darkMode ? 'Ganti ke Terang' : 'Ganti ke Gelap'}</span>
-            </button>
-          </div>
-
-          {/* Info Card: Status Sinkronisasi Real-Time */}
-          <div className="p-3.5 rounded-xl border border-[#D8D2C5] dark:border-[#2E3744] bg-[#FAF7F2] dark:bg-[#14181F] flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-[#163825] text-emerald-800 dark:text-[#34D399] flex items-center justify-center flex-shrink-0 mt-0.5">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div className="text-xs space-y-1">
-              <span className="font-bold text-stone-800 dark:text-stone-200 block">
-                Sinkronisasi Otomatis
-              </span>
-              <p className="text-stone-600 dark:text-stone-300 font-normal leading-relaxed">
-                Jadwal pelajaran, penugasan, petugas MBG, doa, dan piket diperbarui otomatis dari Google Calendar & Google Sheets resmi kelas XB.
-              </p>
-            </div>
+            <RotateCw className="w-4 h-4 text-stone-400 group-hover:text-[#2C4E3A] dark:group-hover:text-[#34D399] group-hover:rotate-180 transition-transform duration-300 flex-shrink-0 mt-1" />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#2E3744] bg-white dark:bg-[#1C212A] flex items-center justify-between flex-shrink-0">
-          <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-            Waktu Standar Indonesia Barat (WIB)
-          </span>
+        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#2E3744] bg-white dark:bg-[#1C212A] flex items-center justify-end flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-stone-100 dark:bg-[#252C37] hover:bg-stone-200 dark:hover:bg-[#2E3744] text-stone-800 dark:text-stone-200 text-xs font-semibold transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"

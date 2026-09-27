@@ -4,6 +4,42 @@ export interface SongDetail {
   lyrics: string[];
 }
 
+/**
+ * Safely converts lyrics (either 1D array with blank lines or 2D array of verses)
+ * into a structured 2D array of verses [verseIndex][lineIndex].
+ */
+export function formatLyricsVerses(lyrics: string[] | string[][] | undefined): string[][] {
+  if (!lyrics || !Array.isArray(lyrics) || lyrics.length === 0) return [];
+
+  // If already a 2D array
+  if (Array.isArray(lyrics[0])) {
+    return (lyrics as string[][]).map(v => (Array.isArray(v) ? v : [String(v)]));
+  }
+
+  // If 1D string array with empty lines separating stanzas/verses
+  const verses: string[][] = [];
+  let currentVerse: string[] = [];
+
+  for (const rawLine of lyrics as string[]) {
+    if (typeof rawLine !== 'string') continue;
+    const trimmed = rawLine.trim();
+    if (trimmed === '') {
+      if (currentVerse.length > 0) {
+        verses.push(currentVerse);
+        currentVerse = [];
+      }
+    } else {
+      currentVerse.push(rawLine);
+    }
+  }
+
+  if (currentVerse.length > 0) {
+    verses.push(currentVerse);
+  }
+
+  return verses.length > 0 ? verses : [(lyrics as string[]).filter(Boolean)];
+}
+
 // Jadwal resmi lagu wajib bulanan sesuai lampiran data
 // 0: Jan, 1: Feb, 2: Mar, 3: Apr, 4: Mei, 5: Jun, 6: Jul, 7: Ags, 8: Sep, 9: Okt, 10: Nov, 11: Des
 export const MONTHLY_SONG_SCHEDULE: Record<number, Record<number, string>> = {

@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { X, Music, User } from 'lucide-react';
-import { SONG_LYRICS_DB } from '../data/songSchedule';
+import { SONG_LYRICS_DB, formatLyricsVerses } from '../data/songSchedule';
 
 interface SongLyricsModalProps {
   isOpen: boolean;
@@ -25,13 +25,17 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const songData = SONG_LYRICS_DB[songTitle] || {
     title: songTitle,
     composer: 'Nasional',
-    lyrics: [['(Lirik lengkap dapat dinyanyikan bersama saat apel/pagi hari)']]
+    lyrics: ['(Lirik lengkap dapat dinyanyikan bersama saat apel/pagi hari)']
   };
+
+  const verses = useMemo(() => {
+    return formatLyricsVerses(songData.lyrics);
+  }, [songData.lyrics]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -77,15 +81,15 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
         </div>
 
         {/* Lyrics body with touch scroll */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-center flex-1">
-          <div className="bg-white dark:bg-[#1C212A] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-5 sm:p-6 shadow-2xs space-y-4">
-            {songData.lyrics.map((verse, vIdx) => (
-              <div key={vIdx} className="space-y-1.5 font-serif text-sm sm:text-base text-stone-900 dark:text-stone-100 leading-relaxed">
+        <div className="p-4 sm:p-5 overflow-y-auto text-center flex-1">
+          <div className="bg-white dark:bg-[#1C212A] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-5 sm:p-6 shadow-2xs">
+            {verses.map((verse, vIdx) => (
+              <div key={vIdx} className={`font-serif text-sm sm:text-base text-stone-900 dark:text-stone-100 ${vIdx > 0 ? "mt-3.5 pt-0.5" : ""}`}>
                 {verse.map((line, lIdx) =>
                   line === '' ? (
-                    <div key={lIdx} className="h-2.5" />
+                    <div key={lIdx} className="h-2" />
                   ) : (
-                    <p key={lIdx} className="italic font-medium tracking-wide">
+                    <p key={lIdx} className="italic font-medium tracking-wide leading-snug">
                       {line}
                     </p>
                   )
