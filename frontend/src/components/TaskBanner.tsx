@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, AlertCircle } from 'lucide-react';
 import { TaskItem } from '../types';
 
 interface TaskBannerProps {
@@ -12,39 +12,40 @@ export const TaskBanner: React.FC<TaskBannerProps> = ({ tasks }) => {
   return (
     <div
       id="task-banner"
-      className="bg-[#FFF8E7] dark:bg-[#261E10] border border-[#F0D597] dark:border-[#5E4416] rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col gap-2 transition-colors flex-shrink-0"
+      className="bg-[#FEF3C7] dark:bg-[#2A2010] border border-[#FCD34D] dark:border-[#78541C] rounded-xl p-3 sm:p-3.5 shadow-xs flex flex-col gap-2.5 transition-colors flex-shrink-0"
     >
-      <div className="flex items-center justify-between pb-1 border-b border-[#F0D597]/70 dark:border-[#5E4416]">
+      <div className="flex items-center justify-between pb-1.5 border-b border-[#FCD34D]/80 dark:border-[#5E4416]">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] dark:bg-[#FBBF24] flex-shrink-0 animate-pulse" />
-          <h3 className="font-medium text-xs uppercase tracking-wider text-[#92400E] dark:text-[#FDE68A]">
-            Penugasan Pelajaran ({tasks.length})
+          <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] dark:bg-[#FBBF24] flex-shrink-0 ring-2 ring-[#D97706]/30 animate-pulse" />
+          <h3 className="font-bold text-xs uppercase tracking-wider text-[#78350F] dark:text-[#FDE68A] flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>Penugasan Terjadwal ({tasks.length})</span>
           </h3>
         </div>
-        <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-[#FEF3C7] dark:bg-[#3D2D12] text-[#92400E] dark:text-[#FDE68A] border border-[#FDE68A] dark:border-[#6B501B]">
+        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-[#3D2D12] text-[#78350F] dark:text-[#FDE68A] border border-[#FCD34D] dark:border-[#855D1C]">
           Penting
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {tasks.map((task, i) => (
           <div
             key={task.id || i}
-            className="bg-white/95 dark:bg-[#1E2228] border border-[#F0D597]/80 dark:border-[#4B3714] rounded-lg p-2.5 flex flex-col justify-between shadow-2xs hover:bg-white dark:hover:bg-[#252B33] transition"
+            className="bg-white dark:bg-[#181C23] border border-[#FCD34D]/80 dark:border-[#523A12] rounded-xl p-3 flex flex-col justify-between shadow-2xs hover:border-[#D97706] transition"
           >
-            <div className="flex items-center justify-between gap-1.5 mb-1">
-              <span className="px-2 py-0.5 rounded bg-[#FEF3C7] dark:bg-[#3D2D12] text-[#92400E] dark:text-[#FDE68A] font-semibold text-xs border border-[#FDE68A] dark:border-[#6B501B]">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="px-2.5 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#3D2D12] text-[#78350F] dark:text-[#FDE68A] font-bold text-xs border border-[#FCD34D] dark:border-[#855D1C]">
                 {task.subject}
               </span>
               {task.time && (
-                <span className="flex items-center gap-1 text-[11px] font-mono font-normal text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-[#2A313C] px-1.5 py-0.5 rounded">
-                  <Clock className="w-3 h-3 text-stone-400" />
+                <span className="flex items-center gap-1 text-xs font-mono font-semibold text-stone-700 dark:text-stone-300 bg-[#FAF7F2] dark:bg-[#202630] px-2 py-0.5 rounded-md border border-[#D8D2C5] dark:border-[#3A4555]">
+                  <Clock className="w-3 h-3 text-stone-500" />
                   {task.time}
                 </span>
               )}
             </div>
 
-            <div className="text-xs text-stone-800 dark:text-stone-200 font-normal whitespace-pre-line leading-relaxed">
+            <div className="text-xs sm:text-sm text-stone-900 dark:text-stone-100 font-medium whitespace-pre-line leading-relaxed">
               {task.taskText}
             </div>
           </div>

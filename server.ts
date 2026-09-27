@@ -4,7 +4,9 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = process.env.NODE_ENV === 'production' && process.env.PORT
+  ? parseInt(process.env.PORT, 10)
+  : 3000;
 
 // Enable CORS for API routes so frontend containers or direct API callers on port 3003 work seamlessly
 app.use((req, res, next) => {

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "PORT=3000 tsx server.ts",
     "build": "vite build frontend --outDir ../dist && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "build:backend": "esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-backend/server.mjs",
     "start:backend": "node dist-backend/server.mjs",

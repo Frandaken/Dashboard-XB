@@ -57,12 +57,19 @@ export function parsePelajaranICS(
 
     const addPeriod = (dateKey: string, ev: ICAL.Event, startTime: string) => {
       const desc = ev.description ? ev.description.trim() : '';
-      const cleanName = (ev.summary || '').replace(/\s*-\s*JP\s*\d+/gi, '').trim();
+      const summary = ev.summary || '';
+      // Preserve subject name, also preserve JP session identifier if present
+      const cleanName = summary.replace(/\s*-\s*JP\s*\d+/gi, '').trim() || summary || 'Pelajaran';
+      
+      // Extract JP (Jam Pelajaran) session info if present (e.g. "JP 1", "JP 3-4")
+      const jpMatch = summary.match(/JP\s*\d+(?:\s*-\s*\d+)?/i);
+      const sessionLabel = jpMatch ? jpMatch[0].toUpperCase() : '';
+
       const period: PeriodItem = {
         time: startTime,
-        cleanName: cleanName || ev.summary || 'Pelajaran',
-        summary: ev.summary || '',
-        rawSummary: ev.summary || '',
+        cleanName: cleanName,
+        summary: sessionLabel ? `${cleanName} (${sessionLabel})` : summary,
+        rawSummary: summary,
         hasTask: !!desc,
         taskText: desc,
         location: ev.location || ''
@@ -78,8 +85,8 @@ export function parsePelajaranICS(
           tasksByDate[dateKey] = [];
         }
         tasksByDate[dateKey].push({
-          id: `${ev.uid}_${dateKey}`,
-          subject: cleanName || ev.summary || 'Penugasan',
+          id: `${ev.uid || 'task'}_${dateKey}_${startTime}`,
+          subject: cleanName,
           taskText: desc,
           time: startTime
         });
@@ -126,85 +133,25 @@ export function parsePelajaranICS(
     overrides.forEach((ev, key) => {
       const parts = key.split('_');
       const dKey = parts[parts.length - 1];
-      if (dKey && !pelajaranByDate[dKey]?.some(p => p.summary === ev.summary)) {
-        const st = ev.startDate;
-        const timeStr = st ? formatPeriodTime(ev, st) : '';
+      const st = ev.startDate;
+      const timeStr = st ? formatPeriodTime(ev, st) : '';
+      if (dKey && !pelajaranByDate[dKey]?.some(p => p.rawSummary === ev.summary && p.time === timeStr)) {
         addPeriod(dKey, ev, timeStr);
       }
     });
 
-    // Helper to convert HH:MM to minutes
-    const timeToMinutes = (t: string): number => {
-      if (!t) return 0;
-      const parts = t.split(':').map(Number);
-      if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return 0;
-      return parts[0] * 60 + parts[1];
-    };
-
-    // Merge adjacent periods if same subject and same task/topic
-    const mergeAdjacentPeriods = (periods: PeriodItem[]): PeriodItem[] => {
-      if (!periods || periods.length <= 1) return periods;
-      const sorted = [...periods].sort((a, b) => a.time.localeCompare(b.time));
-      const result: PeriodItem[] = [];
-
-      for (let i = 0; i < sorted.length; i++) {
-        const cur = { ...sorted[i] };
-        if (result.length === 0) {
-          result.push(cur);
-          continue;
-        }
-
-        const prev = result[result.length - 1];
-        const sameSubject = prev.cleanName.trim().toLowerCase() === cur.cleanName.trim().toLowerCase();
-        const prevTask = (prev.taskText || '').trim().toLowerCase();
-        const curTask = (cur.taskText || '').trim().toLowerCase();
-        const sameTopic = prevTask === curTask;
-
-        const [pStart, pEnd] = prev.time.split(' - ').map(s => s.trim());
-        const [cStart, cEnd] = cur.time.split(' - ').map(s => s.trim());
-
-        const isAdjacent = pEnd && cStart && (
-          pEnd === cStart ||
-          Math.abs(timeToMinutes(cStart) - timeToMinutes(pEnd)) <= 15
-        );
-
-        if (sameSubject && sameTopic && isAdjacent) {
-          // Merge cur into prev
-          prev.time = `${pStart || cStart} - ${cEnd || pEnd || cStart}`;
-          if (cur.taskText && !prev.taskText) {
-            prev.taskText = cur.taskText;
-            prev.hasTask = true;
-          }
-          if (prev.summary && cur.summary && prev.summary !== cur.summary) {
-            prev.summary = `${prev.summary} / ${cur.summary}`;
-          }
-        } else {
-          result.push(cur);
-        }
-      }
-      return result;
-    };
-
-    // Sort & merge events, and re-sync tasks for every date
+    // Keep all scheduled periods SEPARATE (do not merge same-name subjects with different schedule times)
+    // Sort strictly chronologically by schedule start time
     for (const key of Object.keys(pelajaranByDate)) {
-      pelajaranByDate[key] = mergeAdjacentPeriods(pelajaranByDate[key]);
+      pelajaranByDate[key].sort((a, b) => {
+        const timeA = a.time || '';
+        const timeB = b.time || '';
+        return timeA.localeCompare(timeB);
+      });
 
-      // Re-populate clean tasks for this date from merged periods
-      tasksByDate[key] = [];
-      const seenTasks = new Set<string>();
-      for (const p of pelajaranByDate[key]) {
-        if (p.hasTask && p.taskText) {
-          const taskKey = `${p.cleanName}_${p.taskText}`.toLowerCase();
-          if (!seenTasks.has(taskKey)) {
-            seenTasks.add(taskKey);
-            tasksByDate[key].push({
-              id: `${key}_${p.cleanName}_${p.time}`,
-              subject: p.cleanName,
-              taskText: p.taskText,
-              time: p.time
-            });
-          }
-        }
+      // Synchronize clean tasks list for this date in chronological order
+      if (tasksByDate[key]) {
+        tasksByDate[key].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
       }
     }
   } catch (err: any) {

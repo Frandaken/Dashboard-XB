@@ -16,11 +16,11 @@ import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
 
 export default function App() {
-  // Dark mode state with persistence
+  // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false; // Default to light mode as requested
   });
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function App() {
 
   const toggleDarkMode = () => setDarkMode(prev => !prev);
 
-  // Hamburger modal state (Menu modul & slot kosong fitur)
+  // Hamburger modal state (Menu navigasi)
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   // All songs lyrics modal
   const [isAllSongsOpen, setIsAllSongsOpen] = useState<boolean>(false);
@@ -99,53 +99,42 @@ export default function App() {
     const matchInSemester = sortedDates.find(d => d.slice(5) === targetMMDD);
     if (matchInSemester) return matchInSemester;
 
-    if (targetIso > sortedDates[sortedDates.length - 1]) {
-      return sortedDates[sortedDates.length - 1];
-    }
+    const futureDates = sortedDates.filter(d => d >= targetIso);
+    if (futureDates.length > 0) return futureDates[0];
 
-    const preceding = sortedDates.filter(d => d <= targetIso);
-    if (preceding.length > 0) {
-      return preceding[preceding.length - 1];
-    }
-
-    return sortedDates[0];
+    return sortedDates[sortedDates.length - 1];
   }, [hasSchoolData]);
 
+  // Fetch real data with fallback
   const fetchData = useCallback(async () => {
+    setStatus({ type: 'loading', message: 'Memperbarui data kelas...' });
+
+    const fetchEndpoint = async (path: string, fallbackKey?: keyof typeof DEMO_CSV) => {
+      try {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        return { text, isFallback: false };
+      } catch (err) {
+        console.warn(`Fetch ${path} gagal, menggunakan data lokal:`, err);
+        return {
+          text: fallbackKey ? DEMO_CSV[fallbackKey] : '',
+          isFallback: true
+        };
+      }
+    };
+
     try {
-      const fetchSheet = async (key: 'doa' | 'mbg' | 'piket') => {
-        try {
-          const res = await fetch(`/api/sheets/${key}`);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const text = await res.text();
-          return { text, ok: true };
-        } catch (err: any) {
-          console.warn(`Gagal memuat sheet ${key}:`, err.message);
-          return { text: DEMO_CSV[key], ok: false };
-        }
-      };
-
-      const rangeStart = new Date(2025, 0, 1);
-      const rangeEnd = new Date(2027, 11, 31);
-
-      const fetchICS = async (feed: 'pelajaran' | 'birthday') => {
-        try {
-          const res = await fetch(`/api/calendar/${feed}`);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const text = await res.text();
-          return { text, ok: true };
-        } catch (err: any) {
-          console.warn(`Gagal memuat kalender ${feed}:`, err.message);
-          return { text: '', ok: false };
-        }
-      };
+      const curYear = new Date().getFullYear();
+      const rangeStart = new Date(curYear - 1, 0, 1);
+      const rangeEnd = new Date(curYear + 1, 11, 31);
 
       const [doaRes, mbgRes, piketRes, pelajaranRes, birthdayRes] = await Promise.all([
-        fetchSheet('doa'),
-        fetchSheet('mbg'),
-        fetchSheet('piket'),
-        fetchICS('pelajaran'),
-        fetchICS('birthday')
+        fetchEndpoint('/api/sheets/doa', 'doa'),
+        fetchEndpoint('/api/sheets/mbg', 'mbg'),
+        fetchEndpoint('/api/sheets/piket', 'piket'),
+        fetchEndpoint('/api/calendar/pelajaran'),
+        fetchEndpoint('/api/calendar/birthday')
       ]);
 
       const doaRows = parseCSV(doaRes.text);
@@ -157,7 +146,7 @@ export default function App() {
       const piketRows = parseCSV(piketRes.text);
       const piketByDow = parsePiketRows(piketRows);
 
-      // Parse pelajaran iCal with automatic merge for adjacent periods with same subject & topic
+      // Parse pelajaran iCal (keeping subjects on different schedules strictly separated)
       const { pelajaranByDate, tasksByDate } = parsePelajaranICS(pelajaranRes.text, rangeStart, rangeEnd);
 
       // Parse birthday iCal
@@ -305,8 +294,9 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen max-h-screen overflow-hidden bg-[#FAF6EE] dark:bg-[#121417] text-[#2B2A28] dark:text-[#E6EDF3] p-2 sm:p-2.5 lg:p-3 flex flex-col font-sans transition-colors duration-200">
-      <div className="max-w-[1600px] w-full mx-auto flex flex-col flex-1 h-full min-h-0 gap-2">
+    // 5. Overflow scrolling on mobile enabled (min-h-screen overflow-y-auto on mobile, desktop keeps clean full viewport)
+    <div className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#FAF7F2] dark:bg-[#0F1216] text-[#1C1917] dark:text-[#F8FAFC] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200">
+      <div className="max-w-[1600px] w-full mx-auto flex flex-col flex-1 min-h-0 gap-2.5">
         {/* Top Header with Dark Mode Toggle & Hamburger Button */}
         <Header
           darkMode={darkMode}
@@ -323,36 +313,37 @@ export default function App() {
           />
         )}
 
-        {/* Main Grid: Left = Hero Today Schedule, Right = Calendar & Song (Fits 100% in Viewport) */}
-        <main className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 flex-1 min-h-0 items-stretch overflow-hidden">
+        {/* Main Grid: Left = Hero Today Schedule, Right = Calendar & Song */}
+        <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0">
           {/* LEFT: TODAY DASHBOARD (Col Span 7-8) */}
           <section
             id="hero-today-section"
-            className="lg:col-span-7 xl:col-span-8 flex flex-col h-full min-h-0 gap-2 w-full overflow-hidden"
+            className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden"
           >
             {/* Date Title with Navigation */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1.5 border-b border-[#E4DDCE] dark:border-[#2D333B] flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#2E3744] flex-shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#2C4E3A] dark:bg-[#34D399]" />
-                <h2 className="font-display font-semibold text-lg sm:text-xl text-[#2B2A28] dark:text-white tracking-tight leading-tight">
+                <span className="w-3 h-3 rounded-full bg-[#2C4E3A] dark:bg-[#34D399] ring-2 ring-[#2C4E3A]/20" />
+                <h2 className="font-display font-bold text-lg sm:text-xl text-stone-900 dark:text-white tracking-tight leading-tight">
                   {activeDow}, {activeDate.getDate()} {MONTH_ID[activeDate.getMonth()]} {activeDate.getFullYear()}
                 </h2>
                 {activeISO === todayWIB.iso ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#EBF3EE] dark:bg-[#1B3626] text-[#2C4E3A] dark:text-[#6EE7B7] border border-[#C6DEC0] dark:border-[#2D5A3C]">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E]">
                     Hari Ini (WIB)
                   </span>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 dark:bg-[#3D2C15] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
-                      Sedang Dipreview
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#3D2C15] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
+                      Sedang Ditampilkan
                     </span>
                     <button
                       onClick={() => {
                         setActiveISO(todayWIB.iso);
                         setIsManualDate(true);
                       }}
-                      className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#EBF3EE] dark:bg-[#1B3626] text-[#2C4E3A] dark:text-[#6EE7B7] border border-[#C6DEC0] dark:border-[#2D5A3C] hover:bg-[#DCECE1] transition cursor-pointer"
+                      className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E] hover:bg-[#BBF7D0] transition cursor-pointer"
                       title="Kembali ke Hari Ini"
+                      aria-label="Kembali ke jadwal hari ini"
                     >
                       Kembali ke Hari Ini
                     </button>
@@ -360,33 +351,35 @@ export default function App() {
                 )}
               </div>
 
-              {/* Prev / Next Day Steppers */}
+              {/* Prev / Next Day Steppers with accessible touch targets */}
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => handleStepDay(-1)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E4DDCE] dark:border-[#38414D] bg-white dark:bg-[#1E2228] hover:bg-[#FAF6EE] dark:hover:bg-[#2A313C] text-xs font-medium text-stone-700 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95"
+                  aria-label="Jadwal Hari Sebelumnya"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
                   title="Hari Sebelumnya"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Sebelumnya</span>
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="inline">Sebelumnya</span>
                 </button>
                 <button
                   onClick={() => handleStepDay(1)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E4DDCE] dark:border-[#38414D] bg-white dark:bg-[#1E2228] hover:bg-[#FAF6EE] dark:hover:bg-[#2A313C] text-xs font-medium text-stone-700 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95"
+                  aria-label="Jadwal Hari Berikutnya"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
                   title="Hari Berikutnya"
                 >
-                  <span className="hidden sm:inline">Berikutnya</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <span className="inline">Berikutnya</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             {/* Smart Notice if displayed date differs from WIB date */}
             {activeISO !== todayWIB.iso && !isManualDate && (
-              <div className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-[#163523] border border-emerald-200 dark:border-[#2D6643] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center justify-between gap-2 flex-shrink-0 shadow-2xs">
-                <div className="flex items-center gap-1.5">
-                  <CalendarIcon className="w-3.5 h-3.5 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
-                  <span className="font-normal">
+              <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#142A1E] border border-emerald-300 dark:border-[#205C38] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center justify-between gap-2 flex-shrink-0 shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
+                  <span className="font-medium">
                     {todayWIB.date.getDay() === 0 || todayWIB.date.getDay() === 6
                       ? `Hari ini akhir pekan (${DOW_ID[todayWIB.date.getDay()]}). Menampilkan jadwal hari sekolah aktif terdekat.`
                       : `Menampilkan jadwal semester aktif (${activeDow}, ${activeDate.getDate()} ${MONTH_ID[activeDate.getMonth()]}).`}
@@ -397,7 +390,7 @@ export default function App() {
                     setActiveISO(todayWIB.iso);
                     setIsManualDate(true);
                   }}
-                  className="text-emerald-800 dark:text-[#34D399] hover:underline font-semibold cursor-pointer text-xs flex-shrink-0"
+                  className="text-emerald-900 dark:text-[#34D399] hover:underline font-bold cursor-pointer text-xs flex-shrink-0"
                 >
                   Lihat Hari Ini
                 </button>
@@ -420,7 +413,7 @@ export default function App() {
           </section>
 
           {/* RIGHT: CALENDAR, BIRTHDAYS & SONG SCHEDULE (Col Span 4-5) */}
-          <aside className="lg:col-span-5 xl:col-span-4 flex flex-col h-full min-h-0 w-full justify-between gap-2 overflow-hidden">
+          <aside className="lg:col-span-5 xl:col-span-4 flex flex-col h-auto lg:h-full min-h-0 w-full justify-between gap-2.5 overflow-visible lg:overflow-hidden">
             <CalendarSection
               viewYear={viewYear}
               viewMonth={viewMonth}
@@ -441,18 +434,32 @@ export default function App() {
               birthdaysToday={activeBirthdays}
             />
 
-            {/* Lagu Wajib Minggu Ini (Hanya Minggu Ini Saja) */}
-            <SongScheduleList
-              viewYear={viewYear}
-              viewMonth={viewMonth}
-              currentDate={activeDate}
-              selectedISO={selectedISO}
-            />
+            {/* Song Schedule Card */}
+            <SongScheduleList currentDate={activeDate} />
           </aside>
         </main>
       </div>
 
-      {/* Selected Day Detail Modal */}
+      {/* Offline Status Toast */}
+      <OfflineIndicator />
+
+      {/* Hamburger Navigation Modal (No placeholders) */}
+      <HamburgerMenuModal
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        onOpenSongLyrics={() => setIsAllSongsOpen(true)}
+        onJumpToToday={handleJumpToToday}
+        darkMode={darkMode}
+        onToggleDarkMode={toggleDarkMode}
+      />
+
+      {/* All Songs Lyrics Modal */}
+      <AllSongsModal
+        isOpen={isAllSongsOpen}
+        onClose={() => setIsAllSongsOpen(false)}
+      />
+
+      {/* Day Detail Modal (When user clicks on a calendar date) */}
       {selectedDetails && (
         <DayDetailModal
           isoDate={selectedDetails.isoDate}
@@ -465,22 +472,6 @@ export default function App() {
           birthdays={selectedDetails.birthdays}
         />
       )}
-
-      {/* Hamburger Tab: Menu Modul & Slot Kosong Fitur */}
-      <HamburgerMenuModal
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        onOpenSongLyrics={() => setIsAllSongsOpen(true)}
-      />
-
-      {/* Pop Up Koleksi Semua Lirik Lagu Wajib Nasional */}
-      <AllSongsModal
-        isOpen={isAllSongsOpen}
-        onClose={() => setIsAllSongsOpen(false)}
-      />
-
-      {/* Offline Indicator Toast */}
-      <OfflineIndicator />
     </div>
   );
 }
