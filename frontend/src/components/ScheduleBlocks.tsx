@@ -20,6 +20,22 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
     ? [doa.bacaanInjil, doa.bab && doa.ayat ? `${doa.bab}:${doa.ayat}` : ''].filter(Boolean).join(' ')
     : '';
 
+  const isFriday = dowName.toLowerCase() === 'jumat' || dowName.toLowerCase() === 'jum\'at';
+
+  // Helper function to determine if a period is Friday's Literasi / Senam activity
+  const isLiterasiOrSenam = (p: PeriodItem) => {
+    const textToCheck = `${p.cleanName} ${p.rawSummary || ''} ${p.summary || ''}`.toLowerCase();
+    return textToCheck.includes('literasi') || textToCheck.includes('senam');
+  };
+
+  // Calculate actual Jam Pelajaran (On Friday, Literasi & Senam are excluded from academic Jam Pelajaran count)
+  const totalJamPelajaran = isFriday
+    ? pelajaran.filter(p => !isLiterasiOrSenam(p)).length
+    : pelajaran.length;
+
+  // Track sequence for academic Jam Pelajaran on Friday
+  let academicCounter = 0;
+
   return (
     <div id="schedule-blocks-grid" className="flex flex-col gap-2.5 flex-1 min-h-0">
       {/* ROW 1: MBG & PIKET KEBERSIHAN */}
@@ -103,9 +119,11 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
             </h3>
           </div>
           {bacaanText && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-stone-600 dark:text-stone-300">Bacaan Injil:</span>
-              <span className="font-bold text-xs sm:text-sm text-[#14532D] dark:text-[#A7F3D0] bg-[#DCFCE7] dark:bg-[#163825] px-2.5 py-0.5 rounded-md border border-[#86EFAC] dark:border-[#265E3E]">
+            <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300">
+                Bacaan Injil:
+              </span>
+              <span className="font-black text-base sm:text-lg lg:text-xl text-[#14532D] dark:text-[#6EE7B7] bg-[#DCFCE7] dark:bg-[#143522] px-4 py-1.5 rounded-xl border border-[#86EFAC] dark:border-[#245D3B] shadow-xs tracking-normal">
                 {bacaanText}
               </span>
             </div>
@@ -147,58 +165,86 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               Jadwal Pelajaran
             </h3>
           </div>
-          <span className="text-xs font-semibold text-[#581C87] dark:text-[#E9D5FF] bg-[#F3E8FF] dark:bg-[#2E1A47] px-2.5 py-0.5 rounded-md border border-[#D8B4FE] dark:border-[#582B8A]">
-            {pelajaran.length} Sesi Terjadwal
+          <span className="text-xs sm:text-sm font-bold text-[#581C87] dark:text-[#E9D5FF] bg-[#F3E8FF] dark:bg-[#2E1A47] px-3 py-1 rounded-md border border-[#D8B4FE] dark:border-[#582B8A]">
+            {totalJamPelajaran} Jam Pelajaran
           </span>
         </div>
 
         {pelajaran && pelajaran.length > 0 ? (
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 overflow-y-auto flex-1 pr-1">
-            {pelajaran.map((p, idx) => (
-              <div
-                key={`${p.cleanName}-${p.time}-${idx}`}
-                className={`p-3 rounded-xl border flex flex-col justify-between transition-shadow shadow-2xs ${
-                  p.hasTask
-                    ? 'bg-[#FEF9EE] dark:bg-[#2D2314] border-[#FCD34D] dark:border-[#78541C]'
-                    : 'bg-[#FAF7F2] dark:bg-[#202630] border-[#D8D2C5] dark:border-[#333E4E] hover:border-[#2C4E3A]/50 dark:hover:border-[#34D399]/50'
-                }`}
-              >
-                {/* Header: Sesi index badge & Time Badge */}
-                <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-                      {idx + 1}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-white dark:bg-[#14181F] text-stone-800 dark:text-stone-200 font-mono font-semibold text-xs border border-[#D8D2C5] dark:border-[#3A4555] tracking-tight">
-                      {p.time}
-                    </span>
+            {pelajaran.map((p, idx) => {
+              const isNonAcademicFriday = isFriday && isLiterasiOrSenam(p);
+              let sessionNumber: number | string = idx + 1;
+              if (isFriday) {
+                if (isNonAcademicFriday) {
+                  sessionNumber = 0;
+                } else {
+                  academicCounter += 1;
+                  sessionNumber = academicCounter;
+                }
+              }
+
+              return (
+                <div
+                  key={`${p.cleanName}-${p.time}-${idx}`}
+                  className={`p-3 rounded-xl border flex flex-col justify-between transition-shadow shadow-2xs ${
+                    p.hasTask
+                      ? 'bg-[#FEF9EE] dark:bg-[#2D2314] border-[#FCD34D] dark:border-[#78541C]'
+                      : isNonAcademicFriday
+                      ? 'bg-[#F0FDF4] dark:bg-[#14261C] border-[#BBF7D0] dark:border-[#234E35]'
+                      : 'bg-[#FAF7F2] dark:bg-[#202630] border-[#D8D2C5] dark:border-[#333E4E] hover:border-[#2C4E3A]/50 dark:hover:border-[#34D399]/50'
+                  }`}
+                >
+                  {/* Header: Sesi index badge & Time Badge */}
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center flex-shrink-0 ${
+                          isNonAcademicFriday
+                            ? 'bg-[#DCFCE7] dark:bg-[#1A3D2A] text-[#14532D] dark:text-[#86EFAC] ring-1 ring-[#86EFAC]/40'
+                            : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200'
+                        }`}
+                        title={isNonAcademicFriday ? 'Kegiatan Pembiasaan (Jam ke-0)' : `Jam Pelajaran ke-${sessionNumber}`}
+                      >
+                        {sessionNumber}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-[#14181F] text-stone-800 dark:text-stone-200 font-mono font-semibold text-xs border border-[#D8D2C5] dark:border-[#3A4555] tracking-tight">
+                        {p.time}
+                      </span>
+                    </div>
+
+                    {p.hasTask && (
+                      <span className="px-2 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#4E3D19] text-[#78350F] dark:text-[#FDE68A] font-bold text-[10px] uppercase border border-[#FCD34D] dark:border-[#855D1C]">
+                        Tugas
+                      </span>
+                    )}
+
+                    {isNonAcademicFriday && !p.hasTask && (
+                      <span className="px-2 py-0.5 rounded-md bg-[#DCFCE7] dark:bg-[#1A3D2A] text-[#14532D] dark:text-[#86EFAC] font-bold text-[10px] uppercase border border-[#86EFAC] dark:border-[#265E3E]">
+                        Pembiasaan
+                      </span>
+                    )}
                   </div>
 
-                  {p.hasTask && (
-                    <span className="px-2 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#4E3D19] text-[#78350F] dark:text-[#FDE68A] font-bold text-[10px] uppercase border border-[#FCD34D] dark:border-[#855D1C]">
-                      Tugas
-                    </span>
+                  {/* Subject Title */}
+                  <div
+                    className="font-bold text-sm text-stone-900 dark:text-white leading-snug line-clamp-2"
+                    title={p.summary || p.cleanName}
+                  >
+                    {p.cleanName}
+                  </div>
+
+                  {/* Task Notice if present */}
+                  {p.hasTask && p.taskText ? (
+                    <div className="text-xs font-medium text-[#78350F] dark:text-[#FDE68A] break-words leading-relaxed mt-2 bg-[#FEF3C7]/80 dark:bg-[#2A210F] p-2 rounded-lg border border-[#FCD34D]/80 dark:border-[#5C4517]">
+                      <strong>Catatan:</strong> {p.taskText}
+                    </div>
+                  ) : (
+                    <div className="h-1.5" />
                   )}
                 </div>
-
-                {/* Subject Title */}
-                <div
-                  className="font-bold text-sm text-stone-900 dark:text-white leading-snug line-clamp-2"
-                  title={p.summary || p.cleanName}
-                >
-                  {p.cleanName}
-                </div>
-
-                {/* Task Notice if present */}
-                {p.hasTask && p.taskText ? (
-                  <div className="text-xs font-medium text-[#78350F] dark:text-[#FDE68A] break-words leading-relaxed mt-2 bg-[#FEF3C7]/80 dark:bg-[#2A210F] p-2 rounded-lg border border-[#FCD34D]/80 dark:border-[#5C4517]">
-                    <strong>Catatan:</strong> {p.taskText}
-                  </div>
-                ) : (
-                  <div className="h-1.5" />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-stone-500 dark:text-stone-400 italic text-xs py-3 font-medium">

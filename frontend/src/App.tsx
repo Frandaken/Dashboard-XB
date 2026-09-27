@@ -14,6 +14,7 @@ import { ClassDataStore } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
+import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
 
 export default function App() {
   // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
@@ -52,16 +53,9 @@ export default function App() {
 
   const [status, setStatus] = useState<{ type: 'loading' | 'error' | 'success'; message: string } | null>(null);
 
-  // Compute today's date in Western Indonesia Time (WIB / Asia/Jakarta, UTC+7)
+  // Compute today's date strictly in Western Indonesia Time (WIB / Asia/Jakarta, UTC+7)
   const todayWIB = useMemo(() => {
-    const now = new Date();
-    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const wibDate = new Date(utcMs + (7 * 3600000));
-    const y = wibDate.getFullYear();
-    const m = String(wibDate.getMonth() + 1).padStart(2, '0');
-    const d = String(wibDate.getDate()).padStart(2, '0');
-    const iso = `${y}-${m}-${d}`;
-    return { date: wibDate, iso };
+    return getWIBDateParts();
   }, []);
 
   // Active date displayed in the hero section (default to WIB today)
@@ -69,8 +63,8 @@ export default function App() {
   const [isManualDate, setIsManualDate] = useState<boolean>(false);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
 
-  const [viewYear, setViewYear] = useState<number>(() => todayWIB.date.getFullYear());
-  const [viewMonth, setViewMonth] = useState<number>(() => todayWIB.date.getMonth());
+  const [viewYear, setViewYear] = useState<number>(() => todayWIB.year);
+  const [viewMonth, setViewMonth] = useState<number>(() => todayWIB.month);
 
   // Check if a specific date has any academic/school activity
   const hasSchoolData = useCallback((iso: string, store: ClassDataStore) => {
@@ -95,13 +89,25 @@ export default function App() {
     const sortedDates = Array.from(availableDates).sort();
     if (sortedDates.length === 0) return targetIso;
 
+    // Check same MMDD
     const targetMMDD = targetIso.slice(5);
     const matchInSemester = sortedDates.find(d => d.slice(5) === targetMMDD);
     if (matchInSemester) return matchInSemester;
 
+    // Find closest date with school data
+    const pastDates = sortedDates.filter(d => d <= targetIso);
     const futureDates = sortedDates.filter(d => d >= targetIso);
-    if (futureDates.length > 0) return futureDates[0];
 
+    if (pastDates.length > 0 && futureDates.length > 0) {
+      const lastPast = pastDates[pastDates.length - 1];
+      const firstFuture = futureDates[0];
+      const targetTime = new Date(targetIso).getTime();
+      const pastDiff = Math.abs(targetTime - new Date(lastPast).getTime());
+      const futureDiff = Math.abs(new Date(firstFuture).getTime() - targetTime);
+      return futureDiff < pastDiff ? firstFuture : lastPast;
+    }
+
+    if (futureDates.length > 0) return futureDates[0];
     return sortedDates[sortedDates.length - 1];
   }, [hasSchoolData]);
 
@@ -201,26 +207,25 @@ export default function App() {
   }, [fetchData]);
 
   // Information for the currently displayed active date
-  const activeDate = useMemo(() => new Date(activeISO + 'T00:00:00'), [activeISO]);
-  const activeDow = DOW_ID[activeDate.getDay()];
+  const activeInfo = useMemo(() => parseISODateParts(activeISO), [activeISO]);
+  const activeDow = activeInfo.dowName;
   const activeMbg = dataStore.mbgByDate[activeISO];
   const activePiket = dataStore.piketByDow[activeDow];
   const activeDoa = dataStore.doaByDate[activeISO];
   const activePelajaran = dataStore.pelajaranByDate[activeISO] || [];
   const activeTasks = dataStore.tasksByDate[activeISO] || [];
 
-  const activeMonthDayKey = `${String(activeDate.getMonth() + 1).padStart(2, '0')}-${String(activeDate.getDate()).padStart(2, '0')}`;
+  const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
 
   // Helper check for calendar dots
   const hasDataForISO = (iso: string): boolean => {
-    const d = new Date(iso + 'T00:00:00');
-    const dow = DOW_ID[d.getDay()];
-    const md = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const info = parseISODateParts(iso);
+    const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
     return (
       !!dataStore.doaByDate[iso] ||
       !!dataStore.mbgByDate[iso] ||
-      !!dataStore.piketByDow[dow] ||
+      !!dataStore.piketByDow[info.dowName] ||
       (dataStore.pelajaranByDate[iso] && dataStore.pelajaranByDate[iso].length > 0) ||
       (dataStore.tasksByDate[iso] && dataStore.tasksByDate[iso].length > 0) ||
       (dataStore.birthdayByMonthDay[md] && dataStore.birthdayByMonthDay[md].length > 0)
@@ -232,23 +237,22 @@ export default function App() {
   };
 
   const getBirthdaysForISO = (iso: string): string[] => {
-    const d = new Date(iso + 'T00:00:00');
-    const md = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const info = parseISODateParts(iso);
+    const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
     return dataStore.birthdayByMonthDay[md] || [];
   };
 
   // Selected date details for modal
   const selectedDetails = useMemo(() => {
     if (!selectedISO) return null;
-    const d = new Date(selectedISO + 'T00:00:00');
-    const dow = DOW_ID[d.getDay()];
-    const md = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const info = parseISODateParts(selectedISO);
+    const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
 
     return {
       isoDate: selectedISO,
-      dow,
+      dow: info.dowName,
       mbg: dataStore.mbgByDate[selectedISO],
-      piket: dataStore.piketByDow[dow],
+      piket: dataStore.piketByDow[info.dowName],
       doa: dataStore.doaByDate[selectedISO],
       pelajaran: dataStore.pelajaranByDate[selectedISO] || [],
       tasks: dataStore.tasksByDate[selectedISO] || [],
@@ -275,23 +279,23 @@ export default function App() {
   };
 
   const handleJumpToToday = () => {
-    setViewYear(todayWIB.date.getFullYear());
-    setViewMonth(todayWIB.date.getMonth());
-    setActiveISO(todayWIB.iso);
+    const curWIB = getWIBDateParts();
+    setViewYear(curWIB.year);
+    setViewMonth(curWIB.month);
+    setActiveISO(curWIB.iso);
     setIsManualDate(true);
     setSelectedISO(null);
   };
 
   const handleStepDay = (delta: number) => {
-    const cur = new Date(activeISO + 'T00:00:00');
-    cur.setDate(cur.getDate() + delta);
-    const y = cur.getFullYear();
-    const m = String(cur.getMonth() + 1).padStart(2, '0');
-    const d = String(cur.getDate()).padStart(2, '0');
-    const nextIso = `${y}-${m}-${d}`;
-    setActiveISO(nextIso);
+    setActiveISO(prev => stepISODate(prev, delta));
     setIsManualDate(true);
   };
+
+  // Safe Date object for components expecting a Date instance
+  const safeActiveDate = useMemo(() => {
+    return new Date(Date.UTC(activeInfo.year, activeInfo.month, activeInfo.day, 12, 0, 0));
+  }, [activeInfo.year, activeInfo.month, activeInfo.day]);
 
   return (
     // 5. Overflow scrolling on mobile enabled (min-h-screen overflow-y-auto on mobile, desktop keeps clean full viewport)
@@ -325,11 +329,11 @@ export default function App() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="w-3 h-3 rounded-full bg-[#2C4E3A] dark:bg-[#34D399] ring-2 ring-[#2C4E3A]/20" />
                 <h2 className="font-display font-bold text-lg sm:text-xl text-stone-900 dark:text-white tracking-tight leading-tight">
-                  {activeDow}, {activeDate.getDate()} {MONTH_ID[activeDate.getMonth()]} {activeDate.getFullYear()}
+                  {activeInfo.formattedDate}
                 </h2>
                 {activeISO === todayWIB.iso ? (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E]">
-                    Hari Ini (WIB)
+                    Hari Ini
                   </span>
                 ) : (
                   <div className="flex items-center gap-1.5">
@@ -380,9 +384,9 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
                   <span className="font-medium">
-                    {todayWIB.date.getDay() === 0 || todayWIB.date.getDay() === 6
-                      ? `Hari ini akhir pekan (${DOW_ID[todayWIB.date.getDay()]}). Menampilkan jadwal hari sekolah aktif terdekat.`
-                      : `Menampilkan jadwal semester aktif (${activeDow}, ${activeDate.getDate()} ${MONTH_ID[activeDate.getMonth()]}).`}
+                    {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
+                      ? `Hari ini akhir pekan (${todayWIB.dowName}). Menampilkan jadwal hari sekolah aktif terdekat (${activeInfo.formattedDate}).`
+                      : `Menampilkan jadwal semester aktif (${activeInfo.formattedDate}).`}
                   </span>
                 </div>
                 <button
@@ -392,7 +396,7 @@ export default function App() {
                   }}
                   className="text-emerald-900 dark:text-[#34D399] hover:underline font-bold cursor-pointer text-xs flex-shrink-0"
                 >
-                  Lihat Hari Ini
+                  Lihat Hari Ini ({todayWIB.day} {MONTH_ID[todayWIB.month]})
                 </button>
               </div>
             )}
@@ -435,7 +439,7 @@ export default function App() {
             />
 
             {/* Song Schedule Card */}
-            <SongScheduleList currentDate={activeDate} />
+            <SongScheduleList currentDate={safeActiveDate} />
           </aside>
         </main>
       </div>

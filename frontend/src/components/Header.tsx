@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Sun, Moon } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
+import { getWIBDateParts, WIBDateInfo } from '../utils/dateUtils';
 
 interface HeaderProps {
   darkMode: boolean;
@@ -13,21 +14,11 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleDarkMode,
   onOpenMenu
 }) => {
-  const [timeStr, setTimeStr] = useState<string>(() => {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-  });
+  const [wibInfo, setWibInfo] = useState<WIBDateInfo>(() => getWIBDateParts());
 
   useEffect(() => {
     const updateTime = () => {
-      const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-      setTimeStr(`${h}:${m}:${s}`);
+      setWibInfo(getWIBDateParts());
     };
 
     const interval = setInterval(updateTime, 1000);
@@ -57,6 +48,9 @@ export const Header: React.FC<HeaderProps> = ({
           <h1 className="font-display font-bold text-lg sm:text-xl lg:text-2xl text-stone-900 dark:text-white tracking-tight leading-none">
             Jadwal Kelas XB
           </h1>
+          <p className="text-[11px] sm:text-xs font-semibold text-stone-600 dark:text-stone-400 mt-1 leading-none">
+            {wibInfo.formattedDate}
+          </p>
         </div>
       </div>
 
@@ -77,10 +71,10 @@ export const Header: React.FC<HeaderProps> = ({
 
         <PWAInstallButton />
 
-        {/* Live Clock with high-contrast font */}
+        {/* Live Clock strictly synchronized to WIB */}
         <div className="text-right pl-1">
           <div className="font-display text-lg sm:text-xl lg:text-2xl font-bold text-stone-900 dark:text-white tabular-nums leading-none tracking-tight">
-            {timeStr} <span className="text-xs font-sans font-semibold text-stone-600 dark:text-stone-400">WIB</span>
+            {wibInfo.timeStr} <span className="text-xs font-sans font-semibold text-stone-600 dark:text-stone-400">WIB</span>
           </div>
         </div>
       </div>
