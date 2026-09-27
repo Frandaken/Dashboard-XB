@@ -16,7 +16,8 @@ export interface WIBDateInfo {
  * Uses Intl.DateTimeFormat so it is 100% independent of client browser timezone.
  */
 export function getWIBDateParts(date: Date = new Date()): WIBDateInfo {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
+  // Use formatToParts for 100% cross-browser reliability (no split(', ') or separator assumptions)
+  const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Jakarta',
     year: 'numeric',
     month: '2-digit',
@@ -26,13 +27,28 @@ export function getWIBDateParts(date: Date = new Date()): WIBDateInfo {
     second: '2-digit',
     hour12: false
   });
-  const formatted = formatter.format(date);
-  const [datePart, timePart] = formatted.split(', ');
-  const [yStr, mStr, dStr] = datePart.split('-');
+
+  const parts = formatter.formatToParts(date);
+  let yStr = '2026';
+  let mStr = '09';
+  let dStr = '27';
+  let hourStr = '00';
+  let minStr = '00';
+  let secStr = '00';
+
+  for (const part of parts) {
+    if (part.type === 'year') yStr = part.value;
+    else if (part.type === 'month') mStr = part.value;
+    else if (part.type === 'day') dStr = part.value;
+    else if (part.type === 'hour') hourStr = part.value;
+    else if (part.type === 'minute') minStr = part.value;
+    else if (part.type === 'second') secStr = part.value;
+  }
+
   const year = parseInt(yStr, 10);
   const month = parseInt(mStr, 10) - 1; // 0-indexed
   const day = parseInt(dStr, 10);
-  const iso = `${yStr}-${mStr}-${dStr}`;
+  const iso = `${yStr}-${mStr.padStart(2, '0')}-${dStr.padStart(2, '0')}`;
 
   // Use UTC noon to safely calculate day of week without local browser timezone offset
   const noonDate = new Date(Date.UTC(year, month, day, 12, 0, 0));
@@ -46,7 +62,7 @@ export function getWIBDateParts(date: Date = new Date()): WIBDateInfo {
     day,
     dayOfWeek,
     dowName,
-    timeStr: timePart || '00:00:00',
+    timeStr: `${hourStr}:${minStr}:${secStr}`,
     formattedDate: `${dowName}, ${day} ${MONTH_ID[month]} ${year}`
   };
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Music, BookOpen } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
+import { parseISODateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../data/songSchedule';
 import { TaskBanner } from './TaskBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
@@ -46,9 +47,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   if (!isoDate) return null;
 
-  const d = new Date(isoDate + 'T00:00:00');
-  const dow = DOW_ID[d.getDay()];
-  const formattedDate = `${dow}, ${d.getDate()} ${MONTH_ID[d.getMonth()]} ${d.getFullYear()}`;
+  const info = parseISODateParts(isoDate);
+  const dow = info.dowName;
+  const formattedDate = info.formattedDate;
+  const d = new Date(Date.UTC(info.year, info.month, info.day, 12, 0, 0));
   const daySong = getSongForDate(d);
   const hasSong = !!daySong.song && daySong.song !== '-' && daySong.song.toLowerCase() !== 'blank';
 

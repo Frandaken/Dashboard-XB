@@ -33,8 +33,9 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
   hasBirthdayFn,
   birthdaysToday
 }) => {
-  const firstDow = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  // Use UTC noon to safely calculate first day of week and days in month without client timezone offset
+  const firstDow = new Date(Date.UTC(viewYear, viewMonth, 1, 12, 0, 0)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0, 12, 0, 0)).getUTCDate();
 
   const blanks = Array.from({ length: firstDow }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);

@@ -58,8 +58,23 @@ export default function App() {
     return getWIBDateParts();
   }, []);
 
-  // Active date displayed in the hero section (default to WIB today)
-  const [activeISO, setActiveISO] = useState<string>(() => todayWIB.iso);
+  // Compute default active school date:
+  // On weekend:
+  // - If today is Sunday (dayOfWeek === 0), jump to upcoming Monday (+1 day, e.g. 27 -> 28).
+  // - If today is Saturday (dayOfWeek === 6), jump to upcoming Monday (+2 days, e.g. 26 -> 28).
+  // On weekdays: default to today.
+  const defaultSchoolISO = useMemo(() => {
+    if (todayWIB.dayOfWeek === 0) {
+      return stepISODate(todayWIB.iso, 1);
+    }
+    if (todayWIB.dayOfWeek === 6) {
+      return stepISODate(todayWIB.iso, 2);
+    }
+    return todayWIB.iso;
+  }, [todayWIB.dayOfWeek, todayWIB.iso]);
+
+  // Active date displayed in the hero section (default to next active school day on weekend)
+  const [activeISO, setActiveISO] = useState<string>(() => defaultSchoolISO);
   const [isManualDate, setIsManualDate] = useState<boolean>(false);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
 
@@ -92,7 +107,7 @@ export default function App() {
     // Check same MMDD
     const targetMMDD = targetIso.slice(5);
     const matchInSemester = sortedDates.find(d => d.slice(5) === targetMMDD);
-    if (matchInSemester) return matchInSemester;
+    if (matchInSemester && hasSchoolData(matchInSemester, store)) return matchInSemester;
 
     // Find closest date with school data
     const pastDates = sortedDates.filter(d => d <= targetIso);
@@ -101,9 +116,14 @@ export default function App() {
     if (pastDates.length > 0 && futureDates.length > 0) {
       const lastPast = pastDates[pastDates.length - 1];
       const firstFuture = futureDates[0];
-      const targetTime = new Date(targetIso).getTime();
-      const pastDiff = Math.abs(targetTime - new Date(lastPast).getTime());
-      const futureDiff = Math.abs(new Date(firstFuture).getTime() - targetTime);
+      // On weekends, always prefer the upcoming future school day (Monday) rather than previous Friday
+      const targetDow = parseISODateParts(targetIso).dayOfWeek;
+      if (targetDow === 0 || targetDow === 6) {
+        return firstFuture;
+      }
+      const targetTime = new Date(targetIso + 'T12:00:00Z').getTime();
+      const pastDiff = Math.abs(targetTime - new Date(lastPast + 'T12:00:00Z').getTime());
+      const futureDiff = Math.abs(new Date(firstFuture + 'T12:00:00Z').getTime() - targetTime);
       return futureDiff < pastDiff ? firstFuture : lastPast;
     }
 
@@ -170,8 +190,11 @@ export default function App() {
       setDataStore(newStore);
 
       setActiveISO(prev => {
-        if (!isManualDate && !hasSchoolData(prev, newStore)) {
-          return findBestActiveDate(todayWIB.iso, newStore);
+        if (!isManualDate) {
+          if (hasSchoolData(prev, newStore)) {
+            return prev;
+          }
+          return findBestActiveDate(defaultSchoolISO, newStore);
         }
         return prev;
       });
@@ -192,9 +215,9 @@ export default function App() {
         birthdayByMonthDay: {}
       };
       setDataStore(fallbackStore);
-      setActiveISO(prev => findBestActiveDate(prev, fallbackStore));
+      setActiveISO(prev => findBestActiveDate(isManualDate ? prev : defaultSchoolISO, fallbackStore));
     }
-  }, [findBestActiveDate, hasSchoolData, isManualDate, todayWIB.iso]);
+  }, [defaultSchoolISO, findBestActiveDate, hasSchoolData, isManualDate]);
 
   useEffect(() => {
     fetchData();
@@ -336,9 +359,11 @@ export default function App() {
                     Hari Ini
                   </span>
                 ) : (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#3D2C15] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
-                      Sedang Ditampilkan
+                      {(todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6) && activeISO === defaultSchoolISO
+                        ? `Jadwal ${activeInfo.dowName} Depan`
+                        : 'Sedang Ditampilkan'}
                     </span>
                     <button
                       onClick={() => {
@@ -346,10 +371,10 @@ export default function App() {
                         setIsManualDate(true);
                       }}
                       className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E] hover:bg-[#BBF7D0] transition cursor-pointer"
-                      title="Kembali ke Hari Ini"
+                      title={`Lihat Jadwal Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
                       aria-label="Kembali ke jadwal hari ini"
                     >
-                      Kembali ke Hari Ini
+                      Lihat Hari Ini ({todayWIB.dowName})
                     </button>
                   </div>
                 )}
@@ -385,7 +410,7 @@ export default function App() {
                   <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
                   <span className="font-medium">
                     {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
-                      ? `Hari ini akhir pekan (${todayWIB.dowName}). Menampilkan jadwal hari sekolah aktif terdekat (${activeInfo.formattedDate}).`
+                      ? `Hari ini akhir pekan (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]}). Menampilkan jadwal hari sekolah terdekat: ${activeInfo.formattedDate}.`
                       : `Menampilkan jadwal semester aktif (${activeInfo.formattedDate}).`}
                   </span>
                 </div>
@@ -396,7 +421,7 @@ export default function App() {
                   }}
                   className="text-emerald-900 dark:text-[#34D399] hover:underline font-bold cursor-pointer text-xs flex-shrink-0"
                 >
-                  Lihat Hari Ini ({todayWIB.day} {MONTH_ID[todayWIB.month]})
+                  Lihat Hari Ini ({todayWIB.dowName}, {todayWIB.day} {MONTH_ID[todayWIB.month]})
                 </button>
               </div>
             )}
