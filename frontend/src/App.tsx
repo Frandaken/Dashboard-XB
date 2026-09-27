@@ -10,6 +10,7 @@ import { HamburgerMenuModal } from './components/HamburgerMenuModal';
 import { AllSongsModal } from './components/AllSongsModal';
 import { StatusBanner } from './components/StatusBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { DashboardSkeleton } from './components/DashboardSkeleton';
 import { ClassDataStore } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
@@ -72,6 +73,7 @@ export default function App() {
   });
 
   const [status, setStatus] = useState<{ type: 'loading' | 'error' | 'success'; message: string } | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Compute today's date strictly in Western Indonesia Time (WIB / Asia/Jakarta, UTC+7)
   const todayWIB = useMemo(() => {
@@ -223,6 +225,7 @@ export default function App() {
       });
 
       setStatus(null);
+      setIsLoading(false);
     } catch (err: any) {
       console.error('Error in fetchData:', err);
       setStatus({
@@ -244,6 +247,7 @@ export default function App() {
         if (hasSchoolData(defaultSchoolISO, fallbackStore)) return defaultSchoolISO;
         return findBestActiveDate(defaultSchoolISO, fallbackStore);
       });
+      setIsLoading(false);
     }
   }, [defaultSchoolISO, findBestActiveDate, hasSchoolData, isManualDate]);
 
@@ -368,133 +372,137 @@ export default function App() {
           />
         )}
 
-        {/* Main Grid: Left = Hero Today Schedule, Right = Calendar & Song */}
-        <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0">
-          {/* LEFT: TODAY DASHBOARD (Col Span 7-8) */}
-          <section
-            id="hero-today-section"
-            className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden"
-          >
-            {/* Date Title with Navigation */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#2E3744] flex-shrink-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="w-3 h-3 rounded-full bg-[#2C4E3A] dark:bg-[#34D399] ring-2 ring-[#2C4E3A]/20" />
-                <h2
-                  key={activeISO}
-                  className="font-display font-bold text-lg sm:text-xl text-stone-900 dark:text-white tracking-tight leading-tight animate-fade-in"
-                >
-                  {activeInfo.formattedDate}
-                </h2>
-                {activeISO === todayWIB.iso ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E]">
-                    Hari Ini
-                  </span>
-                ) : (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#3D2C15] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
-                      {(todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6) && activeISO === defaultSchoolISO
-                        ? `Jadwal ${activeInfo.dowName} Depan`
-                        : 'Sedang Ditampilkan'}
+        {/* Main Grid: Skeleton Loader during data loading, or actual Dashboard */}
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : (
+          <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0 animate-fade-in">
+            {/* LEFT: TODAY DASHBOARD (Col Span 7-8) */}
+            <section
+              id="hero-today-section"
+              className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden"
+            >
+              {/* Date Title with Navigation */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#2E3744] flex-shrink-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="w-3 h-3 rounded-full bg-[#2C4E3A] dark:bg-[#34D399] ring-2 ring-[#2C4E3A]/20" />
+                  <h2
+                    key={activeISO}
+                    className="font-display font-bold text-lg sm:text-xl text-stone-900 dark:text-white tracking-tight leading-tight animate-fade-in"
+                  >
+                    {activeInfo.formattedDate}
+                  </h2>
+                  {activeISO === todayWIB.iso ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E]">
+                      Hari Ini
                     </span>
-                    <button
-                      onClick={() => {
-                        setActiveISO(todayWIB.iso);
-                        setIsManualDate(true);
-                      }}
-                      className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E] hover:bg-[#BBF7D0] transition cursor-pointer"
-                      title={`Lihat Jadwal Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
-                      aria-label="Kembali ke jadwal hari ini"
-                    >
-                      Lihat Hari Ini ({todayWIB.dowName})
-                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#3D2C15] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
+                        {(todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6) && activeISO === defaultSchoolISO
+                          ? `Jadwal ${activeInfo.dowName} Depan`
+                          : 'Sedang Ditampilkan'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setActiveISO(todayWIB.iso);
+                          setIsManualDate(true);
+                        }}
+                        className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E] hover:bg-[#BBF7D0] transition cursor-pointer"
+                        title={`Lihat Jadwal Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
+                        aria-label="Kembali ke jadwal hari ini"
+                      >
+                        Lihat Hari Ini ({todayWIB.dowName})
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Prev / Next Day Steppers with accessible touch targets */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleStepDay(-1)}
+                    aria-label="Jadwal Hari Sebelumnya"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+                    title="Hari Sebelumnya"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="inline">Sebelumnya</span>
+                  </button>
+                  <button
+                    onClick={() => handleStepDay(1)}
+                    aria-label="Jadwal Hari Berikutnya"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+                    title="Hari Berikutnya"
+                  >
+                    <span className="inline">Berikutnya</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Dynamic Day Content with smooth fade-in */}
+              <div
+                key={activeISO}
+                className="flex-1 flex flex-col gap-2.5 min-h-0 animate-fade-in"
+              >
+                {/* Smart Notice if displayed date differs from WIB date */}
+                {activeISO !== todayWIB.iso && !isManualDate && (
+                  <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#142A1E] border border-emerald-300 dark:border-[#205C38] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center gap-2 flex-shrink-0 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
+                      <span className="font-medium">
+                        {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
+                          ? `Hari ini hari libur sekolah (${todayWIB.formattedDate}). Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`
+                          : `Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`}
+                      </span>
+                    </div>
                   </div>
                 )}
+
+                {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
+                {activeTasks.length > 0 && (
+                  <TaskBanner tasks={activeTasks} />
+                )}
+
+                {/* Schedule Blocks (MBG, Piket, Doa & Bacaan Injil, Jadwal Pelajaran) */}
+                <ScheduleBlocks
+                  mbg={activeMbg}
+                  piket={activePiket}
+                  doa={activeDoa}
+                  pelajaran={activePelajaran}
+                  dowName={activeDow}
+                />
               </div>
+            </section>
 
-              {/* Prev / Next Day Steppers with accessible touch targets */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => handleStepDay(-1)}
-                  aria-label="Jadwal Hari Sebelumnya"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
-                  title="Hari Sebelumnya"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span className="inline">Sebelumnya</span>
-                </button>
-                <button
-                  onClick={() => handleStepDay(1)}
-                  aria-label="Jadwal Hari Berikutnya"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
-                  title="Hari Berikutnya"
-                >
-                  <span className="inline">Berikutnya</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Dynamic Day Content with smooth fade-in */}
-            <div
-              key={activeISO}
-              className="flex-1 flex flex-col gap-2.5 min-h-0 animate-fade-in"
-            >
-              {/* Smart Notice if displayed date differs from WIB date */}
-              {activeISO !== todayWIB.iso && !isManualDate && (
-                <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#142A1E] border border-emerald-300 dark:border-[#205C38] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center gap-2 flex-shrink-0 shadow-2xs">
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
-                    <span className="font-medium">
-                      {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
-                        ? `Hari ini hari libur sekolah (${todayWIB.formattedDate}). Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`
-                        : `Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
-              {activeTasks.length > 0 && (
-                <TaskBanner tasks={activeTasks} />
-              )}
-
-              {/* Schedule Blocks (MBG, Piket, Doa & Bacaan Injil, Jadwal Pelajaran) */}
-              <ScheduleBlocks
-                mbg={activeMbg}
-                piket={activePiket}
-                doa={activeDoa}
-                pelajaran={activePelajaran}
-                dowName={activeDow}
+            {/* RIGHT: CALENDAR, BIRTHDAYS & SONG SCHEDULE (Col Span 4-5) */}
+            <aside className="lg:col-span-5 xl:col-span-4 flex flex-col h-auto lg:h-full min-h-0 w-full justify-between gap-2.5 overflow-visible lg:overflow-hidden">
+              <CalendarSection
+                viewYear={viewYear}
+                viewMonth={viewMonth}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                onToday={handleJumpToToday}
+                previewISO={activeISO}
+                todayISO={todayWIB.iso}
+                selectedISO={selectedISO}
+                onSelectDate={iso => {
+                  setSelectedISO(iso);
+                  setActiveISO(iso);
+                  setIsManualDate(true);
+                }}
+                hasDataFn={hasDataForISO}
+                hasTaskFn={hasTasksForISO}
+                hasBirthdayFn={getBirthdaysForISO}
+                birthdaysToday={activeBirthdays}
               />
-            </div>
-          </section>
 
-          {/* RIGHT: CALENDAR, BIRTHDAYS & SONG SCHEDULE (Col Span 4-5) */}
-          <aside className="lg:col-span-5 xl:col-span-4 flex flex-col h-auto lg:h-full min-h-0 w-full justify-between gap-2.5 overflow-visible lg:overflow-hidden">
-            <CalendarSection
-              viewYear={viewYear}
-              viewMonth={viewMonth}
-              onPrevMonth={handlePrevMonth}
-              onNextMonth={handleNextMonth}
-              onToday={handleJumpToToday}
-              previewISO={activeISO}
-              todayISO={todayWIB.iso}
-              selectedISO={selectedISO}
-              onSelectDate={iso => {
-                setSelectedISO(iso);
-                setActiveISO(iso);
-                setIsManualDate(true);
-              }}
-              hasDataFn={hasDataForISO}
-              hasTaskFn={hasTasksForISO}
-              hasBirthdayFn={getBirthdaysForISO}
-              birthdaysToday={activeBirthdays}
-            />
-
-            {/* Song Schedule Card */}
-            <SongScheduleList currentDate={safeActiveDate} />
-          </aside>
-        </main>
+              {/* Song Schedule Card */}
+              <SongScheduleList currentDate={safeActiveDate} />
+            </aside>
+          </main>
+        )}
       </div>
 
       {/* Offline Status Toast */}
