@@ -30,6 +30,9 @@ export interface PeriodItem {
   rawSummary?: string;
   hasTask?: boolean;
   taskText?: string;
+  taskTitle?: string;
+  taskDetails?: string;
+  hasDetails?: boolean;
   location?: string;
 }
 
@@ -37,6 +40,9 @@ export interface TaskItem {
   id?: string;
   subject: string;
   taskText: string;
+  taskTitle?: string;
+  taskDetails?: string;
+  hasDetails?: boolean;
   time?: string;
   dueDate?: string;
 }

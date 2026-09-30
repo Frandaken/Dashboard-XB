@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem } from '../types';
 
 interface ScheduleBlocksProps {
@@ -16,6 +17,15 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   pelajaran = [],
   dowName
 }) => {
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+
+  const toggleTaskExpand = (key: string) => {
+    setExpandedTasks(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   const bacaanText = doa
     ? [doa.bacaanInjil, doa.bab && doa.ayat ? `${doa.bab}:${doa.ayat}` : ''].filter(Boolean).join(' ')
     : '';
@@ -235,11 +245,52 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                   </div>
 
                   {/* Task Notice if present */}
-                  {p.hasTask && p.taskText ? (
-                    <div className="text-xs font-medium text-[#78350F] dark:text-[#FDE68A] break-words leading-relaxed mt-2 bg-[#FEF3C7]/80 dark:bg-[#2A210F] p-2 rounded-lg border border-[#FCD34D]/80 dark:border-[#5C4517]">
-                      <strong>Catatan:</strong> {p.taskText}
-                    </div>
-                  ) : (
+                  {p.hasTask && (p.taskTitle || p.taskText) ? (() => {
+                    const taskKey = `${p.cleanName}_${p.time}_${idx}`;
+                    const isExpanded = !!expandedTasks[taskKey];
+                    const title = p.taskTitle || (p.taskText ? p.taskText.split('\n')[0] : '');
+                    const details = p.taskDetails || (p.taskText && p.taskText.includes('\n')
+                      ? p.taskText.split('\n').slice(1).join('\n').trim()
+                      : '');
+                    const hasDetails = p.hasDetails !== undefined ? p.hasDetails : !!details;
+
+                    return (
+                      <div className="mt-2 bg-[#FEF3C7]/90 dark:bg-[#2A210F] p-2 sm:p-2.5 rounded-lg border border-[#FCD34D]/80 dark:border-[#5C4517] text-xs">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <div
+                            onClick={hasDetails ? () => toggleTaskExpand(taskKey) : undefined}
+                            className={`font-medium text-[#78350F] dark:text-[#FDE68A] leading-snug break-words flex-1 ${
+                              hasDetails ? 'cursor-pointer hover:text-[#B45309] dark:hover:text-[#FBBF24] transition-colors' : ''
+                            }`}
+                          >
+                            <strong className="font-bold text-[#92400E] dark:text-[#FBBF24]">Tugas:</strong> {title}
+                          </div>
+                          {hasDetails && (
+                            <button
+                              type="button"
+                              onClick={() => toggleTaskExpand(taskKey)}
+                              aria-expanded={isExpanded}
+                              aria-label={isExpanded ? 'Tutup detail penugasan' : 'Lihat detail penugasan'}
+                              className="flex items-center gap-0.5 text-[10px] font-bold text-[#92400E] dark:text-[#FBBF24] hover:text-[#78350F] dark:hover:text-[#FDE68A] px-1.5 py-0.5 rounded bg-white/70 dark:bg-[#1E170F] border border-[#FCD34D] dark:border-[#6B4B18] transition cursor-pointer flex-shrink-0"
+                            >
+                              <span>{isExpanded ? 'Tutup' : 'Detail'}</span>
+                              <ChevronDown
+                                className={`w-3 h-3 transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </div>
+
+                        {hasDetails && isExpanded && (
+                          <div className="mt-2 pt-1.5 border-t border-[#FCD34D]/60 dark:border-[#4A3714] text-[11px] text-stone-800 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/80 dark:bg-[#1C160E] p-2 rounded border border-[#FCD34D]/40 dark:border-[#3D2C10] animate-fade-in">
+                            {details}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })() : (
                     <div className="h-1.5" />
                   )}
                 </div>

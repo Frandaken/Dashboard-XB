@@ -1,6 +1,50 @@
 import ICAL from 'ical.js';
 import { PeriodItem, TaskItem } from '../types';
 
+export interface ParsedTask {
+  title: string;
+  details?: string;
+  hasDetails: boolean;
+}
+
+export function parseTaskDescription(rawDesc: string): ParsedTask {
+  if (!rawDesc) return { title: '', hasDetails: false };
+
+  let text = rawDesc
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<div[^>]*>/gi, '')
+    .replace(/<span[^>]*>/gi, '')
+    .replace(/<\/span>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+
+  const lines = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  if (lines.length === 0) {
+    return { title: rawDesc.trim(), hasDetails: false };
+  }
+
+  const title = lines[0];
+  const details = lines.slice(1).join('\n').trim();
+
+  return {
+    title,
+    details: details || undefined,
+    hasDetails: !!details
+  };
+}
+
 export function parsePelajaranICS(
   icsText: string,
   rangeStart?: Date,
@@ -65,13 +109,19 @@ export function parsePelajaranICS(
       const jpMatch = summary.match(/JP\s*\d+(?:\s*-\s*\d+)?/i);
       const sessionLabel = jpMatch ? jpMatch[0].toUpperCase() : '';
 
+      const parsedTask = desc ? parseTaskDescription(desc) : null;
+      const fullTaskText = parsedTask ? (parsedTask.details ? `${parsedTask.title}\n${parsedTask.details}` : parsedTask.title) : '';
+
       const period: PeriodItem = {
         time: startTime,
         cleanName: cleanName,
         summary: sessionLabel ? `${cleanName} (${sessionLabel})` : summary,
         rawSummary: summary,
         hasTask: !!desc,
-        taskText: desc,
+        taskText: fullTaskText,
+        taskTitle: parsedTask?.title,
+        taskDetails: parsedTask?.details,
+        hasDetails: parsedTask?.hasDetails || false,
         location: ev.location || ''
       };
 
@@ -80,16 +130,25 @@ export function parsePelajaranICS(
       }
       pelajaranByDate[dateKey].push(period);
 
-      if (desc) {
+      if (desc && parsedTask) {
         if (!tasksByDate[dateKey]) {
           tasksByDate[dateKey] = [];
         }
-        tasksByDate[dateKey].push({
-          id: `${ev.uid || 'task'}_${dateKey}_${startTime}`,
-          subject: cleanName,
-          taskText: desc,
-          time: startTime
-        });
+        // Deduplicate identical tasks for the same subject on the same day (e.g. multiple JPs of the same class)
+        const isDuplicate = tasksByDate[dateKey].some(
+          t => t.subject === cleanName && t.taskTitle === parsedTask.title && t.taskDetails === parsedTask.details
+        );
+        if (!isDuplicate) {
+          tasksByDate[dateKey].push({
+            id: `${ev.uid || 'task'}_${dateKey}_${startTime}`,
+            subject: cleanName,
+            taskText: fullTaskText,
+            taskTitle: parsedTask.title,
+            taskDetails: parsedTask.details,
+            hasDetails: parsedTask.hasDetails,
+            time: startTime
+          });
+        }
       }
     };
 
