@@ -53,9 +53,9 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         {/* 1. MAKAN BERGIZI GRATIS (MBG) */}
         <div
           id="card-mbg"
-          className="bg-white dark:bg-[#181C23] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors"
+          className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors"
         >
-          <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#2E3744]">
+          <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222]">
             <span className="w-2.5 h-2.5 rounded-full bg-[#E0602F] dark:bg-[#FB923C] flex-shrink-0 ring-2 ring-[#E0602F]/20" />
             <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
               Makan Bergizi Gratis (MBG)
@@ -67,7 +67,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               {mbg.petugas.map((name, i) => (
                 <span
                   key={i}
-                  className="px-2.5 py-1 rounded-full bg-[#FFEDD5] dark:bg-[#3D2218] text-[#9A3412] dark:text-[#FDBA74] font-semibold text-xs border border-[#FDBA74] dark:border-[#6B3722]"
+                  className="px-2.5 py-1 rounded-full bg-[#FFEDD5] dark:bg-[#241208] text-[#9A3412] dark:text-[#FDBA74] font-semibold text-xs border border-[#FDBA74] dark:border-[#4A200E]"
                 >
                   {name}
                 </span>
@@ -83,16 +83,16 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         {/* 2. PIKET KEBERSIHAN */}
         <div
           id="card-piket"
-          className="bg-white dark:bg-[#181C23] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors"
+          className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors"
         >
-          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#2E3744]">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222]">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] dark:bg-[#FBBF24] flex-shrink-0 ring-2 ring-[#D97706]/20" />
               <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
                 Piket Kebersihan
               </h3>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-[#FEF9C3] dark:bg-[#332A17] text-[#854D0E] dark:text-[#FDE68A] border border-[#FACC15] dark:border-[#524120]">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-[#FEF9C3] dark:bg-[#211B05] text-[#854D0E] dark:text-[#FDE68A] border border-[#FACC15] dark:border-[#47360A]">
               Hari {dowName}
             </span>
           </div>
@@ -102,7 +102,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               {piket.petugas.map((name, i) => (
                 <span
                   key={i}
-                  className="px-2.5 py-1 rounded-full bg-[#FEF9C3] dark:bg-[#332A17] text-[#854D0E] dark:text-[#FDE68A] font-semibold text-xs border border-[#FACC15] dark:border-[#524120]"
+                  className="px-2.5 py-1 rounded-full bg-[#FEF9C3] dark:bg-[#211B05] text-[#854D0E] dark:text-[#FDE68A] font-semibold text-xs border border-[#FACC15] dark:border-[#47360A]"
                 >
                   {name}
                 </span>
@@ -119,9 +119,9 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
       {/* ROW 2: PETUGAS DOA & BACAAN INJIL */}
       <div
         id="card-doa"
-        className="bg-white dark:bg-[#181C23] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-3 sm:p-3.5 shadow-xs transition-colors flex-shrink-0"
+        className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 shadow-xs transition-colors flex-shrink-0"
       >
-        <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#2E3744] flex-wrap">
+        <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222] flex-wrap">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] dark:bg-[#34D399] flex-shrink-0 ring-2 ring-[#16A34A]/20" />
             <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
@@ -133,7 +133,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300">
                 Bacaan Injil:
               </span>
-              <span className="font-black text-base sm:text-lg lg:text-xl text-[#14532D] dark:text-[#6EE7B7] bg-[#DCFCE7] dark:bg-[#143522] px-4 py-1.5 rounded-xl border border-[#86EFAC] dark:border-[#245D3B] shadow-xs tracking-normal">
+              <span className="font-black text-base sm:text-lg lg:text-xl text-[#14532D] dark:text-[#34D399] bg-[#DCFCE7] dark:bg-[#082216] px-4 py-1.5 rounded-xl border border-[#86EFAC] dark:border-[#0E492B] shadow-xs tracking-normal">
                 {bacaanText}
               </span>
             </div>
@@ -150,7 +150,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
           ].map((role, idx) => (
             <div
               key={idx}
-              className="bg-[#FAF7F2] dark:bg-[#202630] border border-[#D8D2C5] dark:border-[#333E4E] rounded-lg p-2.5 flex flex-col justify-between"
+              className="bg-[#FAF7F2] dark:bg-[#121212] border border-[#D8D2C5] dark:border-[#222222] rounded-lg p-2.5 flex flex-col justify-between"
             >
               <span className="text-[11px] font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wide">
                 {role.label}
@@ -166,16 +166,16 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
       {/* ROW 3: JADWAL PELAJARAN (KEEP EACH SUBJECT / SCHEDULE SEPARATE FOR MAXIMUM CLARITY) */}
       <div
         id="card-pelajaran"
-        className="bg-white dark:bg-[#181C23] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-3 sm:p-3.5 shadow-xs flex-1 min-h-0 flex flex-col transition-colors overflow-hidden"
+        className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 shadow-xs flex-1 min-h-0 flex flex-col transition-colors overflow-hidden"
       >
-        <div className="flex items-center justify-between mb-2.5 pb-1.5 border-b border-[#E8E2D5] dark:border-[#2E3744] flex-shrink-0">
+        <div className="flex items-center justify-between mb-2.5 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222] flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED] dark:bg-[#A78BFA] flex-shrink-0 ring-2 ring-[#7C3AED]/20" />
             <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
               Jadwal Pelajaran
             </h3>
           </div>
-          <span className="text-xs sm:text-sm font-bold text-[#581C87] dark:text-[#E9D5FF] bg-[#F3E8FF] dark:bg-[#2E1A47] px-3 py-1 rounded-md border border-[#D8B4FE] dark:border-[#582B8A]">
+          <span className="text-xs sm:text-sm font-bold text-[#581C87] dark:text-[#E9D5FF] bg-[#F3E8FF] dark:bg-[#1C0D2E] px-3 py-1 rounded-md border border-[#D8B4FE] dark:border-[#3D1A63]">
             {totalJamPelajaran} Jam Pelajaran
           </span>
         </div>
@@ -199,10 +199,10 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                   key={`${p.cleanName}-${p.time}-${idx}`}
                   className={`p-3 rounded-xl border flex flex-col justify-between transition-shadow shadow-2xs ${
                     p.hasTask
-                      ? 'bg-[#FEF9EE] dark:bg-[#2D2314] border-[#FCD34D] dark:border-[#78541C]'
+                      ? 'bg-[#FEF9EE] dark:bg-[#1C1508] border-[#FCD34D] dark:border-[#4D380E]'
                       : isNonAcademicFriday
-                      ? 'bg-[#F0FDF4] dark:bg-[#14261C] border-[#BBF7D0] dark:border-[#234E35]'
-                      : 'bg-[#FAF7F2] dark:bg-[#202630] border-[#D8D2C5] dark:border-[#333E4E] hover:border-[#2C4E3A]/50 dark:hover:border-[#34D399]/50'
+                      ? 'bg-[#F0FDF4] dark:bg-[#061C12] border-[#BBF7D0] dark:border-[#0E492B]'
+                      : 'bg-[#FAF7F2] dark:bg-[#121212] border-[#D8D2C5] dark:border-[#222222] hover:border-[#2C4E3A]/50 dark:hover:border-[#34D399]/50'
                   }`}
                 >
                   {/* Header: Sesi index badge & Time Badge */}
@@ -211,26 +211,26 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                       <span
                         className={`w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center flex-shrink-0 ${
                           isNonAcademicFriday
-                            ? 'bg-[#DCFCE7] dark:bg-[#1A3D2A] text-[#14532D] dark:text-[#86EFAC] ring-1 ring-[#86EFAC]/40'
-                            : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200'
+                            ? 'bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] ring-1 ring-[#34D399]/40'
+                            : 'bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-200'
                         }`}
                         title={isNonAcademicFriday ? 'Kegiatan Pembiasaan (Jam ke-0)' : `Jam Pelajaran ke-${sessionNumber}`}
                       >
                         {sessionNumber}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-[#14181F] text-stone-800 dark:text-stone-200 font-mono font-semibold text-xs border border-[#D8D2C5] dark:border-[#3A4555] tracking-tight">
+                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-[#161616] text-stone-800 dark:text-stone-200 font-mono font-semibold text-xs border border-[#D8D2C5] dark:border-[#262626] tracking-tight">
                         {p.time}
                       </span>
                     </div>
 
                     {p.hasTask && (
-                      <span className="px-2 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#4E3D19] text-[#78350F] dark:text-[#FDE68A] font-bold text-[10px] uppercase border border-[#FCD34D] dark:border-[#855D1C]">
+                      <span className="px-2 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#261B06] text-[#78350F] dark:text-[#FDE68A] font-bold text-[10px] uppercase border border-[#FCD34D] dark:border-[#523A0F]">
                         Tugas
                       </span>
                     )}
 
                     {isNonAcademicFriday && !p.hasTask && (
-                      <span className="px-2 py-0.5 rounded-md bg-[#DCFCE7] dark:bg-[#1A3D2A] text-[#14532D] dark:text-[#86EFAC] font-bold text-[10px] uppercase border border-[#86EFAC] dark:border-[#265E3E]">
+                      <span className="px-2 py-0.5 rounded-md bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] font-bold text-[10px] uppercase border border-[#86EFAC] dark:border-[#0E492B]">
                         Pembiasaan
                       </span>
                     )}
@@ -255,7 +255,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                     const hasDetails = p.hasDetails !== undefined ? p.hasDetails : !!details;
 
                     return (
-                      <div className="mt-2 bg-[#FEF3C7]/90 dark:bg-[#2A210F] p-2 sm:p-2.5 rounded-lg border border-[#FCD34D]/80 dark:border-[#5C4517] text-xs">
+                      <div className="mt-2 bg-[#FEF3C7]/90 dark:bg-[#1A1205] p-2 sm:p-2.5 rounded-lg border border-[#FCD34D]/80 dark:border-[#422C05] text-xs">
                         <div className="flex items-start justify-between gap-1.5">
                           <div
                             onClick={hasDetails ? () => toggleTaskExpand(taskKey) : undefined}
@@ -271,7 +271,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                               onClick={() => toggleTaskExpand(taskKey)}
                               aria-expanded={isExpanded}
                               aria-label={isExpanded ? 'Tutup detail penugasan' : 'Lihat detail penugasan'}
-                              className="flex items-center gap-0.5 text-[10px] font-bold text-[#92400E] dark:text-[#FBBF24] hover:text-[#78350F] dark:hover:text-[#FDE68A] px-1.5 py-0.5 rounded bg-white/70 dark:bg-[#1E170F] border border-[#FCD34D] dark:border-[#6B4B18] transition cursor-pointer flex-shrink-0"
+                              className="flex items-center gap-0.5 text-[10px] font-bold text-[#92400E] dark:text-[#FBBF24] hover:text-[#78350F] dark:hover:text-[#FDE68A] px-1.5 py-0.5 rounded bg-white/70 dark:bg-[#261B06] border border-[#FCD34D] dark:border-[#523A0F] transition cursor-pointer flex-shrink-0"
                             >
                               <span>{isExpanded ? 'Tutup' : 'Detail'}</span>
                               <ChevronDown
@@ -284,7 +284,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                         </div>
 
                         {hasDetails && isExpanded && (
-                          <div className="mt-2 pt-1.5 border-t border-[#FCD34D]/60 dark:border-[#4A3714] text-[11px] text-stone-800 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/80 dark:bg-[#1C160E] p-2 rounded border border-[#FCD34D]/40 dark:border-[#3D2C10] animate-fade-in">
+                          <div className="mt-2 pt-1.5 border-t border-[#FCD34D]/60 dark:border-[#382606] text-[11px] text-stone-800 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/80 dark:bg-[#140D04] p-2 rounded border border-[#FCD34D]/40 dark:border-[#2E1E05] animate-fade-in">
                             {details}
                           </div>
                         )}

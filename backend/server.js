@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express from "express";
+import fs from "fs";
+import path from "path";
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -14,6 +16,8 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+app.use(express.json());
 
 // Upstream Google Calendar feeds
 const CALENDAR_FEEDS = {
@@ -132,6 +136,26 @@ app.get('/api/sheets/:key', async (req, res) => {
 app.post('/api/refresh', (req, res) => {
   cache.clear();
   res.json({ ok: true, message: 'Cache cleared' });
+});
+
+// Endpoint to persist generated kelompok CSV in exports folder
+app.post('/api/kelompok/export', (req, res) => {
+  try {
+    const { filename, csvContent } = req.body || {};
+    if (!filename || !csvContent) {
+      return res.status(400).json({ error: 'filename and csvContent are required' });
+    }
+    const exportDir = process.env.EXPORT_DIR || path.join(process.cwd(), 'exports');
+    if (!fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir, { recursive: true });
+    }
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(exportDir, safeFilename);
+    fs.writeFileSync(filePath, csvContent, 'utf8');
+    return res.json({ ok: true, filename: safeFilename, path: filePath });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, '0.0.0.0', () => {

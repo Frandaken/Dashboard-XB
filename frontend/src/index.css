@@ -2,10 +2,29 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Glass backdrop blur tint supporting dynamic app theme (Light / OLED Black) */
+.modal-backdrop-tint {
+  background-color: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+html.dark .modal-backdrop-tint,
+.dark .modal-backdrop-tint {
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+  }
+
+  html.dark,
+  .dark body,
+  .dark #root {
+    color-scheme: dark;
+    background-color: #000000;
   }
 
   body {
@@ -20,7 +39,7 @@
   }
 
   .dark body {
-    background-color: #0F1216;
+    background-color: #000000;
     color: #F8FAFC;
   }
 

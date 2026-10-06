@@ -19,6 +19,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(express.json());
+
 // Upstream Google Calendar feeds (Notice: penugasan calendar link is completely removed as requested)
 const CALENDAR_FEEDS: Record<string, string> = {
   pelajaran: "https://calendar.google.com/calendar/ical/a4fd56ccb6ac7cde9478e4d863191dd53cd12c6110fe380d6bf279da0e44dc8e%40group.calendar.google.com/private-f67cd9352a27790460116ba8a612434c/basic.ics",
@@ -139,11 +141,34 @@ app.post('/api/refresh', (req, res) => {
   res.json({ ok: true, message: 'Cache cleared' });
 });
 
+// Endpoint to persist generated kelompok CSV in exports folder
+app.post('/api/kelompok/export', (req, res) => {
+  try {
+    const { filename, csvContent } = req.body || {};
+    if (!filename || !csvContent) {
+      return res.status(400).json({ error: 'filename and csvContent are required' });
+    }
+    const exportDir = process.env.EXPORT_DIR || path.join(process.cwd(), 'backend', 'exports');
+    if (!fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir, { recursive: true });
+    }
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(exportDir, safeFilename);
+    fs.writeFileSync(filePath, csvContent, 'utf8');
+    return res.json({ ok: true, filename: safeFilename, path: filePath });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       root: path.resolve('frontend'),
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

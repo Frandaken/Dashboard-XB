@@ -8,9 +8,12 @@ import { SongScheduleList } from './components/SongScheduleList';
 import { DayDetailModal } from './components/DayDetailModal';
 import { HamburgerMenuModal } from './components/HamburgerMenuModal';
 import { AllSongsModal } from './components/AllSongsModal';
+import { WheelOfNamesModal } from './components/WheelOfNamesModal';
+import { GroupGeneratorModal } from './components/GroupGeneratorModal';
 import { StatusBanner } from './components/StatusBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardSkeleton } from './components/DashboardSkeleton';
+import { NotFoundUI } from './components/NotFoundUI';
 import { ClassDataStore } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
@@ -99,6 +102,41 @@ export default function App() {
   const [activeISO, setActiveISO] = useState<string>(() => defaultSchoolISO);
   const [isManualDate, setIsManualDate] = useState<boolean>(false);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
+
+  const [isRandomPickerOpen, setIsRandomPickerOpen] = useState<boolean>(false);
+  const [isGroupGeneratorOpen, setIsGroupGeneratorOpen] = useState<boolean>(false);
+
+  // 404 Route state & browser pathname listener
+  const [is404, setIs404] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname;
+      return p !== '' && p !== '/' && p !== '/index.html';
+    }
+    return false;
+  });
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    return typeof window !== 'undefined' ? window.location.pathname : '/';
+  });
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      setCurrentPath(path);
+      const notFound = path !== '' && path !== '/' && path !== '/index.html';
+      setIs404(notFound);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  const handleGoHome = () => {
+    if (typeof window !== 'undefined' && window.history) {
+      window.history.pushState({}, '', '/');
+    }
+    setIs404(false);
+    setCurrentPath('/');
+  };
 
   const [viewYear, setViewYear] = useState<number>(() => todayWIB.year);
   const [viewMonth, setViewMonth] = useState<number>(() => todayWIB.month);
@@ -352,9 +390,53 @@ export default function App() {
     return new Date(Date.UTC(activeInfo.year, activeInfo.month, activeInfo.day, 12, 0, 0));
   }, [activeInfo.year, activeInfo.month, activeInfo.day]);
 
+  if (is404) {
+    return (
+      <>
+        <NotFoundUI
+          onGoHome={handleGoHome}
+          onOpenMenu={() => setIsMenuOpen(true)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          currentPath={currentPath}
+        />
+
+        {/* Keep Hamburger Menu & Modals accessible from 404 page */}
+        <HamburgerMenuModal
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          onOpenSongLyrics={() => setIsAllSongsOpen(true)}
+          onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+          onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+          onJumpToToday={() => {
+            handleGoHome();
+            handleJumpToToday();
+          }}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <WheelOfNamesModal
+          isOpen={isRandomPickerOpen}
+          onClose={() => setIsRandomPickerOpen(false)}
+        />
+
+        <GroupGeneratorModal
+          isOpen={isGroupGeneratorOpen}
+          onClose={() => setIsGroupGeneratorOpen(false)}
+        />
+
+        <AllSongsModal
+          isOpen={isAllSongsOpen}
+          onClose={() => setIsAllSongsOpen(false)}
+        />
+      </>
+    );
+  }
+
   return (
     // 5. Overflow scrolling on mobile enabled (min-h-screen overflow-y-auto on mobile, desktop keeps clean full viewport)
-    <div className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#FAF7F2] dark:bg-[#0F1216] text-[#1C1917] dark:text-[#F8FAFC] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#FAF7F2] dark:bg-black text-[#1C1917] dark:text-[#F8FAFC] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200">
       <div className="max-w-[1600px] w-full mx-auto flex flex-col flex-1 min-h-0 gap-2.5">
         {/* Top Header with Dark Mode Toggle & Hamburger Button */}
         <Header
@@ -383,7 +465,7 @@ export default function App() {
               className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden"
             >
               {/* Date Title with Navigation */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#2E3744] flex-shrink-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#222222] flex-shrink-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="w-3 h-3 rounded-full bg-[#2C4E3A] dark:bg-[#34D399] ring-2 ring-[#2C4E3A]/20" />
                   <h2
@@ -393,12 +475,12 @@ export default function App() {
                     {activeInfo.formattedDate}
                   </h2>
                   {activeISO === todayWIB.iso ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E]">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] border border-[#86EFAC] dark:border-[#0E492B]">
                       Hari Ini
                     </span>
                   ) : (
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#3D2C15] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#261B06] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-[#523A0F]">
                         {(todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6) && activeISO === defaultSchoolISO
                           ? `Jadwal ${activeInfo.dowName} Depan`
                           : 'Sedang Ditampilkan'}
@@ -408,7 +490,7 @@ export default function App() {
                           setActiveISO(todayWIB.iso);
                           setIsManualDate(true);
                         }}
-                        className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#6EE7B7] border border-[#86EFAC] dark:border-[#265E3E] hover:bg-[#BBF7D0] transition cursor-pointer"
+                        className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] border border-[#86EFAC] dark:border-[#0E492B] hover:bg-[#BBF7D0] transition cursor-pointer"
                         title={`Lihat Jadwal Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
                         aria-label="Kembali ke jadwal hari ini"
                       >
@@ -423,7 +505,7 @@ export default function App() {
                   <button
                     onClick={() => handleStepDay(-1)}
                     aria-label="Jadwal Hari Sebelumnya"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-[#FAF7F2] dark:hover:bg-[#1C1C1C] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
                     title="Hari Sebelumnya"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -432,7 +514,7 @@ export default function App() {
                   <button
                     onClick={() => handleStepDay(1)}
                     aria-label="Jadwal Hari Berikutnya"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#181C23] hover:bg-[#FAF7F2] dark:hover:bg-[#202630] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-[#FAF7F2] dark:hover:bg-[#1C1C1C] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
                     title="Hari Berikutnya"
                   >
                     <span className="inline">Berikutnya</span>
@@ -448,7 +530,7 @@ export default function App() {
               >
                 {/* Smart Notice if displayed date differs from WIB date */}
                 {activeISO !== todayWIB.iso && !isManualDate && (
-                  <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#142A1E] border border-emerald-300 dark:border-[#205C38] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center gap-2 flex-shrink-0 shadow-2xs">
+                  <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#071F14] border border-emerald-300 dark:border-[#0E492B] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center gap-2 flex-shrink-0 shadow-2xs">
                     <div className="flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
                       <span className="font-medium">
@@ -499,7 +581,11 @@ export default function App() {
               />
 
               {/* Song Schedule Card */}
-              <SongScheduleList currentDate={safeActiveDate} />
+              <SongScheduleList
+                currentDate={safeActiveDate}
+                darkMode={darkMode}
+                onToggleDarkMode={toggleDarkMode}
+              />
             </aside>
           </main>
         )}
@@ -513,15 +599,31 @@ export default function App() {
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         onOpenSongLyrics={() => setIsAllSongsOpen(true)}
+        onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+        onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
         onJumpToToday={handleJumpToToday}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
+      />
+
+      {/* Random Name Picker (Wheel of Names) Modal */}
+      <WheelOfNamesModal
+        isOpen={isRandomPickerOpen}
+        onClose={() => setIsRandomPickerOpen(false)}
+      />
+
+      {/* Random Group Name Picker (Team Generator) Modal */}
+      <GroupGeneratorModal
+        isOpen={isGroupGeneratorOpen}
+        onClose={() => setIsGroupGeneratorOpen(false)}
       />
 
       {/* All Songs Lyrics Modal */}
       <AllSongsModal
         isOpen={isAllSongsOpen}
         onClose={() => setIsAllSongsOpen(false)}
+        darkMode={darkMode}
+        onToggleDarkMode={toggleDarkMode}
       />
 
       {/* Day Detail Modal (When user clicks on a calendar date) */}
@@ -535,6 +637,8 @@ export default function App() {
           pelajaran={selectedDetails.pelajaran}
           tasks={selectedDetails.tasks}
           birthdays={selectedDetails.birthdays}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
       )}
     </div>

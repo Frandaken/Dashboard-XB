@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Music, User } from 'lucide-react';
 import { SONG_LYRICS_DB, formatLyricsVerses } from '../data/songSchedule';
 
@@ -7,14 +8,43 @@ interface SongLyricsModalProps {
   onClose: () => void;
   songTitle: string;
   weekNumber?: number;
+  darkMode?: boolean;
 }
 
 export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
   isOpen,
   onClose,
   songTitle,
-  weekNumber
+  weekNumber,
+  darkMode
 }) => {
+  // Real-time tracking of app theme (Light mode / OLED black)
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof darkMode === 'boolean') return darkMode;
+    if (typeof document !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof darkMode === 'boolean') {
+      setIsDark(darkMode);
+      return;
+    }
+    const checkDark = () => {
+      if (typeof document !== 'undefined') {
+        setIsDark(document.documentElement.classList.contains('dark'));
+      }
+    };
+    checkDark();
+    const observer = new MutationObserver(checkDark);
+    if (typeof document !== 'undefined') {
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+    return () => observer.disconnect();
+  }, [darkMode]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -37,21 +67,26 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="song-lyrics-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 modal-backdrop-tint transition-colors duration-200 animate-in fade-in duration-150"
+      style={{
+        backgroundColor: isDark ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.25)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)'
+      }}
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#FAF7F2] dark:bg-[#161A20] text-[#1C1917] dark:text-[#F8FAFC] rounded-2xl border border-[#D8D2C5] dark:border-[#2E3744] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-[#FAF7F2] dark:bg-black text-[#1C1917] dark:text-[#F8FAFC] rounded-2xl border border-[#D8D2C5] dark:border-[#222222] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#D8D2C5] dark:border-[#2E3744] bg-white dark:bg-[#1C212A] flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0A0A0A] flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#2C4E3A] dark:bg-[#34D399] text-white dark:text-[#0F172A] flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-[#2C4E3A] dark:bg-[#34D399] text-white dark:text-[#0A0A0A] flex items-center justify-center shadow-xs">
               <Music className="w-5 h-5" />
             </div>
             <div>
@@ -71,18 +106,20 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Tutup Lirik Lagu"
-            className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#252C37] hover:bg-stone-100 dark:hover:bg-[#2E3744] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onClose}
+              aria-label="Tutup Lirik Lagu"
+              className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1C1C1C] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Lyrics body with touch scroll */}
         <div className="p-4 sm:p-5 overflow-y-auto text-center flex-1">
-          <div className="bg-white dark:bg-[#1C212A] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-5 sm:p-6 shadow-2xs">
+          <div className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-5 sm:p-6 shadow-2xs">
             {verses.map((verse, vIdx) => (
               <div key={vIdx} className={`font-serif text-sm sm:text-base text-stone-900 dark:text-stone-100 ${vIdx > 0 ? "mt-3.5 pt-0.5" : ""}`}>
                 {verse.map((line, lIdx) =>
@@ -100,15 +137,21 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#2E3744] bg-[#FAF7F2] dark:bg-[#1C212A] flex justify-end flex-shrink-0">
+        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#222222] bg-[#FAF7F2] dark:bg-[#0A0A0A] flex justify-end flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-[#2C4E3A] dark:bg-[#34D399] hover:bg-[#203a2a] dark:hover:bg-[#2EB882] text-white dark:text-[#0F172A] text-xs font-bold transition cursor-pointer shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+            className="px-4 py-2 rounded-lg bg-[#2C4E3A] dark:bg-[#34D399] hover:bg-[#203a2a] dark:hover:bg-[#2EB882] text-white dark:text-[#0A0A0A] text-xs font-bold transition cursor-pointer shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
           >
-            Selesai Membaca
+            Tutup
           </button>
         </div>
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 };

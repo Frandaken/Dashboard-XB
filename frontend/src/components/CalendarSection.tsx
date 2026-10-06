@@ -43,11 +43,11 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
   return (
     <div
       id="calendar-panel"
-      className="bg-white dark:bg-[#181C23] border border-[#D8D2C5] dark:border-[#2E3744] rounded-xl p-3 sm:p-3.5 flex flex-col justify-between shadow-xs transition-colors"
+      className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 flex flex-col justify-between shadow-xs transition-colors"
     >
       <div>
         {/* Calendar Header */}
-        <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-[#E8E2D5] dark:border-[#2E3744]">
+        <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-[#E8E2D5] dark:border-[#222222]">
           <div className="flex items-center gap-2">
             <CalIcon className="w-4 h-4 text-[#2C4E3A] dark:text-[#34D399]" />
             <h2 className="font-display font-bold text-sm sm:text-base text-stone-900 dark:text-white">
@@ -60,7 +60,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-prev"
               onClick={onPrevMonth}
               aria-label="Bulan Sebelumnya"
-              className="w-8 h-8 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#202630] hover:bg-stone-100 dark:hover:bg-[#2D3542] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="w-8 h-8 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1A1A1A] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -73,7 +73,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-next"
               onClick={onNextMonth}
               aria-label="Bulan Berikutnya"
-              className="w-8 h-8 rounded-lg border border-[#D8D2C5] dark:border-[#3A4555] bg-white dark:bg-[#202630] hover:bg-stone-100 dark:hover:bg-[#2D3542] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="w-8 h-8 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1A1A1A] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -82,7 +82,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-today"
               onClick={onToday}
               aria-label="Lompat ke tanggal hari ini"
-              className="text-xs font-bold px-2.5 py-1.5 rounded-lg border border-[#86EFAC] dark:border-[#2C573A] bg-[#DCFCE7] dark:bg-[#1E3A29] text-[#14532D] dark:text-[#6EE7B7] hover:bg-[#BBF7D0] dark:hover:bg-[#264A35] transition ml-1 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="text-xs font-bold px-2.5 py-1.5 rounded-lg border border-[#86EFAC] dark:border-[#0E492B] bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] hover:bg-[#BBF7D0] dark:hover:bg-[#0C3322] transition ml-1 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
             >
               Hari Ini
             </button>
@@ -123,23 +123,23 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
 
             // Condition 1: BOTH Today AND Preview
             if (isToday && isPreview) {
-              cellClass += 'bg-[#2C4E3A] dark:bg-[#20623D] text-white font-bold shadow-xs ring-2 ring-[#34D399] z-10';
+              cellClass += 'bg-[#2C4E3A] dark:bg-[#15462D] text-white font-bold shadow-xs ring-2 ring-[#34D399] z-10';
             }
             // Condition 2: TODAY (Real date, user previewing another date)
             else if (isToday) {
-              cellClass += 'bg-[#DCFCE7] dark:bg-[#163825] text-[#14532D] dark:text-[#A7F3D0] border-2 border-[#16A34A] dark:border-[#34D399] font-bold';
+              cellClass += 'bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#A7F3D0] border-2 border-[#16A34A] dark:border-[#34D399] font-bold';
             }
             // Condition 3: PREVIEW DATE (Currently displayed in dashboard)
             else if (isPreview) {
-              cellClass += 'bg-[#FFEDD5] dark:bg-[#3E2419] text-[#9A3412] dark:text-[#FDBA74] border-2 border-[#EA580C] dark:border-[#FB923C] font-bold ring-1 ring-[#EA580C]/40 z-10';
+              cellClass += 'bg-[#FFEDD5] dark:bg-[#2A1508] text-[#9A3412] dark:text-[#FDBA74] border-2 border-[#EA580C] dark:border-[#FB923C] font-bold ring-1 ring-[#EA580C]/40 z-10';
             }
             // Condition 4: Has data (school schedule, doa, mbg, piket)
             else if (hasData) {
-              cellClass += 'bg-[#FAF7F2] dark:bg-[#202630] text-stone-900 dark:text-stone-100 border border-[#D8D2C5] dark:border-[#343E4E] hover:bg-stone-200 dark:hover:bg-[#2B3442] font-semibold';
+              cellClass += 'bg-[#FAF7F2] dark:bg-[#121212] text-stone-900 dark:text-stone-100 border border-[#D8D2C5] dark:border-[#222222] hover:bg-stone-200 dark:hover:bg-[#1A1A1A] font-semibold';
             }
             // Condition 5: Normal empty day
             else {
-              cellClass += 'text-stone-500 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-[#202630] border border-transparent font-normal';
+              cellClass += 'text-stone-500 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-[#141414] border border-transparent font-normal';
             }
 
             const weekOfDate = getWeekOfMonth(viewYear, viewMonth, day);
@@ -189,7 +189,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
         </div>
 
         {/* CALENDAR LEGEND BAR */}
-        <div className="mt-2.5 pt-2 border-t border-[#E8E2D5] dark:border-[#2E3744] flex items-center justify-between flex-wrap gap-2 text-[11px] font-medium text-stone-600 dark:text-stone-300">
+        <div className="mt-2.5 pt-2 border-t border-[#E8E2D5] dark:border-[#222222] flex items-center justify-between flex-wrap gap-2 text-[11px] font-medium text-stone-600 dark:text-stone-300">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2C4E3A] dark:bg-[#34D399]" />
             <span>Hari Ini</span>
@@ -209,7 +209,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
 
       {/* Birthday Banner - ONLY DISPLAYED IF SOMEONE HAS BIRTHDAY TODAY */}
       {birthdaysToday && birthdaysToday.length > 0 && (
-        <div className="mt-2.5 pt-2 border-t border-[#E8E2D5] dark:border-[#2E3744]">
+        <div className="mt-2.5 pt-2 border-t border-[#E8E2D5] dark:border-[#222222]">
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#EA580C] dark:bg-[#FB923C]" />
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#9A3412] dark:text-[#FDBA74]">
@@ -221,7 +221,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             {birthdaysToday.map((name, i) => (
               <span
                 key={i}
-                className="px-2.5 py-1 rounded-full bg-[#FFEDD5] dark:bg-[#3D2218] text-[#9A3412] dark:text-[#FDBA74] font-semibold text-xs border border-[#FDBA74] dark:border-[#5C3322] flex items-center gap-1"
+                className="px-2.5 py-1 rounded-full bg-[#FFEDD5] dark:bg-[#241208] text-[#9A3412] dark:text-[#FDBA74] font-semibold text-xs border border-[#FDBA74] dark:border-[#4A200E] flex items-center gap-1"
               >
                 <span>🎂</span>
                 <span>{name}</span>

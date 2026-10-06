@@ -39,41 +39,41 @@ export const PWAInstallButton: React.FC = () => {
         </button>
 
         {showIOSGuide && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
-            <div className="w-full max-w-sm rounded-2xl bg-[#FAF8F5] border border-[#E4DDCE] p-5 shadow-xl text-stone-800 animate-in fade-in zoom-in-95">
-              <div className="flex items-center justify-between pb-3 border-b border-[#E4DDCE]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop-tint transition-colors duration-200 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-[#FAF8F5] dark:bg-[#0A0A0A] border border-[#E4DDCE] dark:border-[#222222] p-5 shadow-xl text-stone-800 dark:text-stone-100 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4DDCE] dark:border-[#222222]">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#3F6E52] text-white flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-lg bg-[#3F6E52] dark:bg-[#34D399] text-white dark:text-[#0A0A0A] flex items-center justify-center">
                     <Smartphone className="w-4 h-4" />
                   </div>
-                  <h3 className="font-bold text-sm text-[#2B2A28]">Pasang di iPhone / iPad</h3>
+                  <h3 className="font-bold text-sm text-[#2B2A28] dark:text-white">Pasang di iPhone / iPad</h3>
                 </div>
                 <button
                   onClick={() => setShowIOSGuide(false)}
-                  className="p-1 rounded-md text-stone-500 hover:text-stone-800 hover:bg-stone-200/50"
+                  className="p-1 rounded-md text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-[#1A1A1A]"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="mt-3.5 space-y-2.5 text-xs text-stone-600 leading-relaxed">
+              <div className="mt-3.5 space-y-2.5 text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
                 <p className="flex items-start gap-2">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] font-bold text-[11px] text-[#2B2A28] flex items-center justify-center">1</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] dark:bg-[#222222] font-bold text-[11px] text-[#2B2A28] dark:text-stone-200 flex items-center justify-center">1</span>
                   <span>Ketuk tombol <strong>Bagikan (Share)</strong> di bar bawah Safari browser.</span>
                 </p>
                 <p className="flex items-start gap-2">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] font-bold text-[11px] text-[#2B2A28] flex items-center justify-center">2</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] dark:bg-[#222222] font-bold text-[11px] text-[#2B2A28] dark:text-stone-200 flex items-center justify-center">2</span>
                   <span>Gulir ke bawah dan pilih <strong>"Tambah ke Layar Utama" (Add to Home Screen)</strong>.</span>
                 </p>
                 <p className="flex items-start gap-2">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] font-bold text-[11px] text-[#2B2A28] flex items-center justify-center">3</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] dark:bg-[#222222] font-bold text-[11px] text-[#2B2A28] dark:text-stone-200 flex items-center justify-center">3</span>
                   <span>Ketuk <strong>Tambah (Add)</strong> di pojok kanan atas untuk menyelesaikan.</span>
                 </p>
               </div>
 
               <button
                 onClick={() => setShowIOSGuide(false)}
-                className="mt-5 w-full rounded-xl bg-[#3F6E52] py-2 text-xs font-semibold text-white hover:bg-[#325841] transition shadow-xs"
+                className="mt-5 w-full rounded-xl bg-[#3F6E52] dark:bg-[#34D399] py-2 text-xs font-semibold text-white dark:text-[#0A0A0A] hover:bg-[#325841] dark:hover:bg-[#2EB882] transition shadow-xs cursor-pointer"
               >
                 Mengerti
               </button>
