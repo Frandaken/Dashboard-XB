@@ -31,7 +31,8 @@ const CALENDAR_FEEDS: Record<string, string> = {
 const SHEET_FEEDS: Record<string, string> = {
   doa: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=0&single=true&output=csv",
   mbg: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=215098819&single=true&output=csv",
-  piket: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1149044316&single=true&output=csv"
+  piket: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1149044316&single=true&output=csv",
+  icebreaking: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1073417057&single=true&output=csv"
 };
 
 // Simple in-memory cache to prevent hitting Google rate limits
@@ -67,6 +68,45 @@ async function fetchWithRetry(url: string, headers: Record<string, string> = {},
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// Explicit SEO, Bot & Crawler discovery endpoints
+const publicDir = path.join(process.cwd(), 'frontend', 'public');
+
+app.get('/robots.txt', (req, res) => {
+  const filePath = path.join(publicDir, 'robots.txt');
+  if (fs.existsSync(filePath)) {
+    res.type('text/plain; charset=utf-8').sendFile(filePath);
+  } else {
+    res.type('text/plain; charset=utf-8').send('User-agent: *\nAllow: /\n');
+  }
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const filePath = path.join(publicDir, 'sitemap.xml');
+  if (fs.existsSync(filePath)) {
+    res.type('application/xml; charset=utf-8').sendFile(filePath);
+  } else {
+    res.status(404).send('Not Found');
+  }
+});
+
+app.get('/llms.txt', (req, res) => {
+  const filePath = path.join(publicDir, 'llms.txt');
+  if (fs.existsSync(filePath)) {
+    res.type('text/plain; charset=utf-8').sendFile(filePath);
+  } else {
+    res.status(404).send('Not Found');
+  }
+});
+
+app.get('/llms-full.txt', (req, res) => {
+  const filePath = path.join(publicDir, 'llms-full.txt');
+  if (fs.existsSync(filePath)) {
+    res.type('text/plain; charset=utf-8').sendFile(filePath);
+  } else {
+    res.status(404).send('Not Found');
+  }
 });
 
 // Proxy route for Google Calendar feeds (solves HTTP 401 & browser CORS issues)

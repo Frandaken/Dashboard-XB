@@ -1,6 +1,6 @@
 {
   "name": "Jadwal Kelas XB",
-  "description": "Dashboard jadwal kelas XB dengan jadwal pelajaran, penugasan, petugas MBG, piket, doa dan bacaan Injil, serta kalender.",
+  "description": "Dashboard jadwal kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, petugas ice breaking, serta kalender terpadu.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

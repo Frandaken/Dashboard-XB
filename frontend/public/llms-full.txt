@@ -1,0 +1,26 @@
+# Jadwal Kelas XB - Extended Documentation
+
+## Application Architecture
+- **Framework**: React Single Page Application (SPA) bundled via Vite.
+- **Styling**: Tailwind CSS v4 with custom warm school aesthetic and dark mode support.
+- **Server**: Express proxy server with in-memory caching (60s TTL) solving CORS and Google API rate limits.
+- **Storage & State**: Client-side localStorage for offline resilience, service worker caching (PWA).
+
+## Integrations
+1. **Google Calendar (ICS/iCal)**:
+   - Pelajaran: Recurring classes and single events. Summary contains subject and room/teacher. Description contains tasks ("Tugas: ...").
+   - Birthday: Recurring yearly birthday events for students.
+2. **Google Sheets (CSV)**:
+   - Doa: Dates, prayer leaders, Gospel scripture reading.
+   - MBG: Dates, student officers for school meal distribution.
+   - Piket: Weekly rotation of classroom cleaning duties.
+   - Ice Breaking: Dates, first period subject, student facilitators.
+
+## UI Components
+- `ScheduleBlocks`: Renders MBG, Piket, Doa, and Pelajaran cards.
+- `CalendarSection`: Monthly view with navigation and detail inspection.
+- `IceBreakingPanel`: Dynamic banner appearing during active first lesson hour.
+- `DayDetailModal`: In-depth breakdown for any selected date.
+- `SongLyricsModal`: Indonesian national anthems and patriotic songs lyrics.
+- `WheelOfNamesModal`: Interactive wheel spinner for student selection.
+- `GroupGeneratorModal`: Fair randomized team generator with CSV export.

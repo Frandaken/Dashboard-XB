@@ -5,20 +5,25 @@ import { TaskBanner } from './components/TaskBanner';
 import { ScheduleBlocks } from './components/ScheduleBlocks';
 import { CalendarSection } from './components/CalendarSection';
 import { SongScheduleList } from './components/SongScheduleList';
-import { DayDetailModal } from './components/DayDetailModal';
 import { HamburgerMenuModal } from './components/HamburgerMenuModal';
-import { AllSongsModal } from './components/AllSongsModal';
-import { WheelOfNamesModal } from './components/WheelOfNamesModal';
-import { GroupGeneratorModal } from './components/GroupGeneratorModal';
+import { IceBreakingPanel } from './components/IceBreakingPanel';
 import { StatusBanner } from './components/StatusBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardSkeleton } from './components/DashboardSkeleton';
 import { NotFoundUI } from './components/NotFoundUI';
+
+// Code-split heavy modals to minimize main JS bundle
+const DayDetailModal = React.lazy(() => import('./components/DayDetailModal').then(m => ({ default: m.DayDetailModal })));
+const AllSongsModal = React.lazy(() => import('./components/AllSongsModal').then(m => ({ default: m.AllSongsModal })));
+const WheelOfNamesModal = React.lazy(() => import('./components/WheelOfNamesModal').then(m => ({ default: m.WheelOfNamesModal })));
+const GroupGeneratorModal = React.lazy(() => import('./components/GroupGeneratorModal').then(m => ({ default: m.GroupGeneratorModal })));
+const IceBreakingScheduleModal = React.lazy(() => import('./components/IceBreakingScheduleModal').then(m => ({ default: m.IceBreakingScheduleModal })));
 import { ClassDataStore } from './types';
-import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows } from './utils/csvParser';
+import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
+import { isIceBreakingActiveNow, getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
 
 export default function App() {
   // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
@@ -45,6 +50,8 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   // All songs lyrics modal
   const [isAllSongsOpen, setIsAllSongsOpen] = useState<boolean>(false);
+  // Ice Breaking schedule modal
+  const [isIceBreakingModalOpen, setIsIceBreakingModalOpen] = useState<boolean>(false);
 
   const [dataStore, setDataStore] = useState<ClassDataStore>(() => {
     try {
@@ -54,11 +61,14 @@ export default function App() {
       const mbgByDate = parseMbgRows(mbgRows);
       const piketRows = parseCSV(DEMO_CSV.piket);
       const piketByDow = parsePiketRows(piketRows);
+      const iceBreakingRows = parseCSV(DEMO_CSV.icebreaking);
+      const iceBreakingByDate = parseIceBreakingRows(iceBreakingRows);
 
       return {
         doaByDate,
         mbgByDate,
         piketByDow,
+        iceBreakingByDate,
         pelajaranByDate: {},
         tasksByDate: {},
         birthdayByMonthDay: {}
@@ -68,12 +78,23 @@ export default function App() {
         doaByDate: {},
         mbgByDate: {},
         piketByDow: {},
+        iceBreakingByDate: {},
         pelajaranByDate: {},
         tasksByDate: {},
         birthdayByMonthDay: {}
       };
     }
   });
+
+  // Real-time clock for current time in WIB (updates every 15s to react exactly to period start/end)
+  const [currentWIBTime, setCurrentWIBTime] = useState<string>(() => getCurrentWIBTimeHHMM());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentWIBTime(getCurrentWIBTimeHHMM());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [status, setStatus] = useState<{ type: 'loading' | 'error' | 'success'; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -146,6 +167,7 @@ export default function App() {
     return !!(
       store.doaByDate[iso] ||
       store.mbgByDate[iso] ||
+      store.iceBreakingByDate[iso] ||
       (store.pelajaranByDate[iso] && store.pelajaranByDate[iso].length > 0)
     );
   }, []);
@@ -157,6 +179,7 @@ export default function App() {
     const availableDates = new Set<string>();
     Object.keys(store.doaByDate).forEach(d => availableDates.add(d));
     Object.keys(store.mbgByDate).forEach(d => availableDates.add(d));
+    Object.keys(store.iceBreakingByDate || {}).forEach(d => availableDates.add(d));
     Object.keys(store.pelajaranByDate).forEach(d => {
       if (store.pelajaranByDate[d]?.length) availableDates.add(d);
     });
@@ -215,10 +238,11 @@ export default function App() {
       const rangeStart = new Date(curYear - 1, 0, 1);
       const rangeEnd = new Date(curYear + 1, 11, 31);
 
-      const [doaRes, mbgRes, piketRes, pelajaranRes, birthdayRes] = await Promise.all([
+      const [doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes] = await Promise.all([
         fetchEndpoint('/api/sheets/doa', 'doa'),
         fetchEndpoint('/api/sheets/mbg', 'mbg'),
         fetchEndpoint('/api/sheets/piket', 'piket'),
+        fetchEndpoint('/api/sheets/icebreaking', 'icebreaking'),
         fetchEndpoint('/api/calendar/pelajaran'),
         fetchEndpoint('/api/calendar/birthday')
       ]);
@@ -232,6 +256,9 @@ export default function App() {
       const piketRows = parseCSV(piketRes.text);
       const piketByDow = parsePiketRows(piketRows);
 
+      const iceBreakingRows = parseCSV(iceBreakingRes.text);
+      const iceBreakingByDate = parseIceBreakingRows(iceBreakingRows);
+
       // Parse pelajaran iCal (keeping subjects on different schedules strictly separated)
       const { pelajaranByDate, tasksByDate } = parsePelajaranICS(pelajaranRes.text, rangeStart, rangeEnd);
 
@@ -242,6 +269,7 @@ export default function App() {
         doaByDate,
         mbgByDate,
         piketByDow,
+        iceBreakingByDate,
         pelajaranByDate,
         tasksByDate,
         birthdayByMonthDay
@@ -274,6 +302,7 @@ export default function App() {
         doaByDate: parseDoaRows(parseCSV(DEMO_CSV.doa)),
         mbgByDate: parseMbgRows(parseCSV(DEMO_CSV.mbg)),
         piketByDow: parsePiketRows(parseCSV(DEMO_CSV.piket)),
+        iceBreakingByDate: parseIceBreakingRows(parseCSV(DEMO_CSV.icebreaking)),
         pelajaranByDate: {},
         tasksByDate: {},
         birthdayByMonthDay: {}
@@ -305,11 +334,21 @@ export default function App() {
   const activeMbg = dataStore.mbgByDate[activeISO];
   const activePiket = dataStore.piketByDow[activeDow];
   const activeDoa = dataStore.doaByDate[activeISO];
+  const activeIceBreaking = dataStore.iceBreakingByDate[activeISO];
   const activePelajaran = dataStore.pelajaranByDate[activeISO] || [];
   const activeTasks = dataStore.tasksByDate[activeISO] || [];
 
   const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
+
+  // Check real-time if Ice Breaking panel should appear below the calendar right now
+  const iceBreakingActiveStatus = useMemo(() => {
+    return isIceBreakingActiveNow(
+      todayWIB.iso,
+      dataStore.iceBreakingByDate[todayWIB.iso],
+      dataStore.pelajaranByDate[todayWIB.iso]
+    );
+  }, [todayWIB.iso, dataStore.iceBreakingByDate, dataStore.pelajaranByDate, currentWIBTime]);
 
   // Helper check for calendar dots
   const hasDataForISO = (iso: string): boolean => {
@@ -318,6 +357,7 @@ export default function App() {
     return (
       !!dataStore.doaByDate[iso] ||
       !!dataStore.mbgByDate[iso] ||
+      !!dataStore.iceBreakingByDate[iso] ||
       !!dataStore.piketByDow[info.dowName] ||
       (dataStore.pelajaranByDate[iso] && dataStore.pelajaranByDate[iso].length > 0) ||
       (dataStore.tasksByDate[iso] && dataStore.tasksByDate[iso].length > 0) ||
@@ -347,6 +387,7 @@ export default function App() {
       mbg: dataStore.mbgByDate[selectedISO],
       piket: dataStore.piketByDow[info.dowName],
       doa: dataStore.doaByDate[selectedISO],
+      iceBreaking: dataStore.iceBreakingByDate[selectedISO],
       pelajaran: dataStore.pelajaranByDate[selectedISO] || [],
       tasks: dataStore.tasksByDate[selectedISO] || [],
       birthdays: dataStore.birthdayByMonthDay[md] || []
@@ -408,6 +449,7 @@ export default function App() {
           onOpenSongLyrics={() => setIsAllSongsOpen(true)}
           onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
           onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+          onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
           onJumpToToday={() => {
             handleGoHome();
             handleJumpToToday();
@@ -429,6 +471,14 @@ export default function App() {
         <AllSongsModal
           isOpen={isAllSongsOpen}
           onClose={() => setIsAllSongsOpen(false)}
+        />
+
+        <IceBreakingScheduleModal
+          isOpen={isIceBreakingModalOpen}
+          onClose={() => setIsIceBreakingModalOpen(false)}
+          schedules={dataStore.iceBreakingByDate}
+          pelajaranByDate={dataStore.pelajaranByDate}
+          todayISO={todayWIB.iso}
         />
       </>
     );
@@ -554,6 +604,7 @@ export default function App() {
                   doa={activeDoa}
                   pelajaran={activePelajaran}
                   dowName={activeDow}
+                  iceBreaking={activeIceBreaking}
                 />
               </div>
             </section>
@@ -580,6 +631,16 @@ export default function App() {
                 birthdaysToday={activeBirthdays}
               />
 
+              {/* Panel Petugas Ice Breaking: Hanya muncul saat jam pelajaran pertama yang ada di spreadsheet pada hari yang telah ditentukan (pada setiap awal jam Sosiologi dan Geografi) */}
+              {iceBreakingActiveStatus.isActive && iceBreakingActiveStatus.session && dataStore.iceBreakingByDate[todayWIB.iso] && (
+                <IceBreakingPanel
+                  schedule={dataStore.iceBreakingByDate[todayWIB.iso]}
+                  session={iceBreakingActiveStatus.session}
+                  currentTime={iceBreakingActiveStatus.currentTime}
+                  onOpenFullSchedule={() => setIsIceBreakingModalOpen(true)}
+                />
+              )}
+
               {/* Song Schedule Card */}
               <SongScheduleList
                 currentDate={safeActiveDate}
@@ -601,46 +662,73 @@ export default function App() {
         onOpenSongLyrics={() => setIsAllSongsOpen(true)}
         onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
         onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+        onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
         onJumpToToday={handleJumpToToday}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
       />
 
-      {/* Random Name Picker (Wheel of Names) Modal */}
-      <WheelOfNamesModal
-        isOpen={isRandomPickerOpen}
-        onClose={() => setIsRandomPickerOpen(false)}
-      />
+      {/* Lazy-Loaded Modals wrapped in Suspense for optimal bundle splitting */}
+      <React.Suspense fallback={null}>
+        {/* Random Name Picker (Wheel of Names) Modal */}
+        {isRandomPickerOpen && (
+          <WheelOfNamesModal
+            isOpen={isRandomPickerOpen}
+            onClose={() => setIsRandomPickerOpen(false)}
+          />
+        )}
 
-      {/* Random Group Name Picker (Team Generator) Modal */}
-      <GroupGeneratorModal
-        isOpen={isGroupGeneratorOpen}
-        onClose={() => setIsGroupGeneratorOpen(false)}
-      />
+        {/* Random Group Name Picker (Team Generator) Modal */}
+        {isGroupGeneratorOpen && (
+          <GroupGeneratorModal
+            isOpen={isGroupGeneratorOpen}
+            onClose={() => setIsGroupGeneratorOpen(false)}
+          />
+        )}
 
-      {/* All Songs Lyrics Modal */}
-      <AllSongsModal
-        isOpen={isAllSongsOpen}
-        onClose={() => setIsAllSongsOpen(false)}
-        darkMode={darkMode}
-        onToggleDarkMode={toggleDarkMode}
-      />
+        {/* All Songs Lyrics Modal */}
+        {isAllSongsOpen && (
+          <AllSongsModal
+            isOpen={isAllSongsOpen}
+            onClose={() => setIsAllSongsOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
 
-      {/* Day Detail Modal (When user clicks on a calendar date) */}
-      {selectedDetails && (
-        <DayDetailModal
-          isoDate={selectedDetails.isoDate}
-          onClose={() => setSelectedISO(null)}
-          doa={selectedDetails.doa}
-          mbg={selectedDetails.mbg}
-          piket={selectedDetails.piket}
-          pelajaran={selectedDetails.pelajaran}
-          tasks={selectedDetails.tasks}
-          birthdays={selectedDetails.birthdays}
-          darkMode={darkMode}
-          onToggleDarkMode={toggleDarkMode}
-        />
-      )}
+        {/* Jadwal Petugas Ice Breaking Modal */}
+        {isIceBreakingModalOpen && (
+          <IceBreakingScheduleModal
+            isOpen={isIceBreakingModalOpen}
+            onClose={() => setIsIceBreakingModalOpen(false)}
+            schedules={dataStore.iceBreakingByDate}
+            pelajaranByDate={dataStore.pelajaranByDate}
+            todayISO={todayWIB.iso}
+            onSelectDate={iso => {
+              setSelectedISO(iso);
+              setActiveISO(iso);
+              setIsManualDate(true);
+            }}
+          />
+        )}
+
+        {/* Day Detail Modal (When user clicks on a calendar date) */}
+        {selectedDetails && (
+          <DayDetailModal
+            isoDate={selectedDetails.isoDate}
+            onClose={() => setSelectedISO(null)}
+            doa={selectedDetails.doa}
+            mbg={selectedDetails.mbg}
+            piket={selectedDetails.piket}
+            iceBreaking={selectedDetails.iceBreaking}
+            pelajaran={selectedDetails.pelajaran}
+            tasks={selectedDetails.tasks}
+            birthdays={selectedDetails.birthdays}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+      </React.Suspense>
     </div>
   );
 }

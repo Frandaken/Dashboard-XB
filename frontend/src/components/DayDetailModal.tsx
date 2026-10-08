@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { X, Music, BookOpen } from 'lucide-react';
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem } from '../types';
+import { X, Music, BookOpen, PartyPopper, Clock } from 'lucide-react';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
 import { parseISODateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../data/songSchedule';
+import { getFirstLessonSession } from '../utils/iceBreakingUtils';
 import { TaskBanner } from './TaskBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
 import { SongLyricsModal } from './SongLyricsModal';
@@ -14,6 +15,7 @@ interface DayDetailModalProps {
   doa?: DoaSchedule;
   mbg?: MbgSchedule;
   piket?: PiketSchedule;
+  iceBreaking?: IceBreakingSchedule;
   pelajaran?: PeriodItem[];
   tasks?: TaskItem[];
   birthdays?: string[];
@@ -27,6 +29,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   doa,
   mbg,
   piket,
+  iceBreaking,
   pelajaran = [],
   tasks = [],
   birthdays = [],
@@ -196,6 +199,49 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           {/* Penugasan Banner (if any) */}
           {tasks.length > 0 && (
             <TaskBanner tasks={tasks} />
+          )}
+
+          {/* Petugas Ice Breaking Card (if this date has ice breaking scheduled) */}
+          {iceBreaking && (
+            <div className="p-3.5 sm:p-4 rounded-xl border border-emerald-300 dark:border-[#105432] bg-emerald-50/60 dark:bg-[#072416]/50 shadow-2xs">
+              <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-emerald-200 dark:border-[#13442A]">
+                <div className="flex items-center gap-2">
+                  <PartyPopper className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                  <h3 className="font-display font-bold text-xs uppercase tracking-wider text-emerald-950 dark:text-emerald-200">
+                    Petugas Ice Breaking
+                  </h3>
+                </div>
+                {(() => {
+                  const sess = getFirstLessonSession(isoDate, iceBreaking.pelajaranPertama, pelajaran);
+                  return (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-[#0D3823] px-2 py-0.5 rounded-md border border-emerald-300 dark:border-[#1B5738]">
+                      <Clock className="w-3 h-3" />
+                      <span>{iceBreaking.pelajaranPertama} • {sess.timeRange}</span>
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {iceBreaking.petugas && iceBreaking.petugas.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {iceBreaking.petugas.map((name, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-[#0D0D0D] text-emerald-900 dark:text-emerald-200 text-xs font-bold border border-emerald-300 dark:border-[#1B5738] shadow-2xs"
+                    >
+                      <span className="w-4 h-4 rounded-full bg-emerald-200 dark:bg-emerald-800 text-[10px] flex items-center justify-center text-emerald-800 dark:text-emerald-100 font-bold">
+                        {idx + 1}
+                      </span>
+                      <span>{name}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-stone-500 dark:text-stone-400 italic text-xs py-1">
+                  Belum ada petugas yang dicatat untuk tanggal ini di spreadsheet.
+                </p>
+              )}
+            </div>
           )}
 
           {/* Schedule Blocks */}

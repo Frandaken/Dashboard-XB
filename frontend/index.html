@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jadwal Kelas XB</title>
+    <title>Jadwal Kelas XB – Dashboard Jadwal, Petugas & Kalender</title>
+    
+    <!-- Language & Regional Attribution -->
+    <meta http-equiv="content-language" content="id" />
+    <meta name="language" content="Indonesian" />
+    
     <meta name="theme-color" content="#3F6E52" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -12,11 +17,74 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" href="/icon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="description" content="Dashboard jadwal kelas XB dengan jadwal pelajaran, penugasan, petugas MBG, piket, doa dan bacaan Injil, serta kalender." />
-    <meta property="og:title" content="Jadwal Kelas XB" />
-    <meta property="og:description" content="Dashboard jadwal kelas XB dengan jadwal pelajaran, penugasan, petugas MBG, piket, doa dan bacaan Injil, serta kalender." />
+    
+    <!-- Meta Description (120-160 characters optimal length) -->
+    <meta name="description" content="Dashboard jadwal kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, petugas ice breaking, serta kalender terpadu." />
+    
+    <!-- Canonical Tag & URL -->
+    <link rel="canonical" href="/" />
+    
+    <!-- OpenGraph Social Cards -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jadwal Kelas XB" />
+    <meta property="og:title" content="Jadwal Kelas XB – Dashboard Jadwal, Petugas & Kalender" />
+    <meta property="og:description" content="Dashboard jadwal kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, petugas ice breaking, serta kalender terpadu." />
+    <meta property="og:url" content="/" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="Preview Dashboard Jadwal Kelas XB" />
+    
+    <!-- Twitter / X Social Cards -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Jadwal Kelas XB – Dashboard Jadwal, Petugas & Kalender" />
+    <meta name="twitter:description" content="Dashboard jadwal kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, petugas ice breaking, serta kalender terpadu." />
+    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image:alt" content="Preview Dashboard Jadwal Kelas XB" />
+
+    <!-- Schema.org JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "/#app",
+          "name": "Jadwal Kelas XB",
+          "alternateName": "Dashboard Jadwal Kelas XB",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "All",
+          "inLanguage": "id-ID",
+          "description": "Dashboard jadwal kelas XB SMA dengan jadwal pelajaran realtime, penugasan, petugas MBG, piket, doa dan renungan harian, petugas ice breaking, serta kalender terpadu.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "IDR"
+          }
+        },
+        {
+          "@type": "EducationalOrganization",
+          "@id": "/#organization",
+          "name": "Kelas XB",
+          "description": "Organisasi dan komunitas siswa kelas XB"
+        }
+      ]
+    }
+    </script>
+
+    <!-- Canonical Dynamic URL resolution helper -->
+    <script>
+      try {
+        if (window.location && window.location.origin) {
+          var canon = document.querySelector('link[rel="canonical"]');
+          if (canon) canon.setAttribute('href', window.location.origin + window.location.pathname);
+          var ogUrl = document.querySelector('meta[property="og:url"]');
+          if (ogUrl) ogUrl.setAttribute('content', window.location.origin + window.location.pathname);
+        }
+      } catch (e) {}
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -45,7 +113,28 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Root container with semantic fallback content so View Source is never empty -->
+    <div id="root">
+      <header style="padding: 1rem; border-bottom: 1px solid #e5e5e5; font-family: system-ui, sans-serif;">
+        <h1 style="margin: 0; font-size: 1.5rem; color: #14532d;">Jadwal Kelas XB</h1>
+        <p style="margin: 0.25rem 0 0 0; color: #525252; font-size: 0.875rem;">
+          Dashboard Jadwal Pelajaran, Penugasan, Petugas Piket &amp; MBG, Doa Harian, Petugas Ice Breaking, dan Kalender Kelas.
+        </p>
+      </header>
+      <main style="padding: 1.5rem; font-family: system-ui, sans-serif;">
+        <div style="background-color: #f5f5f4; padding: 1rem; border-radius: 0.75rem; margin-bottom: 1rem;">
+          <h2 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; color: #1c1917;">Memuat Dashboard Kelas XB...</h2>
+          <p style="margin: 0; color: #78716c; font-size: 0.875rem;">
+            Sistem sedang menyinkronkan jadwal pelajaran, kalender, dan petugas harian secara langsung dari server.
+          </p>
+        </div>
+        <noscript>
+          <div style="background-color: #fef2f2; border: 1px solid #f87171; color: #991b1b; padding: 1rem; border-radius: 0.75rem;">
+            <strong>JavaScript Diperlukan:</strong> Harap aktifkan JavaScript di peramban Anda untuk menggunakan seluruh fitur interaktif Dashboard Kelas XB.
+          </div>
+        </noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

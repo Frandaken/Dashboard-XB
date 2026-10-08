@@ -23,6 +23,14 @@ export interface PiketSchedule {
   petugas: string[];
 }
 
+export interface IceBreakingSchedule {
+  tanggal: string;
+  isoDate: string;
+  hari: string;
+  pelajaranPertama: string;
+  petugas: string[];
+}
+
 export interface PeriodItem {
   time: string;
   cleanName: string;
@@ -51,6 +59,7 @@ export interface ClassDataStore {
   doaByDate: Record<string, DoaSchedule>;
   mbgByDate: Record<string, MbgSchedule>;
   piketByDow: Record<string, PiketSchedule>;
+  iceBreakingByDate: Record<string, IceBreakingSchedule>;
   pelajaranByDate: Record<string, PeriodItem[]>;
   tasksByDate: Record<string, TaskItem[]>;
   birthdayByMonthDay: Record<string, string[]>;

@@ -1,0 +1,30 @@
+# Jadwal Kelas XB
+
+> Dashboard informasi dan jadwal terpadu kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket, petugas Makan Bergizi Gratis (MBG), doa dan bacaan Injil harian, petugas ice breaking, serta kalender kegiatan.
+
+## Overview
+Jadwal Kelas XB adalah aplikasi web progresif (PWA) berbasis React dan Vite yang menyediakan sistem otomasi jadwal kelas interaktif. Aplikasi ini terintegrasi langsung dengan sumber data Google Calendar (format iCal/ICS) dan Google Sheets (format CSV publik) dengan sinkronisasi realtime dan sistem caching cerdas.
+
+## Core Features
+- **Jadwal Pelajaran Realtime**: Menampilkan jadwal pelajaran harian lengkap dengan status jam pelajaran aktif (JP), guru pengampu, durasi, dan indikator waktu tersisa.
+- **Deteksi Penugasan Otomatis**: Mendeteksi tugas dan pekerjaan rumah yang dicatat di deskripsi kalender pelajaran secara cerdas.
+- **Petugas Makan Bergizi Gratis (MBG)**: Daftar siswa yang bertugas mengambil dan mendistribusikan makan siang sesuai jadwal harian.
+- **Petugas Piket Harian**: Daftar nama petugas kebersihan kelas untuk setiap hari efektif.
+- **Doa & Renungan / Bacaan Injil**: Petugas pembawa doa harian dan teks perikop/bacaan Injil.
+- **Petugas Ice Breaking**: Petugas khusus ice breaking yang tampil tepat saat jam pelajaran pertama (Sosiologi & Geografi) sesuai spreadsheet kelas.
+- **Kalender Interaktif**: Kalender bulanan dengan penanda tanggal hari ini, hari libur, ulang tahun siswa, dan navigasi tanggal preview.
+- **Lagu Wajib Nasional**: Jadwal lagu wajib nasional mingguan lengkap dengan modal penampil lirik lagu.
+- **Alat Pendukung Pembelajaran**: Random Name Picker (Wheel of Names) dan Generator Pembagian Kelompok Acak.
+
+## Data Sources & Endpoints
+- `/api/calendar/pelajaran`: Feed iCal jadwal pelajaran Google Calendar.
+- `/api/calendar/birthday`: Feed iCal ulang tahun siswa.
+- `/api/sheets/doa`: Feed CSV petugas doa dan bacaan Injil.
+- `/api/sheets/mbg`: Feed CSV petugas MBG.
+- `/api/sheets/piket`: Feed CSV petugas piket harian.
+- `/api/sheets/icebreaking`: Feed CSV petugas ice breaking.
+- `/api/health`: Healthcheck status server.
+
+## Technologies
+- Frontend: React 18, TypeScript, Tailwind CSS, Lucide Icons, Vite PWA
+- Backend: Node.js, Express, iCal parser, PapaParse CSV parser

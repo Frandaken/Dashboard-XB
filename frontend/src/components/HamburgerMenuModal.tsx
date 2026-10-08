@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface HamburgerMenuModalProps {
   onOpenSongLyrics: () => void;
   onOpenRandomPicker: () => void;
   onOpenGroupGenerator: () => void;
+  onOpenIceBreaking?: () => void;
   onJumpToToday?: () => void;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -17,7 +18,8 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onClose,
   onOpenSongLyrics,
   onOpenRandomPicker,
-  onOpenGroupGenerator
+  onOpenGroupGenerator,
+  onOpenIceBreaking
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -164,6 +166,36 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-[#2C4E3A] dark:group-hover:text-[#34D399] transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* Action 4: Petugas Ice Breaking */}
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              if (onOpenIceBreaking) onOpenIceBreaking();
+            }}
+            className="w-full text-left p-3.5 rounded-xl border border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0D0D0D] hover:border-emerald-600 dark:hover:border-emerald-400 hover:bg-[#FAF7F2] dark:hover:bg-[#161616] shadow-xs transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-[#072416] text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                <PartyPopper className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
+                    Petugas Ice Breaking
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-[#072416] px-2 py-0.5 rounded-md border border-emerald-300 dark:border-[#0E492B]">
+                    Jadwal Lengkap
+                  </span>
+                </div>
+                <p className="text-xs text-stone-600 dark:text-stone-300 font-normal mt-0.5">
+                  Lihat jadwal giliran ice breaking kelas pada jam pertama Sosiologi & Geografi.
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5" />
           </button>
 
           {/* Action 4: Sinkronisasi Otomatis (Klik untuk Refresh Halaman & Data) */}

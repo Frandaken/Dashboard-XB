@@ -1,4 +1,4 @@
-import { DoaSchedule, MbgSchedule, PiketSchedule } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, IceBreakingSchedule } from '../types';
 
 export function parseCSV(text: string): Record<string, string>[] {
   const rows: string[][] = [];
@@ -205,6 +205,44 @@ export function parsePiketRows(rows: Record<string, string>[]): Record<string, P
       hari,
       petugas
     };
+  }
+  return map;
+}
+
+export function parseIceBreakingRows(rows: Record<string, string>[]): Record<string, IceBreakingSchedule> {
+  const map: Record<string, IceBreakingSchedule> = {};
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const prevRaw = i > 0 ? rows[i - 1]['Tanggal'] : undefined;
+    const nextRaw = i < rows.length - 1 ? rows[i + 1]['Tanggal'] : undefined;
+
+    const { primaryIso, originalIso, formattedTanggal } = resolveRowISODate(r['Tanggal'] || '', prevRaw, nextRaw);
+    if (!primaryIso && !originalIso) continue;
+
+    const petugas: string[] = [];
+    Object.keys(r).forEach(k => {
+      if (k.toLowerCase().startsWith('petugas')) {
+        const val = r[k]?.trim();
+        if (val) petugas.push(val);
+      }
+    });
+
+    const pelajaranPertama = (r['Pelajaran Pertama'] || r['Pelajaran'] || '').trim();
+
+    const schedule: IceBreakingSchedule = {
+      tanggal: formattedTanggal || r['Tanggal'] || '',
+      isoDate: primaryIso || originalIso || '',
+      hari: r['Hari'] || '',
+      pelajaranPertama,
+      petugas
+    };
+
+    if (primaryIso) {
+      map[primaryIso] = schedule;
+    }
+    if (originalIso && originalIso !== primaryIso) {
+      map[originalIso] = schedule;
+    }
   }
   return map;
 }

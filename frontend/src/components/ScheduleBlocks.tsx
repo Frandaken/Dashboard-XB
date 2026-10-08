@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem } from '../types';
+import { ChevronDown, PartyPopper } from 'lucide-react';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, IceBreakingSchedule } from '../types';
 
 interface ScheduleBlocksProps {
   mbg?: MbgSchedule;
@@ -8,6 +8,7 @@ interface ScheduleBlocksProps {
   doa?: DoaSchedule;
   pelajaran?: PeriodItem[];
   dowName: string;
+  iceBreaking?: IceBreakingSchedule;
 }
 
 export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
@@ -15,7 +16,8 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   piket,
   doa,
   pelajaran = [],
-  dowName
+  dowName,
+  iceBreaking
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
 
@@ -115,6 +117,43 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
           )}
         </div>
       </div>
+
+      {/* OPTIONAL: PETUGAS ICE BREAKING (If scheduled for this day) */}
+      {iceBreaking && (
+        <div
+          id="card-ice-breaking"
+          className="bg-emerald-50/60 dark:bg-[#072416]/50 border border-emerald-300 dark:border-[#105432] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors flex-shrink-0"
+        >
+          <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-emerald-200 dark:border-[#13442A]">
+            <div className="flex items-center gap-2">
+              <PartyPopper className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
+              <h3 className="text-emerald-950 dark:text-emerald-200 font-bold text-xs uppercase tracking-wider">
+                Petugas Ice Breaking
+              </h3>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-white dark:bg-[#0A0A0A] text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-[#105432]">
+              Jam Pertama: {iceBreaking.pelajaranPertama}
+            </span>
+          </div>
+
+          {iceBreaking.petugas && iceBreaking.petugas.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {iceBreaking.petugas.map((name, i) => (
+                <span
+                  key={i}
+                  className="px-2.5 py-1 rounded-full bg-white dark:bg-[#0A0A0A] text-emerald-950 dark:text-emerald-200 font-bold text-xs border border-emerald-300 dark:border-[#105432] shadow-2xs"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-stone-500 dark:text-stone-400 italic text-xs py-1 font-normal">
+              Belum ada nama petugas yang dicatat untuk hari ini.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ROW 2: PETUGAS DOA & BACAAN INJIL */}
       <div
