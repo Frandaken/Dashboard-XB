@@ -123,6 +123,9 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
               >
                 Koleksi Lirik Lagu Wajib Nasional
               </h2>
+              <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
+                SMA Putra Nirmala • Panduan Apel & Pembiasaan Pagi
+              </p>
             </div>
           </div>
 

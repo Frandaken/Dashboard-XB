@@ -116,6 +116,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               >
                 {formattedDate}
               </h2>
+              <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
+                SMA Putra Nirmala • Kelas XB
+              </p>
             </div>
           </div>
 

@@ -1,9 +1,9 @@
-# Jadwal Kelas XB
+# Jadwal Kelas XB – SMA Putra Nirmala
 
-> Dashboard informasi dan jadwal terpadu kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket, petugas Makan Bergizi Gratis (MBG), doa dan bacaan Injil harian, petugas ice breaking, serta kalender kegiatan.
+> Dashboard informasi dan jadwal resmi kelas XB SMA Putra Nirmala: jadwal pelajaran realtime, penugasan, petugas piket, petugas Makan Bergizi Gratis (MBG), doa dan bacaan Injil harian, petugas ice breaking, serta kalender kegiatan.
 
 ## Overview
-Jadwal Kelas XB adalah aplikasi web progresif (PWA) berbasis React dan Vite yang menyediakan sistem otomasi jadwal kelas interaktif. Aplikasi ini terintegrasi langsung dengan sumber data Google Calendar (format iCal/ICS) dan Google Sheets (format CSV publik) dengan sinkronisasi realtime dan sistem caching cerdas.
+Jadwal Kelas XB adalah aplikasi web progresif (PWA) resmi untuk siswa dan guru kelas XB SMA Putra Nirmala berbasis React dan Vite yang menyediakan sistem otomasi jadwal kelas interaktif. Aplikasi ini terintegrasi langsung dengan sumber data Google Calendar (format iCal/ICS) dan Google Sheets (format CSV publik) dengan sinkronisasi realtime dan sistem caching cerdas.
 
 ## Core Features
 - **Jadwal Pelajaran Realtime**: Menampilkan jadwal pelajaran harian lengkap dengan status jam pelajaran aktif (JP), guru pengampu, durasi, dan indikator waktu tersisa.

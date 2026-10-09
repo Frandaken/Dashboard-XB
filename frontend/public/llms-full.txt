@@ -1,4 +1,6 @@
-# Jadwal Kelas XB - Extended Documentation
+# Jadwal Kelas XB – SMA Putra Nirmala - Extended Documentation
+
+Dashboard resmi kelas XB SMA Putra Nirmala.
 
 ## Application Architecture
 - **Framework**: React Single Page Application (SPA) bundled via Vite.

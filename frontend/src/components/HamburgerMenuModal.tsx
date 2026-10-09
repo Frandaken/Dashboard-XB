@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface HamburgerMenuModalProps {
   onOpenRandomPicker: () => void;
   onOpenGroupGenerator: () => void;
   onOpenIceBreaking?: () => void;
+  onOpenNotifications?: () => void;
   onJumpToToday?: () => void;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -19,7 +20,8 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onOpenSongLyrics,
   onOpenRandomPicker,
   onOpenGroupGenerator,
-  onOpenIceBreaking
+  onOpenIceBreaking,
+  onOpenNotifications
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,7 +64,7 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
                 Menu Navigasi & Alat
               </h2>
               <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
-                Dashboard Kelas XB • TP 2026/2027
+                SMA Putra Nirmala • Kelas XB
               </p>
             </div>
           </div>
@@ -198,7 +200,39 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          {/* Action 4: Sinkronisasi Otomatis (Klik untuk Refresh Halaman & Data) */}
+          {/* Action 5: Push Notifikasi & Pengingat */}
+          {onOpenNotifications && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenNotifications();
+              }}
+              className="w-full text-left p-3.5 rounded-xl border border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0D0D0D] hover:border-[#2C4E3A] dark:hover:border-[#34D399] hover:bg-[#FAF7F2] dark:hover:bg-[#161616] shadow-xs transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Bell className="w-5 h-5 text-[#2C4E3A] dark:text-[#34D399]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
+                      Push Notifikasi & Pengingat
+                    </span>
+                    <span className="text-[10px] font-semibold text-[#14532D] dark:text-[#34D399] bg-[#DCFCE7] dark:bg-[#071F14] px-2 py-0.5 rounded-md border border-[#86EFAC] dark:border-[#0E492B]">
+                      Aktifkan
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600 dark:text-stone-300 font-normal mt-0.5">
+                    Pengingat otomatis jam pelajaran, piket, MBG, & tugas ice breaking langsung ke perangkat Anda.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-[#2C4E3A] dark:group-hover:text-[#34D399] transition-transform group-hover:translate-x-0.5" />
+            </button>
+          )}
+
+          {/* Action 6: Sinkronisasi Otomatis (Klik untuk Refresh Halaman & Data) */}
           <div
             role="button"
             tabIndex={0}
@@ -229,7 +263,7 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
                   </span>
                 </div>
                 <p className="text-stone-600 dark:text-stone-300 font-normal leading-relaxed">
-                  Jadwal pelajaran, penugasan, petugas MBG, doa, dan piket diperbarui otomatis dari Google Calendar & Google Sheets resmi kelas XB.
+                  Jadwal pelajaran, penugasan, petugas MBG, doa, dan piket diperbarui otomatis dari Google Calendar & Google Sheets resmi kelas XB SMA Putra Nirmala.
                 </p>
               </div>
             </div>
@@ -238,7 +272,10 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0A0A0A] flex items-center justify-end flex-shrink-0">
+        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0A0A0A] flex items-center justify-between flex-shrink-0">
+          <div className="text-[11px] text-stone-500 dark:text-stone-400 font-medium truncate">
+            SMA Putra Nirmala • Kelas XB
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-stone-100 dark:bg-[#161616] hover:bg-stone-200 dark:hover:bg-[#222222] text-stone-800 dark:text-stone-200 text-xs font-semibold transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"

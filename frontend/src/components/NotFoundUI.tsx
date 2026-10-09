@@ -31,7 +31,7 @@ export const NotFoundUI: React.FC<NotFoundUIProps> = ({
               Dashboard Kelas XB
             </h1>
             <p className="text-[11px] text-stone-500 dark:text-stone-400">
-              TP 2026/2027 • Kelas XB
+              SMA Putra Nirmala • Kelas XB
             </p>
           </div>
         </div>

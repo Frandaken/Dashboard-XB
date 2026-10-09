@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jadwal Kelas XB – Dashboard Jadwal, Petugas & Kalender</title>
+    <title>Jadwal Kelas XB – SMA Putra Nirmala</title>
     
     <!-- Language & Regional Attribution -->
     <meta http-equiv="content-language" content="id" />
@@ -19,29 +19,29 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     
     <!-- Meta Description (120-160 characters optimal length) -->
-    <meta name="description" content="Dashboard jadwal kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, petugas ice breaking, serta kalender terpadu." />
+    <meta name="description" content="Dashboard jadwal resmi kelas XB SMA Putra Nirmala: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, dan kalender." />
     
     <!-- Canonical Tag & URL -->
     <link rel="canonical" href="/" />
     
     <!-- OpenGraph Social Cards -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Jadwal Kelas XB" />
-    <meta property="og:title" content="Jadwal Kelas XB – Dashboard Jadwal, Petugas & Kalender" />
-    <meta property="og:description" content="Dashboard jadwal kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, petugas ice breaking, serta kalender terpadu." />
+    <meta property="og:site_name" content="SMA Putra Nirmala" />
+    <meta property="og:title" content="Jadwal Kelas XB – SMA Putra Nirmala" />
+    <meta property="og:description" content="Dashboard jadwal resmi kelas XB SMA Putra Nirmala: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, dan kalender." />
     <meta property="og:url" content="/" />
     <meta property="og:image" content="/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:alt" content="Preview Dashboard Jadwal Kelas XB" />
+    <meta property="og:image:alt" content="Preview Dashboard Jadwal Kelas XB SMA Putra Nirmala" />
     
     <!-- Twitter / X Social Cards -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Jadwal Kelas XB – Dashboard Jadwal, Petugas & Kalender" />
-    <meta name="twitter:description" content="Dashboard jadwal kelas XB SMA: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, petugas ice breaking, serta kalender terpadu." />
+    <meta name="twitter:title" content="Jadwal Kelas XB – SMA Putra Nirmala" />
+    <meta name="twitter:description" content="Dashboard jadwal resmi kelas XB SMA Putra Nirmala: jadwal pelajaran realtime, penugasan, petugas piket & MBG, doa harian, dan kalender." />
     <meta name="twitter:image" content="/og-image.png" />
-    <meta name="twitter:image:alt" content="Preview Dashboard Jadwal Kelas XB" />
+    <meta name="twitter:image:alt" content="Preview Dashboard Jadwal Kelas XB SMA Putra Nirmala" />
 
     <!-- Schema.org JSON-LD Structured Data -->
     <script type="application/ld+json">
@@ -51,12 +51,14 @@
         {
           "@type": "WebApplication",
           "@id": "/#app",
-          "name": "Jadwal Kelas XB",
-          "alternateName": "Dashboard Jadwal Kelas XB",
+          "name": "Jadwal Kelas XB – SMA Putra Nirmala",
           "applicationCategory": "EducationalApplication",
           "operatingSystem": "All",
           "inLanguage": "id-ID",
-          "description": "Dashboard jadwal kelas XB SMA dengan jadwal pelajaran realtime, penugasan, petugas MBG, piket, doa dan renungan harian, petugas ice breaking, serta kalender terpadu.",
+          "description": "Dashboard jadwal resmi kelas XB SMA Putra Nirmala dengan jadwal pelajaran realtime, penugasan, petugas MBG, piket, doa dan renungan harian, petugas ice breaking, serta kalender terpadu.",
+          "provider": {
+            "@id": "/#organization"
+          },
           "offers": {
             "@type": "Offer",
             "price": "0",
@@ -66,8 +68,14 @@
         {
           "@type": "EducationalOrganization",
           "@id": "/#organization",
-          "name": "Kelas XB",
-          "description": "Organisasi dan komunitas siswa kelas XB"
+          "name": "SMA Putra Nirmala",
+          "description": "SMA Putra Nirmala – Sekolah Menengah Atas di Kota Cirebon, Jawa Barat.",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Cirebon",
+            "addressRegion": "Jawa Barat",
+            "addressCountry": "ID"
+          }
         }
       ]
     }
@@ -90,40 +98,75 @@
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       // Suppress benign WebSocket / HMR connection errors in AI Studio iframe environment
-      window.addEventListener('error', function(event) {
-        if (
-          event.message &&
-          (event.message.indexOf('WebSocket') !== -1 ||
-           event.message.indexOf('@vite/client') !== -1 ||
-           event.message.indexOf('ModuleRunnerTransport') !== -1)
-        ) {
-          event.stopImmediatePropagation();
+      (function() {
+        function isViteHmrError(err, msg, filename) {
+          var s = (msg || '') + ' ' + (filename || '') + ' ' + (err && err.stack ? err.stack : '') + ' ' + (err && err.message ? err.message : '');
+          return s.indexOf('WebSocket') !== -1 ||
+                 s.indexOf('@vite/client') !== -1 ||
+                 s.indexOf('ModuleRunnerTransport') !== -1 ||
+                 s.indexOf('createWebSocketModuleRunnerTransport') !== -1;
         }
-      }, true);
-      window.addEventListener('unhandledrejection', function(event) {
-        var str = String(event.reason || '');
-        if (
-          str.indexOf('WebSocket') !== -1 ||
-          str.indexOf('@vite/client') !== -1 ||
-          str.indexOf('ModuleRunnerTransport') !== -1
-        ) {
-          event.preventDefault();
+
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+          if (isViteHmrError(error, msg, url)) {
+            return true; // suppresses window error reporting
+          }
+        };
+
+        window.addEventListener('error', function(event) {
+          var target = event.target;
+          var isWsTarget = target && (target.constructor && target.constructor.name === 'WebSocket');
+          if (
+            isWsTarget ||
+            isViteHmrError(event.error, event.message, event.filename)
+          ) {
+            if (typeof event.preventDefault === 'function') event.preventDefault();
+            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event.reason;
+          var str = typeof reason === 'string' ? reason : (reason && (reason.stack || reason.message)) || String(reason || '');
+          if (isViteHmrError(reason, str, '')) {
+            if (typeof event.preventDefault === 'function') event.preventDefault();
+            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+          }
+        });
+
+        if (typeof window.WebSocket !== 'undefined') {
+          var OrigWebSocket = window.WebSocket;
+          var PatchedWebSocket = function(url, protocols) {
+            var ws = protocols !== undefined ? new OrigWebSocket(url, protocols) : new OrigWebSocket(url);
+            ws.addEventListener('error', function(e) {
+              if (e && typeof e.preventDefault === 'function') e.preventDefault();
+              if (e && typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            });
+            return ws;
+          };
+          PatchedWebSocket.prototype = OrigWebSocket.prototype;
+          PatchedWebSocket.CONNECTING = OrigWebSocket.CONNECTING;
+          PatchedWebSocket.OPEN = OrigWebSocket.OPEN;
+          PatchedWebSocket.CLOSING = OrigWebSocket.CLOSING;
+          PatchedWebSocket.CLOSED = OrigWebSocket.CLOSED;
+          window.WebSocket = PatchedWebSocket;
         }
-      });
+      })();
     </script>
   </head>
   <body>
     <!-- Root container with semantic fallback content so View Source is never empty -->
     <div id="root">
       <header style="padding: 1rem; border-bottom: 1px solid #e5e5e5; font-family: system-ui, sans-serif;">
-        <h1 style="margin: 0; font-size: 1.5rem; color: #14532d;">Jadwal Kelas XB</h1>
+        <h1 style="margin: 0; font-size: 1.5rem; color: #14532d;">Jadwal Kelas XB – SMA Putra Nirmala</h1>
         <p style="margin: 0.25rem 0 0 0; color: #525252; font-size: 0.875rem;">
           Dashboard Jadwal Pelajaran, Penugasan, Petugas Piket &amp; MBG, Doa Harian, Petugas Ice Breaking, dan Kalender Kelas.
         </p>
       </header>
       <main style="padding: 1.5rem; font-family: system-ui, sans-serif;">
         <div style="background-color: #f5f5f4; padding: 1rem; border-radius: 0.75rem; margin-bottom: 1rem;">
-          <h2 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; color: #1c1917;">Memuat Dashboard Kelas XB...</h2>
+          <h2 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; color: #1c1917;">Memuat Dashboard Kelas XB SMA Putra Nirmala...</h2>
           <p style="margin: 0; color: #78716c; font-size: 0.875rem;">
             Sistem sedang menyinkronkan jadwal pelajaran, kalender, dan petugas harian secara langsung dari server.
           </p>

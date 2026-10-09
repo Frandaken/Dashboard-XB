@@ -85,7 +85,7 @@ export const IceBreakingScheduleModal: React.FC<IceBreakingScheduleModalProps> =
                 Jadwal Petugas Ice Breaking
               </h2>
               <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
-                Jam Pertama Sosiologi & Geografi • Kelas XB
+                SMA Putra Nirmala • Jam Pertama Sosiologi & Geografi
               </p>
             </div>
           </div>

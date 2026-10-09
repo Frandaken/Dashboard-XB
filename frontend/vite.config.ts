@@ -21,9 +21,9 @@ export default defineConfig(() => {
         ],
         manifest: {
           id: '/',
-          name: 'Jadwal Kelas XB',
+          name: 'Jadwal Kelas XB – SMA Putra Nirmala',
           short_name: 'Kelas XB',
-          description: 'Dashboard jadwal kelas XB dengan jadwal pelajaran, penugasan, petugas MBG, piket, doa dan kalender.',
+          description: 'Dashboard jadwal resmi kelas XB SMA Putra Nirmala: jadwal pelajaran realtime, petugas MBG, piket, doa, dan kalender.',
           theme_color: '#3F6E52',
           background_color: '#FAF8F5',
           display: 'standalone',
@@ -52,6 +52,7 @@ export default defineConfig(() => {
           ]
         },
         workbox: {
+          importScripts: ['/push-worker.js'],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           runtimeCaching: [
             {
@@ -85,7 +86,8 @@ export default defineConfig(() => {
           ]
         },
         devOptions: {
-          enabled: false
+          enabled: true,
+          type: 'module'
         }
       })
     ],

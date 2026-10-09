@@ -96,12 +96,18 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
               >
                 {songData.title}
               </h2>
-              <div className="flex items-center gap-1.5 text-xs text-stone-600 dark:text-stone-300 mt-0.5 font-medium">
-                <User className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500" />
-                <span>Ciptaan: <strong>{songData.composer}</strong></span>
+              <div className="flex items-center gap-1.5 text-xs text-stone-600 dark:text-stone-300 mt-0.5 font-medium flex-wrap">
+                <span className="flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500" />
+                  <span>Ciptaan: <strong>{songData.composer}</strong></span>
+                </span>
                 {weekNumber && (
                   <span className="text-stone-500 dark:text-stone-400">• Minggu ke-{weekNumber}</span>
                 )}
+                <span className="text-stone-400 dark:text-stone-600 hidden sm:inline">•</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-semibold hidden sm:inline">
+                  SMA Putra Nirmala
+                </span>
               </div>
             </div>
           </div>

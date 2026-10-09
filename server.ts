@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import webpush from 'web-push';
 import { createServer as createViteServer } from 'vite';
 
 const app = express();
@@ -201,13 +202,292 @@ app.post('/api/kelompok/export', (req, res) => {
   }
 });
 
+// ==========================================
+// Web Push Notifications & VAPID Integration
+// ==========================================
+const dataDir = path.join(process.cwd(), 'data');
+if (!fs.existsSync(dataDir)) {
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+  } catch (e) {
+    console.error('Failed to create data directory:', e);
+  }
+}
+
+// 1. Initialize VAPID Keys
+let vapidKeys = {
+  publicKey: process.env.VAPID_PUBLIC_KEY || '',
+  privateKey: process.env.VAPID_PRIVATE_KEY || ''
+};
+
+const vapidPath = path.join(dataDir, 'vapid.json');
+if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+  if (fs.existsSync(vapidPath)) {
+    try {
+      vapidKeys = JSON.parse(fs.readFileSync(vapidPath, 'utf8'));
+    } catch {
+      console.warn('Existing vapid.json invalid, regenerating keypair');
+    }
+  }
+}
+
+if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+  try {
+    vapidKeys = webpush.generateVAPIDKeys();
+    fs.writeFileSync(vapidPath, JSON.stringify(vapidKeys, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to write vapid.json:', e);
+  }
+}
+
+if (vapidKeys.publicKey && vapidKeys.privateKey) {
+  try {
+    webpush.setVapidDetails(
+      'mailto:abiprayatujuh@gmail.com',
+      vapidKeys.publicKey,
+      vapidKeys.privateKey
+    );
+  } catch (e: any) {
+    console.error('Failed to configure web-push VAPID details:', e.message);
+  }
+}
+
+// 2. Persistent Push Subscriptions Store
+interface StoredSubscription {
+  endpoint: string;
+  expirationTime?: number | null;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  preferences?: {
+    pelajaran?: boolean;
+    piketMbg?: boolean;
+    iceBreaking?: boolean;
+  };
+  subscribedAt?: string;
+  updatedAt?: string;
+}
+
+const subsPath = path.join(dataDir, 'push-subscriptions.json');
+
+function loadSubscriptions(): StoredSubscription[] {
+  if (fs.existsSync(subsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(subsPath, 'utf8'));
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function saveSubscriptions(subs: StoredSubscription[]) {
+  try {
+    fs.writeFileSync(subsPath, JSON.stringify(subs, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to save push subscriptions:', e);
+  }
+}
+
+// Push API: Get Public VAPID Key
+app.get('/api/push/vapid-public-key', (req, res) => {
+  res.json({ publicKey: vapidKeys.publicKey });
+});
+
+// Push API: Status & Count
+app.get('/api/push/status', (req, res) => {
+  const subs = loadSubscriptions();
+  res.json({
+    enabled: Boolean(vapidKeys.publicKey),
+    subscriberCount: subs.length,
+    vapidPublicKey: vapidKeys.publicKey
+  });
+});
+
+// Push API: Subscribe client
+app.post('/api/push/subscribe', (req, res) => {
+  try {
+    const { subscription, preferences } = req.body || {};
+    if (!subscription || !subscription.endpoint || !subscription.keys) {
+      return res.status(400).json({ error: 'Valid subscription object required' });
+    }
+
+    const subs = loadSubscriptions();
+    const existingIndex = subs.findIndex(s => s.endpoint === subscription.endpoint);
+    const record: StoredSubscription = {
+      endpoint: subscription.endpoint,
+      expirationTime: subscription.expirationTime,
+      keys: subscription.keys,
+      preferences: preferences || { piketMbg: true, iceBreaking: true },
+      subscribedAt: existingIndex >= 0 ? subs[existingIndex].subscribedAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingIndex >= 0) {
+      subs[existingIndex] = record;
+    } else {
+      subs.push(record);
+    }
+
+    saveSubscriptions(subs);
+    return res.json({ ok: true, message: 'Subscription saved', totalSubscribers: subs.length });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Push API: Unsubscribe client
+app.post('/api/push/unsubscribe', (req, res) => {
+  try {
+    const { endpoint } = req.body || {};
+    if (!endpoint) {
+      return res.status(400).json({ error: 'Endpoint required' });
+    }
+
+    let subs = loadSubscriptions();
+    subs = subs.filter(s => s.endpoint !== endpoint);
+    saveSubscriptions(subs);
+    return res.json({ ok: true, message: 'Unsubscribed successfully', totalSubscribers: subs.length });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Push API: Send Immediate Test Push Notification
+app.post('/api/push/send-test', async (req, res) => {
+  try {
+    const { subscription, payload } = req.body || {};
+    const subs = loadSubscriptions();
+    const targetSubs: StoredSubscription[] = [];
+
+    if (subscription && subscription.endpoint) {
+      targetSubs.push(subscription);
+    } else if (subs.length > 0) {
+      targetSubs.push(subs[subs.length - 1]); // send to latest subscriber
+    }
+
+    if (targetSubs.length === 0) {
+      return res.status(400).json({
+        error: 'No active push subscriptions found. Please enable push notifications in browser first.'
+      });
+    }
+
+    const notificationPayload = JSON.stringify({
+      title: (payload && payload.title) || 'Uji Coba Notifikasi Kelas XB 🔔',
+      body: (payload && payload.body) || 'Push Notifikasi aktif! Anda akan menerima pengingat jadwal, piket, MBG, & ice breaking.',
+      icon: (payload && payload.icon) || '/pwa-192x192.png',
+      badge: (payload && payload.badge) || '/favicon.ico',
+      tag: 'test-push-' + Date.now(),
+      url: (payload && payload.url) || '/',
+      vibrate: [200, 100, 200]
+    });
+
+    let successCount = 0;
+    const expiredEndpoints: string[] = [];
+
+    for (const sub of targetSubs) {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: sub.endpoint,
+            keys: sub.keys
+          },
+          notificationPayload
+        );
+        successCount++;
+      } catch (err: any) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          expiredEndpoints.push(sub.endpoint);
+        } else {
+          console.error('Failed to send push to endpoint:', err.message);
+        }
+      }
+    }
+
+    if (expiredEndpoints.length > 0) {
+      const activeSubs = subs.filter(s => !expiredEndpoints.includes(s.endpoint));
+      saveSubscriptions(activeSubs);
+    }
+
+    return res.json({
+      ok: true,
+      sent: successCount,
+      totalTargets: targetSubs.length
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Push API: Broadcast Notification to all subscribers
+app.post('/api/push/broadcast', async (req, res) => {
+  try {
+    const { title, body, icon, url, tag, topic } = req.body || {};
+    if (!title || !body) {
+      return res.status(400).json({ error: 'title and body are required' });
+    }
+
+    const subs = loadSubscriptions();
+    if (subs.length === 0) {
+      return res.json({ ok: true, sent: 0, message: 'No subscribers registered' });
+    }
+
+    const notificationPayload = JSON.stringify({
+      title,
+      body,
+      icon: icon || '/pwa-192x192.png',
+      badge: '/favicon.ico',
+      tag: tag || 'broadcast-' + Date.now(),
+      url: url || '/',
+      vibrate: [200, 100, 200]
+    });
+
+    let sent = 0;
+    const expiredEndpoints: string[] = [];
+
+    for (const sub of subs) {
+      // Check topic preference if applicable
+      if (topic === 'pelajaran' && sub.preferences && sub.preferences.pelajaran === false) continue;
+      if (topic === 'piketMbg' && sub.preferences && sub.preferences.piketMbg === false) continue;
+      if (topic === 'iceBreaking' && sub.preferences && sub.preferences.iceBreaking === false) continue;
+
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: sub.endpoint,
+            keys: sub.keys
+          },
+          notificationPayload
+        );
+        sent++;
+      } catch (err: any) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          expiredEndpoints.push(sub.endpoint);
+        }
+      }
+    }
+
+    if (expiredEndpoints.length > 0) {
+      saveSubscriptions(subs.filter(s => !expiredEndpoints.includes(s.endpoint)));
+    }
+
+    return res.json({ ok: true, sent, total: subs.length });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 async function startServer() {
+  process.env.DISABLE_HMR = 'true';
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       root: path.resolve('frontend'),
       server: {
         middlewareMode: true,
         hmr: false,
+        ws: false,
       },
       appType: 'spa',
     });

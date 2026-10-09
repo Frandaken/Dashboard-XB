@@ -332,7 +332,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
   const handleCopyText = () => {
     if (!generatedGroups) return;
 
-    let text = `📋 *PEMBAGIAN KELOMPOK KELAS XB*\n`;
+    let text = `📋 *PEMBAGIAN KELOMPOK KELAS XB - SMA PUTRA NIRMALA*\n`;
     text += `Total Peserta: ${activeStudents.length} Siswa | ${generatedGroups.length} Kelompok\n\n`;
 
     generatedGroups.forEach(g => {
@@ -374,6 +374,9 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
               <h2 id="group-generator-title" className="font-display font-bold text-base sm:text-lg leading-tight">
                 Random Group Name Picker (Team Generator)
               </h2>
+              <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
+                SMA Putra Nirmala • Kelas XB
+              </p>
             </div>
           </div>
 

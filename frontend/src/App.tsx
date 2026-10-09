@@ -18,6 +18,9 @@ const AllSongsModal = React.lazy(() => import('./components/AllSongsModal').then
 const WheelOfNamesModal = React.lazy(() => import('./components/WheelOfNamesModal').then(m => ({ default: m.WheelOfNamesModal })));
 const GroupGeneratorModal = React.lazy(() => import('./components/GroupGeneratorModal').then(m => ({ default: m.GroupGeneratorModal })));
 const IceBreakingScheduleModal = React.lazy(() => import('./components/IceBreakingScheduleModal').then(m => ({ default: m.IceBreakingScheduleModal })));
+import { NotificationModal } from './components/NotificationModal';
+import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { ClassDataStore } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
@@ -52,6 +55,11 @@ export default function App() {
   const [isAllSongsOpen, setIsAllSongsOpen] = useState<boolean>(false);
   // Ice Breaking schedule modal
   const [isIceBreakingModalOpen, setIsIceBreakingModalOpen] = useState<boolean>(false);
+  // Push Notification settings modal
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
+  const { permission: notificationPermission } = usePushNotifications();
+  // 5-minute pre-lesson in-app toast popup
+  const [nextLessonNotice, setNextLessonNotice] = useState<NextLessonInfo | null>(null);
 
   const [dataStore, setDataStore] = useState<ClassDataStore>(() => {
     try {
@@ -103,6 +111,69 @@ export default function App() {
   const todayWIB = useMemo(() => {
     return getWIBDateParts();
   }, []);
+
+  // 5 Menit Sebelum Jam Selanjutnya Dimulai: Pop up kecil di bagian atas auto close setelah 5 detik
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkNextLesson = () => {
+      const todaySchedule = dataStore.pelajaranByDate[todayWIB.iso] || [];
+      if (todaySchedule.length === 0) return;
+
+      const nowParts = getWIBDateParts();
+      const [nowH, nowM] = nowParts.timeStr.split(':').map(Number);
+      const nowTotalMin = nowH * 60 + nowM;
+
+      const isFriday = todayWIB.dowName.toLowerCase().includes('jumat');
+      let academicCounter = 0;
+
+      for (let idx = 0; idx < todaySchedule.length; idx++) {
+        const period = todaySchedule[idx];
+        if (!period.time || !period.cleanName) continue;
+
+        const isNonAcademicFriday = isFriday && (
+          period.cleanName.toLowerCase().includes('literasi') ||
+          period.cleanName.toLowerCase().includes('senam')
+        );
+
+        let sessionNumber: number | string = idx + 1;
+        if (isFriday) {
+          if (isNonAcademicFriday) {
+            sessionNumber = 0;
+          } else {
+            academicCounter += 1;
+            sessionNumber = academicCounter;
+          }
+        }
+
+        const match = period.time.match(/(\d{1,2}):(\d{2})/);
+        if (!match) continue;
+        const startH = parseInt(match[1], 10);
+        const startM = parseInt(match[2], 10);
+        const startTotalMin = startH * 60 + startM;
+        const diff = startTotalMin - nowTotalMin;
+
+        // Tampilkan tepat saat 5 menit sebelum jam selanjutnya dimulai (diff <= 5 dan diff > 0)
+        if (diff <= 5 && diff > 0) {
+          const storageKey = `next_lesson_popup_${todayWIB.iso}_${period.cleanName}_${period.time}`;
+          if (!sessionStorage.getItem(storageKey)) {
+            sessionStorage.setItem(storageKey, 'true');
+            setNextLessonNotice({
+              lessonName: period.cleanName,
+              sessionNumber,
+              timeStr: period.time,
+              minutesRemaining: diff
+            });
+            break;
+          }
+        }
+      }
+    };
+
+    checkNextLesson();
+    const interval = setInterval(checkNextLesson, 10000); // periksa setiap 10 detik
+    return () => clearInterval(interval);
+  }, [dataStore.pelajaranByDate, todayWIB.iso, todayWIB.dowName]);
 
   // Compute default active school date:
   // On weekend:
@@ -434,6 +505,12 @@ export default function App() {
   if (is404) {
     return (
       <>
+        {/* 5-minute pre-lesson in-app toast popup (auto closes after 5 seconds) */}
+        <NextLessonToast
+          info={nextLessonNotice}
+          onClose={() => setNextLessonNotice(null)}
+        />
+
         <NotFoundUI
           onGoHome={handleGoHome}
           onOpenMenu={() => setIsMenuOpen(true)}
@@ -450,6 +527,7 @@ export default function App() {
           onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
           onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
           onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
+          onOpenNotifications={() => setIsNotificationModalOpen(true)}
           onJumpToToday={() => {
             handleGoHome();
             handleJumpToToday();
@@ -487,12 +565,20 @@ export default function App() {
   return (
     // 5. Overflow scrolling on mobile enabled (min-h-screen overflow-y-auto on mobile, desktop keeps clean full viewport)
     <div className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#FAF7F2] dark:bg-black text-[#1C1917] dark:text-[#F8FAFC] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200">
+      {/* 5-minute pre-lesson in-app toast popup (auto closes after 5 seconds) */}
+      <NextLessonToast
+        info={nextLessonNotice}
+        onClose={() => setNextLessonNotice(null)}
+      />
+
       <div className="max-w-[1600px] w-full mx-auto flex flex-col flex-1 min-h-0 gap-2.5">
         {/* Top Header with Dark Mode Toggle & Hamburger Button */}
         <Header
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
           onOpenMenu={() => setIsMenuOpen(true)}
+          onOpenNotifications={() => setIsNotificationModalOpen(true)}
+          hasNotificationActive={notificationPermission === 'granted'}
         />
 
         {/* Status Notification (Only show on error) */}
@@ -663,6 +749,7 @@ export default function App() {
         onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
         onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
         onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
+        onOpenNotifications={() => setIsNotificationModalOpen(true)}
         onJumpToToday={handleJumpToToday}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
@@ -726,6 +813,15 @@ export default function App() {
             birthdays={selectedDetails.birthdays}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Push Notification Settings Modal */}
+        {isNotificationModalOpen && (
+          <NotificationModal
+            isOpen={isNotificationModalOpen}
+            onClose={() => setIsNotificationModalOpen(false)}
+            darkMode={darkMode}
           />
         )}
       </React.Suspense>

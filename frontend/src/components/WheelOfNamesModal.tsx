@@ -455,6 +455,9 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
               <h2 id="wheel-title" className="font-display font-bold text-base sm:text-lg leading-tight">
                 Random Name Picker (Wheel of Names)
               </h2>
+              <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
+                SMA Putra Nirmala • Kelas XB
+              </p>
             </div>
           </div>
 
