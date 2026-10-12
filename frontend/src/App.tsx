@@ -18,13 +18,15 @@ const AllSongsModal = React.lazy(() => import('./components/AllSongsModal').then
 const WheelOfNamesModal = React.lazy(() => import('./components/WheelOfNamesModal').then(m => ({ default: m.WheelOfNamesModal })));
 const GroupGeneratorModal = React.lazy(() => import('./components/GroupGeneratorModal').then(m => ({ default: m.GroupGeneratorModal })));
 const IceBreakingScheduleModal = React.lazy(() => import('./components/IceBreakingScheduleModal').then(m => ({ default: m.IceBreakingScheduleModal })));
+const KasMuridModal = React.lazy(() => import('./components/KasMuridModal').then(m => ({ default: m.KasMuridModal })));
 import { NotificationModal } from './components/NotificationModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { ClassDataStore } from './types';
-import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows } from './utils/csvParser';
+import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
+import { KAS_DEMO_CSV } from './data/kasDemoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
 import { isIceBreakingActiveNow, getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
 
@@ -71,6 +73,12 @@ export default function App() {
       const piketByDow = parsePiketRows(piketRows);
       const iceBreakingRows = parseCSV(DEMO_CSV.icebreaking);
       const iceBreakingByDate = parseIceBreakingRows(iceBreakingRows);
+      const kasData = parseKasData(
+        KAS_DEMO_CSV.penunggakan,
+        KAS_DEMO_CSV.pengeluaran,
+        KAS_DEMO_CSV.pendapatan_lain,
+        KAS_DEMO_CSV.rekap
+      );
 
       return {
         doaByDate,
@@ -79,7 +87,8 @@ export default function App() {
         iceBreakingByDate,
         pelajaranByDate: {},
         tasksByDate: {},
-        birthdayByMonthDay: {}
+        birthdayByMonthDay: {},
+        kasData
       };
     } catch {
       return {
@@ -197,6 +206,7 @@ export default function App() {
 
   const [isRandomPickerOpen, setIsRandomPickerOpen] = useState<boolean>(false);
   const [isGroupGeneratorOpen, setIsGroupGeneratorOpen] = useState<boolean>(false);
+  const [isKasModalOpen, setIsKasModalOpen] = useState<boolean>(false);
 
   // 404 Route state & browser pathname listener
   const [is404, setIs404] = useState<boolean>(() => {
@@ -309,13 +319,17 @@ export default function App() {
       const rangeStart = new Date(curYear - 1, 0, 1);
       const rangeEnd = new Date(curYear + 1, 11, 31);
 
-      const [doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes] = await Promise.all([
+      const [doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
         fetchEndpoint('/api/sheets/doa', 'doa'),
         fetchEndpoint('/api/sheets/mbg', 'mbg'),
         fetchEndpoint('/api/sheets/piket', 'piket'),
         fetchEndpoint('/api/sheets/icebreaking', 'icebreaking'),
         fetchEndpoint('/api/calendar/pelajaran'),
-        fetchEndpoint('/api/calendar/birthday')
+        fetchEndpoint('/api/calendar/birthday'),
+        fetchEndpoint('/api/sheets/penunggakan'),
+        fetchEndpoint('/api/sheets/pengeluaran'),
+        fetchEndpoint('/api/sheets/pendapatan_lain'),
+        fetchEndpoint('/api/sheets/rekap')
       ]);
 
       const doaRows = parseCSV(doaRes.text);
@@ -336,6 +350,18 @@ export default function App() {
       // Parse birthday iCal
       const birthdayByMonthDay = parseBirthdayICS(birthdayRes.text, rangeStart, rangeEnd);
 
+      // Parse Kas Data (falling back to KAS_DEMO_CSV if network failed or empty)
+      const kasPenunggakanText = penunggakanRes.text || KAS_DEMO_CSV.penunggakan;
+      const kasPengeluaranText = pengeluaranRes.text || KAS_DEMO_CSV.pengeluaran;
+      const kasPendapatanLainText = pendapatanLainRes.text || KAS_DEMO_CSV.pendapatan_lain;
+      const kasRekapText = rekapRes.text || KAS_DEMO_CSV.rekap;
+      const kasData = parseKasData(
+        kasPenunggakanText,
+        kasPengeluaranText,
+        kasPendapatanLainText,
+        kasRekapText
+      );
+
       const newStore: ClassDataStore = {
         doaByDate,
         mbgByDate,
@@ -343,7 +369,8 @@ export default function App() {
         iceBreakingByDate,
         pelajaranByDate,
         tasksByDate,
-        birthdayByMonthDay
+        birthdayByMonthDay,
+        kasData
       };
 
       setDataStore(newStore);
@@ -528,6 +555,7 @@ export default function App() {
           onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
           onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
           onOpenNotifications={() => setIsNotificationModalOpen(true)}
+          onOpenKasMurid={() => setIsKasModalOpen(true)}
           onJumpToToday={() => {
             handleGoHome();
             handleJumpToToday();
@@ -558,6 +586,14 @@ export default function App() {
           pelajaranByDate={dataStore.pelajaranByDate}
           todayISO={todayWIB.iso}
         />
+
+        <KasMuridModal
+          isOpen={isKasModalOpen}
+          onClose={() => setIsKasModalOpen(false)}
+          kasData={dataStore.kasData}
+          onRefresh={fetchData}
+          isRefreshing={isLoading}
+        />
       </>
     );
   }
@@ -579,6 +615,7 @@ export default function App() {
           onOpenMenu={() => setIsMenuOpen(true)}
           onOpenNotifications={() => setIsNotificationModalOpen(true)}
           hasNotificationActive={notificationPermission === 'granted'}
+          onOpenKasMurid={() => setIsKasModalOpen(true)}
         />
 
         {/* Status Notification (Only show on error) */}
@@ -750,6 +787,7 @@ export default function App() {
         onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
         onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
         onOpenNotifications={() => setIsNotificationModalOpen(true)}
+        onOpenKasMurid={() => setIsKasModalOpen(true)}
         onJumpToToday={handleJumpToToday}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
@@ -796,6 +834,17 @@ export default function App() {
               setActiveISO(iso);
               setIsManualDate(true);
             }}
+          />
+        )}
+
+        {/* Buku Kas & Penunggakan Murid Modal */}
+        {isKasModalOpen && (
+          <KasMuridModal
+            isOpen={isKasModalOpen}
+            onClose={() => setIsKasModalOpen(false)}
+            kasData={dataStore.kasData}
+            onRefresh={fetchData}
+            isRefreshing={isLoading}
           />
         )}
 

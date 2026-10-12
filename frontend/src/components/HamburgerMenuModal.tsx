@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface HamburgerMenuModalProps {
   onOpenGroupGenerator: () => void;
   onOpenIceBreaking?: () => void;
   onOpenNotifications?: () => void;
+  onOpenKasMurid?: () => void;
   onJumpToToday?: () => void;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -21,7 +22,8 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onOpenRandomPicker,
   onOpenGroupGenerator,
   onOpenIceBreaking,
-  onOpenNotifications
+  onOpenNotifications,
+  onOpenKasMurid
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,6 +82,38 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 min-h-0">
+          {/* Action: Buku Kas & Penunggakan Murid */}
+          {onOpenKasMurid && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenKasMurid();
+              }}
+              className="w-full text-left p-3.5 rounded-xl border border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-[#07241A] hover:border-emerald-600 dark:hover:border-emerald-400 hover:bg-emerald-100/70 dark:hover:bg-[#0B3325] shadow-xs transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-200/80 dark:bg-[#0D3B2B] text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Wallet className="w-5 h-5 text-emerald-800 dark:text-emerald-300" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
+                      Buku Kas Murid
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-[#082B1E] px-2 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-800">
+                      Iuran & Tunggakan
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600 dark:text-stone-300 font-normal mt-0.5">
+                    Data penunggakan iuran Rp 3.000/minggu, pengeluaran, saldo, & rekap keseluruhan.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          )}
+
           {/* Action 1: Random Name Picker (Wheel of Names) */}
           <button
             type="button"

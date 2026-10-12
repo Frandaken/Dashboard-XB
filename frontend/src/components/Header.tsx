@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Sun, Moon, Bell } from 'lucide-react';
+import { Menu, Sun, Moon, Bell, Wallet } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 import { getWIBDateParts, WIBDateInfo } from '../utils/dateUtils';
 
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenMenu: () => void;
   onOpenNotifications?: () => void;
   hasNotificationActive?: boolean;
+  onOpenKasMurid?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,7 +17,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleDarkMode,
   onOpenMenu,
   onOpenNotifications,
-  hasNotificationActive
+  hasNotificationActive,
+  onOpenKasMurid
 }) => {
   const [wibInfo, setWibInfo] = useState<WIBDateInfo>(() => getWIBDateParts());
 
@@ -70,6 +72,18 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-2.5">
+        {/* Kas Murid Quick-Access Button */}
+        {onOpenKasMurid && (
+          <button
+            onClick={onOpenKasMurid}
+            aria-label="Buka Buku Kas Murid"
+            title="Buku Kas & Penunggakan Murid Kelas XB"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 h-9 rounded-lg border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-[#07241A] hover:bg-emerald-100 dark:hover:bg-[#0C3527] text-emerald-800 dark:text-emerald-300 transition cursor-pointer shadow-2xs font-semibold text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+          >
+            <Wallet className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+            <span className="hidden md:inline">Kas Murid</span>
+          </button>
+        )}
         {/* Push Notification Button */}
         {onOpenNotifications && (
           <button
