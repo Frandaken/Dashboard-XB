@@ -182,23 +182,53 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         {/* MINI-BOXES: DOA PAGI, RENUNGAN, MALAIKAT TUHAN, DOA PENUTUP */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
-            { label: 'Doa Pagi', name: doa?.doaPagi },
-            { label: 'Renungan', name: doa?.renungan },
-            { label: 'Malaikat Tuhan', name: doa?.malaikatTuhan },
-            { label: 'Doa Penutup', name: doa?.doaPenutup }
-          ].map((role, idx) => (
-            <div
-              key={idx}
-              className="bg-[#FAF7F2] dark:bg-[#121212] border border-[#D8D2C5] dark:border-[#222222] rounded-lg p-2.5 flex flex-col justify-between"
-            >
-              <span className="text-[11px] font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wide">
-                {role.label}
-              </span>
-              <span className="font-bold text-xs sm:text-sm text-stone-900 dark:text-stone-50 truncate mt-1">
-                {role.name || '—'}
-              </span>
-            </div>
-          ))}
+            { label: 'Doa Pagi', name: doa?.doaPagi, isTugas: false },
+            { label: 'Renungan', name: doa?.renungan, isTugas: false },
+            { label: 'Malaikat Tuhan', name: doa?.malaikatTuhan, isTugas: Boolean(doa?.tugasMalaikatTuhan) },
+            { label: 'Doa Penutup', name: doa?.doaPenutup, isTugas: false }
+          ].map((role, idx) => {
+            const isMalaikatWithTugas = role.label === 'Malaikat Tuhan' && Boolean(doa?.tugasMalaikatTuhan);
+            return (
+              <div
+                key={idx}
+                className={`rounded-lg p-2.5 flex flex-col justify-between transition-all ${
+                  isMalaikatWithTugas
+                    ? 'bg-emerald-50/80 dark:bg-emerald-950/25 border-2 border-emerald-500 dark:border-emerald-400 outline outline-2 outline-emerald-500/70 dark:outline-emerald-400/70 outline-offset-1 shadow-xs ring-2 ring-emerald-500/20'
+                    : 'bg-[#FAF7F2] dark:bg-[#121212] border border-[#D8D2C5] dark:border-[#222222]'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span
+                    className={`text-[11px] font-bold uppercase tracking-wide ${
+                      isMalaikatWithTugas
+                        ? 'text-emerald-800 dark:text-emerald-300'
+                        : 'text-stone-600 dark:text-stone-300'
+                    }`}
+                  >
+                    {role.label}
+                  </span>
+                  {isMalaikatWithTugas && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-400 dark:border-emerald-600"
+                      title="Tugas Malaikat Tuhan Aktif (TRUE)"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Tugas
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={`font-bold text-xs sm:text-sm truncate mt-1 ${
+                    isMalaikatWithTugas
+                      ? 'text-emerald-950 dark:text-emerald-100 font-extrabold'
+                      : 'text-stone-900 dark:text-stone-50'
+                  }`}
+                >
+                  {role.name || '—'}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

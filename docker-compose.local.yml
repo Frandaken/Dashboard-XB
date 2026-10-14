@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      no_cache: true
     container_name: dashboard-xb-frontend
     ports:
       - 8202:80
@@ -18,9 +19,10 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      no_cache: true
     container_name: dashboard-xb-backend
     ports:
-      - 3003:3003
+      - 3003:3003 # Backend communication & health check
     environment:
       - PORT=3003
       - NODE_ENV=production

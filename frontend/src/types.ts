@@ -9,6 +9,7 @@ export interface DoaSchedule {
   renungan: string;
   malaikatTuhan: string;
   doaPenutup: string;
+  tugasMalaikatTuhan?: boolean;
 }
 
 export interface MbgSchedule {

@@ -133,6 +133,19 @@ export function parseDoaRows(rows: Record<string, string>[]): Record<string, Doa
     const { primaryIso, originalIso, formattedTanggal } = resolveRowISODate(r['Tanggal'] || '', prevRaw, nextRaw);
     if (!primaryIso && !originalIso) continue;
 
+    // Check Tugas Malaikat Tuhan column
+    let tugasMalaikatRaw = r['Tugas Malaikat Tuhan'] || '';
+    if (!tugasMalaikatRaw) {
+      for (const k of Object.keys(r)) {
+        const normKey = k.trim().toLowerCase();
+        if (normKey === 'tugas malaikat tuhan' || normKey === 'tugas malaikat' || (normKey.includes('tugas') && normKey.includes('malaikat'))) {
+          tugasMalaikatRaw = r[k];
+          break;
+        }
+      }
+    }
+    const isTugasMalaikat = String(tugasMalaikatRaw || '').trim().toUpperCase() === 'TRUE';
+
     const schedule: DoaSchedule = {
       tanggal: formattedTanggal || r['Tanggal'] || '',
       isoDate: primaryIso || originalIso || '',
@@ -143,7 +156,8 @@ export function parseDoaRows(rows: Record<string, string>[]): Record<string, Doa
       doaPagi: r['Doa Pagi'] || '',
       renungan: r['Renungan'] || '',
       malaikatTuhan: r['Malaikat Tuhan'] || '',
-      doaPenutup: r['Doa Penutup'] || ''
+      doaPenutup: r['Doa Penutup'] || '',
+      tugasMalaikatTuhan: isTugasMalaikat
     };
 
     if (primaryIso) {
