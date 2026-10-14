@@ -11,6 +11,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
 };
 
 const PREFS_STORAGE_KEY = 'kelas_xb_push_preferences';
+const NOTIF_ENABLED_KEY = 'kelas_xb_push_enabled';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -27,6 +28,14 @@ export function usePushNotifications() {
   const [isSupported, setIsSupported] = useState<boolean>(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [isEnabled, setIsEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem(NOTIF_ENABLED_KEY);
+    if (saved !== null) {
+      return saved === 'true';
+    }
+    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +48,9 @@ export function usePushNotifications() {
       return DEFAULT_PREFERENCES;
     }
   });
+
+  // Derived active status: permission must be granted, push subscribed, and user has not muted/disabled it
+  const isNotificationActive = permission === 'granted' && isEnabled;
 
   // Check support and current permission on mount
   useEffect(() => {
@@ -53,6 +65,9 @@ export function usePushNotifications() {
 
     if ('Notification' in window) {
       setPermission(Notification.permission);
+      if (Notification.permission !== 'granted') {
+        setIsEnabled(false);
+      }
     }
 
     if (supported) {
@@ -62,6 +77,23 @@ export function usePushNotifications() {
         }).catch(() => {});
       }).catch(() => {});
     }
+
+    const handleSync = () => {
+      const saved = localStorage.getItem(NOTIF_ENABLED_KEY);
+      if (saved !== null) {
+        setIsEnabled(saved === 'true');
+      }
+      if ('Notification' in window) {
+        setPermission(Notification.permission);
+      }
+    };
+
+    window.addEventListener('kelas_xb_notif_changed', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('kelas_xb_notif_changed', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, []);
 
   const updatePreferences = useCallback((newPrefs: Partial<NotificationPreferences>) => {
@@ -154,6 +186,11 @@ export function usePushNotifications() {
       }
 
       setIsSubscribed(true);
+      setIsEnabled(true);
+      try {
+        localStorage.setItem(NOTIF_ENABLED_KEY, 'true');
+        window.dispatchEvent(new Event('kelas_xb_notif_changed'));
+      } catch {}
 
       // 6. Show Welcome Notification immediately
       try {
@@ -189,28 +226,43 @@ export function usePushNotifications() {
 
     try {
       if ('serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.ready;
-        const sub = await registration.pushManager.getSubscription();
-        if (sub) {
-          const endpoint = sub.endpoint;
-          await sub.unsubscribe();
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const sub = await registration.pushManager.getSubscription();
+          if (sub) {
+            const endpoint = sub.endpoint;
+            await sub.unsubscribe().catch(() => {});
 
-          await fetch('/api/push/unsubscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ endpoint })
-          }).catch(() => {});
+            await fetch('/api/push/unsubscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ endpoint })
+            }).catch(() => {});
+          }
+        } catch (swErr) {
+          console.warn('SW unsubscribe notice:', swErr);
         }
       }
 
       setIsSubscribed(false);
+      setIsEnabled(false);
+      try {
+        localStorage.setItem(NOTIF_ENABLED_KEY, 'false');
+        window.dispatchEvent(new Event('kelas_xb_notif_changed'));
+      } catch {}
+
       setLoading(false);
       return true;
     } catch (err: any) {
       console.error('Failed to unsubscribe push notifications:', err);
-      setError(err.message || 'Gagal menonaktifkan notifikasi.');
+      setIsSubscribed(false);
+      setIsEnabled(false);
+      try {
+        localStorage.setItem(NOTIF_ENABLED_KEY, 'false');
+        window.dispatchEvent(new Event('kelas_xb_notif_changed'));
+      } catch {}
       setLoading(false);
-      return false;
+      return true;
     }
   }, []);
 
@@ -280,6 +332,8 @@ export function usePushNotifications() {
     isSupported,
     permission,
     isSubscribed,
+    isEnabled,
+    isNotificationActive,
     loading,
     error,
     preferences,

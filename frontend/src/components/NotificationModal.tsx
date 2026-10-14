@@ -31,6 +31,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     isSupported,
     permission,
     isSubscribed,
+    isEnabled,
+    isNotificationActive,
     loading,
     error,
     preferences,
@@ -55,7 +57,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   if (!isOpen) return null;
 
   const handleToggleSubscribe = async () => {
-    if (permission === 'granted' && isSubscribed) {
+    if (isNotificationActive) {
       await unsubscribe();
     } else {
       await subscribe();
@@ -121,7 +123,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 <span className="text-xs font-bold text-stone-900 dark:text-white uppercase tracking-wider">
                   Status Izin
                 </span>
-                {isGranted ? (
+                {isNotificationActive ? (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] border border-[#86EFAC] dark:border-[#0E492B]">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Aktif
@@ -131,6 +133,11 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     <AlertCircle className="w-3.5 h-3.5" />
                     Diblokir Browser
                   </span>
+                ) : isGranted && !isEnabled ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-stone-100 dark:bg-[#1A1A1A] text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-[#333333]">
+                    <BellOff className="w-3.5 h-3.5" />
+                    Dinonaktifkan
+                  </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#261B06] text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-[#523A0F]">
                     <BellOff className="w-3.5 h-3.5" />
@@ -139,10 +146,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
-                {isGranted
+                {isNotificationActive
                   ? 'Perangkat ini siap menerima pengingat otomatis dari dashboard Kelas XB SMA Putra Nirmala.'
                   : isDenied
                   ? 'Izin notifikasi diblokir oleh browser. Buka setelan izin situs browser untuk mengizinkan.'
+                  : isGranted && !isEnabled
+                  ? 'Notifikasi sedang dinonaktifkan. Anda dapat mengaktifkannya kembali kapan saja.'
                   : 'Aktifkan untuk menerima pemberitahuan tepat waktu saat giliran tugas piket dan ice breaking.'}
               </p>
             </div>
@@ -158,7 +167,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
           {/* Action Buttons */}
           <div className="space-y-2">
-            {!isGranted ? (
+            {!isNotificationActive ? (
               <button
                 type="button"
                 onClick={handleToggleSubscribe}
@@ -168,12 +177,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Meminta Izin Browser...
+                    Menyimpan Pengaturan...
                   </>
                 ) : (
                   <>
                     <BellRing className="w-4 h-4" />
-                    Aktifkan Push Notifikasi Sekarang
+                    {isGranted ? 'Aktifkan Kembali Notifikasi' : 'Aktifkan Push Notifikasi Sekarang'}
                   </>
                 )}
               </button>
@@ -249,21 +258,23 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             </div>
           </div>
 
-          {/* Guide for iOS & Mobile */}
-          <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-[#1F1707] border border-amber-200 dark:border-[#4B3710] text-amber-900 dark:text-amber-200 text-xs space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold">
-              <Smartphone className="w-4 h-4 text-amber-700 dark:text-amber-400" />
-              Petunjuk di Perangkat Mobile
+          {/* Guide for iOS & Mobile (Hidden if notifications are already active) */}
+          {!isNotificationActive && (
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-[#1F1707] border border-amber-200 dark:border-[#4B3710] text-amber-900 dark:text-amber-200 text-xs space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold">
+                <Smartphone className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                Petunjuk di Perangkat Mobile
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                <li>
+                  <strong>Android / Chrome / Windows / Mac:</strong> Notifikasi langsung tampil setelah tombol di atas diklik & diizinkan.
+                </li>
+                <li>
+                  <strong>iPhone & iPad (iOS 16.4+):</strong> Buka di Safari, ketuk tombol <strong>Bagikan (Share)</strong> lalu pilih <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>. Buka aplikasi dari layar utama untuk mengaktifkan notifikasi.
+                </li>
+              </ul>
             </div>
-            <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-              <li>
-                <strong>Android / Chrome / Windows / Mac:</strong> Notifikasi langsung tampil setelah tombol di atas diklik & diizinkan.
-              </li>
-              <li>
-                <strong>iPhone & iPad (iOS 16.4+):</strong> Buka di Safari, ketuk tombol <strong>Bagikan (Share)</strong> lalu pilih <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>. Buka aplikasi dari layar utama untuk mengaktifkan notifikasi.
-              </li>
-            </ul>
-          </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -6,7 +6,6 @@ import { ScheduleBlocks } from './components/ScheduleBlocks';
 import { CalendarSection } from './components/CalendarSection';
 import { SongScheduleList } from './components/SongScheduleList';
 import { HamburgerMenuModal } from './components/HamburgerMenuModal';
-import { IceBreakingPanel } from './components/IceBreakingPanel';
 import { StatusBanner } from './components/StatusBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardSkeleton } from './components/DashboardSkeleton';
@@ -28,7 +27,7 @@ import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
 import { KAS_DEMO_CSV } from './data/kasDemoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
-import { isIceBreakingActiveNow, getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
+import { getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
 
 export default function App() {
   // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
@@ -59,7 +58,7 @@ export default function App() {
   const [isIceBreakingModalOpen, setIsIceBreakingModalOpen] = useState<boolean>(false);
   // Push Notification settings modal
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
-  const { permission: notificationPermission } = usePushNotifications();
+  const { isNotificationActive } = usePushNotifications();
   // 5-minute pre-lesson in-app toast popup
   const [nextLessonNotice, setNextLessonNotice] = useState<NextLessonInfo | null>(null);
 
@@ -454,14 +453,6 @@ export default function App() {
   const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
 
-  // Check real-time if Ice Breaking panel should appear below the calendar right now
-  const iceBreakingActiveStatus = useMemo(() => {
-    return isIceBreakingActiveNow(
-      todayWIB.iso,
-      dataStore.iceBreakingByDate[todayWIB.iso],
-      dataStore.pelajaranByDate[todayWIB.iso]
-    );
-  }, [todayWIB.iso, dataStore.iceBreakingByDate, dataStore.pelajaranByDate, currentWIBTime]);
 
   // Helper check for calendar dots
   const hasDataForISO = (iso: string): boolean => {
@@ -570,6 +561,7 @@ export default function App() {
           onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
           onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
           onOpenNotifications={() => setIsNotificationModalOpen(true)}
+          hasNotificationActive={isNotificationActive}
           onOpenKasMurid={() => setIsKasModalOpen(true)}
           onJumpToToday={() => {
             handleGoHome();
@@ -629,7 +621,7 @@ export default function App() {
           onToggleDarkMode={toggleDarkMode}
           onOpenMenu={() => setIsMenuOpen(true)}
           onOpenNotifications={() => setIsNotificationModalOpen(true)}
-          hasNotificationActive={notificationPermission === 'granted'}
+          hasNotificationActive={isNotificationActive}
           onOpenKasMurid={() => setIsKasModalOpen(true)}
         />
 
@@ -769,16 +761,6 @@ export default function App() {
                 birthdaysToday={activeBirthdays}
               />
 
-              {/* Panel Petugas Ice Breaking: Hanya muncul saat jam pelajaran pertama yang ada di spreadsheet pada hari yang telah ditentukan (pada setiap awal jam Sosiologi dan Geografi) */}
-              {iceBreakingActiveStatus.isActive && iceBreakingActiveStatus.session && dataStore.iceBreakingByDate[todayWIB.iso] && (
-                <IceBreakingPanel
-                  schedule={dataStore.iceBreakingByDate[todayWIB.iso]}
-                  session={iceBreakingActiveStatus.session}
-                  currentTime={iceBreakingActiveStatus.currentTime}
-                  onOpenFullSchedule={() => setIsIceBreakingModalOpen(true)}
-                />
-              )}
-
               {/* Song Schedule Card */}
               <SongScheduleList
                 currentDate={safeActiveDate}
@@ -802,6 +784,7 @@ export default function App() {
         onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
         onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
         onOpenNotifications={() => setIsNotificationModalOpen(true)}
+        hasNotificationActive={isNotificationActive}
         onOpenKasMurid={() => setIsKasModalOpen(true)}
         onJumpToToday={handleJumpToToday}
         darkMode={darkMode}

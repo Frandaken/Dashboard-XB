@@ -84,8 +84,8 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden md:inline">Kas Murid</span>
           </button>
         )}
-        {/* Push Notification Button */}
-        {onOpenNotifications && (
+        {/* Push Notification Button (shown in header only if not yet active; when active, moved to hamburger menu as small button) */}
+        {!hasNotificationActive && onOpenNotifications && (
           <button
             onClick={onOpenNotifications}
             aria-label="Pengaturan Push Notifikasi"
@@ -93,9 +93,6 @@ export const Header: React.FC<HeaderProps> = ({
             className="relative w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#0E0E0E] hover:bg-stone-100 dark:hover:bg-[#1A1A1A] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
           >
             <Bell className="w-4 h-4 text-[#2C4E3A] dark:text-[#34D399]" />
-            {hasNotificationActive && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-black" />
-            )}
           </button>
         )}
 

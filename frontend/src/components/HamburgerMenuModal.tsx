@@ -9,6 +9,7 @@ interface HamburgerMenuModalProps {
   onOpenGroupGenerator: () => void;
   onOpenIceBreaking?: () => void;
   onOpenNotifications?: () => void;
+  hasNotificationActive?: boolean;
   onOpenKasMurid?: () => void;
   onJumpToToday?: () => void;
   darkMode?: boolean;
@@ -23,6 +24,7 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onOpenGroupGenerator,
   onOpenIceBreaking,
   onOpenNotifications,
+  hasNotificationActive,
   onOpenKasMurid
 }) => {
   useEffect(() => {
@@ -71,13 +73,32 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Tutup Menu Navigasi"
-            className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1C1C1C] flex items-center justify-center text-stone-600 dark:text-stone-200 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Tombol kecil notifikasi di atas jika notifikasi sudah aktif */}
+            {hasNotificationActive && onOpenNotifications && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenNotifications();
+                }}
+                aria-label="Pengaturan Push Notifikasi (Aktif)"
+                title="Pengaturan Push Notifikasi (Aktif)"
+                className="relative w-9 h-9 rounded-lg border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-[#07241A] hover:bg-emerald-100 dark:hover:bg-[#0C3527] flex items-center justify-center text-emerald-800 dark:text-emerald-300 transition cursor-pointer shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600"
+              >
+                <Bell className="w-4 h-4 text-emerald-700 dark:text-[#34D399]" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-black" />
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              aria-label="Tutup Menu Navigasi"
+              className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1C1C1C] flex items-center justify-center text-stone-600 dark:text-stone-200 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -234,8 +255,8 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          {/* Action 5: Push Notifikasi & Pengingat */}
-          {onOpenNotifications && (
+          {/* Action 5: Push Notifikasi & Pengingat (Hanya tampil sebagai menu besar jika notifikasi belum aktif) */}
+          {!hasNotificationActive && onOpenNotifications && (
             <button
               type="button"
               onClick={() => {
@@ -310,12 +331,29 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
           <div className="text-[11px] text-stone-500 dark:text-stone-400 font-medium truncate">
             SMA Putra Nirmala • Kelas XB
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-stone-100 dark:bg-[#161616] hover:bg-stone-200 dark:hover:bg-[#222222] text-stone-800 dark:text-stone-200 text-xs font-semibold transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
-          >
-            Tutup
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Tombol kecil notifikasi di bawah jika notifikasi sudah aktif */}
+            {hasNotificationActive && onOpenNotifications && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenNotifications();
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-[#07241A] hover:bg-emerald-100 dark:hover:bg-[#0C3527] text-emerald-800 dark:text-emerald-300 transition cursor-pointer shadow-2xs font-semibold text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600"
+                title="Pengaturan Push Notifikasi (Aktif)"
+              >
+                <Bell className="w-3.5 h-3.5 text-emerald-700 dark:text-[#34D399]" />
+                <span className="inline">Notifikasi</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg bg-stone-100 dark:bg-[#161616] hover:bg-stone-200 dark:hover:bg-[#222222] text-stone-800 dark:text-stone-200 text-xs font-semibold transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       </div>
     </div>
