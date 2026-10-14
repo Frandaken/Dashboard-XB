@@ -296,12 +296,27 @@ export default function App() {
   }, [hasSchoolData]);
 
   // Fetch real data with fallback
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceFresh: boolean = false) => {
+    setIsLoading(true);
     setStatus({ type: 'loading', message: 'Memperbarui data kelas...' });
+
+    if (forceFresh) {
+      try {
+        await fetch('/api/refresh', { method: 'POST' });
+      } catch (e) {
+        // ignore network error on cache clearing
+      }
+    }
 
     const fetchEndpoint = async (path: string, fallbackKey?: keyof typeof DEMO_CSV) => {
       try {
-        const res = await fetch(path);
+        const url = forceFresh
+          ? `${path}?fresh=1&t=${Date.now()}`
+          : path;
+        const res = await fetch(url, {
+          cache: forceFresh ? 'no-cache' : 'default',
+          headers: forceFresh ? { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' } : {}
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         return { text, isFallback: false };
@@ -591,7 +606,7 @@ export default function App() {
           isOpen={isKasModalOpen}
           onClose={() => setIsKasModalOpen(false)}
           kasData={dataStore.kasData}
-          onRefresh={fetchData}
+          onRefresh={() => fetchData(true)}
           isRefreshing={isLoading}
         />
       </>
@@ -843,7 +858,7 @@ export default function App() {
             isOpen={isKasModalOpen}
             onClose={() => setIsKasModalOpen(false)}
             kasData={dataStore.kasData}
-            onRefresh={fetchData}
+            onRefresh={() => fetchData(true)}
             isRefreshing={isLoading}
           />
         )}

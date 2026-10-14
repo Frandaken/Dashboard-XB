@@ -60,6 +60,8 @@ export interface KasWeekColumn {
   dateStr: string;   // e.g. "24"
   monthName: string; // e.g. "Jul 26"
   label: string;     // e.g. "24 Jul 26"
+  isoDate: string;   // e.g. "2026-07-24"
+  isElapsed: boolean;// date <= today
 }
 
 export interface KasStudentEntry {
@@ -111,6 +113,8 @@ export interface KasRekapSummary {
 export interface KasDataStore {
   weeks: KasWeekColumn[];
   students: KasStudentEntry[];
+  activeWeeksCount: number;
+  targetWajibPerStudent: number;
   totalKasTerkumpul: number;
   totalTunggakan: number;
   ratePerWeek: number;

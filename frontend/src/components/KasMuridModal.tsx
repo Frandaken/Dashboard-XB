@@ -145,16 +145,11 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
               <Wallet className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 id="kas-modal-title" className="text-base sm:text-lg font-bold font-display tracking-tight text-stone-900 dark:text-white leading-none">
-                  Buku Kas Murid Kelas XB
-                </h2>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                  Resmi Terverifikasi
-                </span>
-              </div>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1 leading-none">
-                SMA Putra Nirmala • Iuran Rp 3.000/minggu (1 angka sheet = Rp 1.000)
+              <h2 id="kas-modal-title" className="text-base sm:text-lg font-bold font-display tracking-tight text-stone-900 dark:text-white leading-tight">
+                Buku Kas Murid Kelas XB
+              </h2>
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 leading-none">
+                Iuran Wajib Rp 3.000 / minggu • SMA Putra Nirmala
               </p>
             </div>
           </div>
@@ -166,9 +161,10 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 onClick={onRefresh}
                 disabled={isRefreshing}
                 title="Perbarui data dari Google Sheets"
-                className="p-2 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-stone-50 dark:bg-[#1A1A1A] hover:bg-stone-100 dark:hover:bg-[#222222] text-stone-700 dark:text-stone-300 transition cursor-pointer disabled:opacity-50"
+                className="p-2 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-stone-50 dark:bg-[#1A1A1A] hover:bg-stone-100 dark:hover:bg-[#222222] text-stone-700 dark:text-stone-300 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
+                <span className="hidden sm:inline text-xs font-semibold">Segarkan</span>
               </button>
             )}
             <button
@@ -200,10 +196,10 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
               <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="font-display font-bold text-lg sm:text-xl text-emerald-800 dark:text-emerald-400">
-              {formatRupiah(rekap?.saldoTotal || (totalTerkumpul - (rekap?.totalPengeluaran || 150000)))}
+              {formatRupiah(rekap?.saldoTotal ?? (totalTerkumpul + (rekap?.pendapatanLain ?? 0) - (rekap?.totalPengeluaran ?? 0)))}
             </div>
             <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">
-              Net kas siap digunakan
+              Total kas siap digunakan
             </div>
           </div>
 
@@ -217,7 +213,7 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
               {formatRupiah(totalTerkumpul)}
             </div>
             <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">
-              Dari 33 murid kelas XB
+              Dari {totalStudents} murid kelas XB
             </div>
           </div>
 
@@ -228,10 +224,10 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
               <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400" />
             </div>
             <div className="font-display font-bold text-lg sm:text-xl text-rose-700 dark:text-rose-400">
-              {formatRupiah(rekap?.totalPengeluaran || 150000)}
+              {formatRupiah(rekap?.totalPengeluaran ?? 0)}
             </div>
             <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">
-              6 transaksi kebutuhan kelas
+              {pengeluaranList.length > 0 ? `${pengeluaranList.length} transaksi pembelanjaan` : 'Belum ada pengeluaran'}
             </div>
           </div>
 
@@ -385,6 +381,22 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 </div>
               </div>
 
+              {/* Status Info Banner (Clean, no formula syntax) */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/70 dark:bg-[#07241A] border border-emerald-200 dark:border-emerald-800/80 text-xs text-emerald-950 dark:text-emerald-200">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold">
+                      Minggu Berjalan: {kasData?.activeWeeksCount ?? 12} Minggu
+                    </span>
+                    <span className="mx-2 opacity-40">•</span>
+                    <span>
+                      Target Wajib: <strong>{formatRupiah(kasData?.targetWajibPerStudent ?? ((kasData?.activeWeeksCount ?? 12) * 3000))}</strong> per murid
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Responsive Table / Cards */}
               <div className="bg-white dark:bg-[#141414] rounded-xl border border-[#D8D2C5] dark:border-[#222222] overflow-hidden shadow-xs">
                 <div className="overflow-x-auto max-h-[50vh]">
@@ -517,55 +529,61 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 <div className="text-right">
                   <span className="text-xs text-stone-500 block">Total Pengeluaran:</span>
                   <span className="font-display font-bold text-base text-rose-700 dark:text-rose-400">
-                    {formatRupiah(rekap?.totalPengeluaran || 150000)}
+                    {formatRupiah(rekap?.totalPengeluaran ?? 0)}
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {pengeluaranList.map((item, idx) => (
-                  <div
-                    key={item.id || idx}
-                    className="p-3.5 rounded-xl bg-white dark:bg-[#141414] border border-[#D8D2C5] dark:border-[#222222] shadow-2xs flex flex-col justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between text-xs text-stone-500 mb-1">
-                        <span className="flex items-center gap-1 font-medium">
-                          <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                          {item.tanggal}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                          Pengeluaran
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-stone-900 dark:text-white text-sm">
-                        {item.barang}
-                      </h4>
-                      <div className="text-xs text-stone-600 dark:text-stone-400 mt-1 flex items-center justify-between">
-                        <span>Kuantitas: {item.kuantitas} item</span>
-                        <span>@ {formatRupiah(item.hargaSatuan)}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#242424] flex items-center justify-between">
+              {pengeluaranList.length === 0 ? (
+                <div className="py-12 text-center text-xs text-stone-500 bg-white dark:bg-[#141414] rounded-xl border border-[#D8D2C5] dark:border-[#222222]">
+                  Belum ada catatan transaksi pengeluaran di lembar Google Sheets.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {pengeluaranList.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="p-3.5 rounded-xl bg-white dark:bg-[#141414] border border-[#D8D2C5] dark:border-[#222222] shadow-2xs flex flex-col justify-between gap-3"
+                    >
                       <div>
-                        <span className="text-[10px] text-stone-500 block">Harga Total:</span>
-                        <span className="font-display font-bold text-sm text-rose-700 dark:text-rose-400">
-                          {formatRupiah(item.hargaTotal)}
-                        </span>
-                      </div>
-                      {item.saldo && (
-                        <div className="text-right">
-                          <span className="text-[10px] text-stone-500 block">Saldo Setelahnya:</span>
-                          <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
-                            {item.saldo}
+                        <div className="flex items-center justify-between text-xs text-stone-500 mb-1">
+                          <span className="flex items-center gap-1 font-medium">
+                            <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                            {item.tanggal}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                            Pengeluaran
                           </span>
                         </div>
-                      )}
+                        <h4 className="font-bold text-stone-900 dark:text-white text-sm">
+                          {item.barang}
+                        </h4>
+                        <div className="text-xs text-stone-600 dark:text-stone-400 mt-1 flex items-center justify-between">
+                          <span>Kuantitas: {item.kuantitas} item</span>
+                          <span>@ {formatRupiah(item.hargaSatuan)}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#242424] flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-stone-500 block">Harga Total:</span>
+                          <span className="font-display font-bold text-sm text-rose-700 dark:text-rose-400">
+                            {formatRupiah(item.hargaTotal)}
+                          </span>
+                        </div>
+                        {item.saldo && (
+                          <div className="text-right">
+                            <span className="text-[10px] text-stone-500 block">Saldo Setelahnya:</span>
+                            <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+                              {item.saldo}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -584,38 +602,44 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 <div className="text-right">
                   <span className="text-xs text-stone-500 block">Total Pendapatan Lain:</span>
                   <span className="font-display font-bold text-base text-blue-700 dark:text-blue-400">
-                    {formatRupiah(rekap?.pendapatanLain || 50000)}
+                    {formatRupiah(rekap?.pendapatanLain ?? 0)}
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {pendapatanLainList.map((item, idx) => (
-                  <div
-                    key={item.id || idx}
-                    className="p-4 rounded-xl bg-white dark:bg-[#141414] border border-[#D8D2C5] dark:border-[#222222] shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
-                      <span className="flex items-center gap-1 font-medium">
-                        <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                        {item.tanggal}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        Pemasukan Khusus
-                      </span>
+              {pendapatanLainList.length === 0 ? (
+                <div className="py-12 text-center text-xs text-stone-500 bg-white dark:bg-[#141414] rounded-xl border border-[#D8D2C5] dark:border-[#222222]">
+                  Belum ada catatan pendapatan lain di luar iuran rutin.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {pendapatanLainList.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="p-4 rounded-xl bg-white dark:bg-[#141414] border border-[#D8D2C5] dark:border-[#222222] shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+                        <span className="flex items-center gap-1 font-medium">
+                          <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                          {item.tanggal}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          Pemasukan Khusus
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-base text-stone-900 dark:text-white">
+                        {item.keterangan}
+                      </h4>
+                      <div className="mt-3 flex items-center justify-between pt-2 border-t border-[#E5DFD5] dark:border-[#242424]">
+                        <span className="text-xs text-stone-500">Nominal:</span>
+                        <span className="font-display font-bold text-lg text-emerald-700 dark:text-emerald-400">
+                          {formatRupiah(item.jumlah)}
+                        </span>
+                      </div>
                     </div>
-                    <h4 className="font-bold text-base text-stone-900 dark:text-white">
-                      {item.keterangan}
-                    </h4>
-                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-[#E5DFD5] dark:border-[#242424]">
-                      <span className="text-xs text-stone-500">Nominal:</span>
-                      <span className="font-display font-bold text-lg text-emerald-700 dark:text-emerald-400">
-                        {formatRupiah(item.jumlah)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -637,10 +661,10 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                     Kas Semester Ganjil
                   </span>
                   <div className="font-display font-bold text-xl text-emerald-900 dark:text-emerald-200">
-                    {formatRupiah(rekap?.kasSemesterGanjil || 1064500)}
+                    {formatRupiah(rekap?.kasSemesterGanjil ?? totalTerkumpul)}
                   </div>
                   <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400 block mt-1">
-                    Iuran 33 siswa kelas XB
+                    Iuran {totalStudents} siswa kelas XB
                   </span>
                 </div>
 
@@ -649,10 +673,10 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                     Pendapatan Lain / Donasi
                   </span>
                   <div className="font-display font-bold text-xl text-blue-900 dark:text-blue-200">
-                    {formatRupiah(rekap?.pendapatanLain || 50000)}
+                    {formatRupiah(rekap?.pendapatanLain ?? 0)}
                   </div>
                   <span className="text-[11px] text-blue-700/80 dark:text-blue-400 block mt-1">
-                    Donasi kelas resmi
+                    {(rekap?.pendapatanLain ?? 0) > 0 ? 'Pemasukan khusus' : 'Tidak ada'}
                   </span>
                 </div>
 
@@ -661,7 +685,7 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                     Kas Semester Genap
                   </span>
                   <div className="font-display font-bold text-xl text-stone-900 dark:text-stone-100">
-                    {formatRupiah(rekap?.kasSemesterGenap || 0)}
+                    {formatRupiah(rekap?.kasSemesterGenap ?? 0)}
                   </div>
                   <span className="text-[11px] text-stone-500 dark:text-stone-400 block mt-1">
                     Belum dimulai

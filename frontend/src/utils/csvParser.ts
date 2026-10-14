@@ -1,4 +1,5 @@
 import { DoaSchedule, MbgSchedule, PiketSchedule, IceBreakingSchedule } from '../types';
+import { getWIBDateParts } from './dateUtils';
 
 export function parseCSV(text: string): Record<string, string>[] {
   const rows: string[][] = [];
@@ -322,20 +323,67 @@ export function parseKasData(
   penunggakanCSV: string,
   pengeluaranCSV?: string,
   pendapatanLainCSV?: string,
-  rekapCSV?: string
+  rekapCSV?: string,
+  customTodayISO?: string
 ): KasDataStore {
   const grid = parseRawCSVGrid(penunggakanCSV);
 
-  // Month header indices in penunggakan sheet
+  // Month header mapping
+  const monthNameToNumber: Record<string, number> = {
+    jul: 7,
+    agu: 8,
+    sep: 9,
+    okt: 10,
+    nov: 11,
+    des: 12
+  };
+
+  // Month header indices in penunggakan sheet: col 2 (Jul 26), 5 (Agu 26), 10 (Sep 26), 15 (Okt 26), 21 (Nov 26), 26 (Des 26)
   const monthIndices = [2, 5, 10, 15, 21, 26];
   const weeks: KasWeekColumn[] = [];
 
-  if (grid.length > 1) {
-    const headerRow = grid[1];
+  // Determine today date in WIB
+  const wibToday = customTodayISO || getWIBDateParts().iso;
+
+  // Locate header row dynamically (row with 'Absen' or 'Nama')
+  const headerRowIndex = grid.findIndex(
+    r => (r[0] || '').trim().toLowerCase() === 'absen' || (r[1] || '').trim().toLowerCase() === 'nama'
+  );
+  const headerRow = headerRowIndex !== -1 ? grid[headerRowIndex] : grid[1] || [];
+  // Row 3 in Google Sheets is student row 1, immediately below the header row
+  const row3 = headerRowIndex !== -1 && grid.length > headerRowIndex + 1 ? grid[headerRowIndex + 1] : [];
+
+  if (headerRow.length > 2) {
+    let currentMonthNum = 7;
+    let currentYear = 2026;
+
     for (let c = 2; c <= 30; c++) {
-      if (monthIndices.includes(c)) continue;
-      const dateStr = headerRow[c] || '';
-      if (!dateStr) continue;
+      const cellText = (headerRow[c] || '').trim();
+
+      // Check if this column is a month header
+      let isMonthHeader = false;
+      const lowerText = cellText.toLowerCase();
+      for (const [prefix, num] of Object.entries(monthNameToNumber)) {
+        if (lowerText.startsWith(prefix)) {
+          currentMonthNum = num;
+          isMonthHeader = true;
+          // check year if present e.g. "Jul 26" -> 2026
+          const yearMatch = cellText.match(/(\d{2})$/);
+          if (yearMatch) {
+            currentYear = 2000 + parseInt(yearMatch[1], 10);
+          }
+          break;
+        }
+      }
+
+      if (isMonthHeader || monthIndices.includes(c)) continue;
+
+      const dateStr = cellText;
+      if (!dateStr || isNaN(parseInt(dateStr, 10))) continue;
+
+      const dayNum = parseInt(dateStr, 10);
+      const isoDate = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      const isElapsed = isoDate <= wibToday;
 
       let monthName = '';
       for (const mIdx of monthIndices) {
@@ -348,36 +396,36 @@ export function parseKasData(
         colIndex: c,
         dateStr,
         monthName,
-        label: `${dateStr} ${monthName}`.trim()
+        label: `${dateStr} ${monthName}`.trim(),
+        isoDate,
+        isElapsed
       });
     }
   }
 
-  // Count active weeks (weeks that have at least one non-zero payment recorded)
-  // or default to weeks where students have started paying
-  const studentRows = grid.slice(2).filter(r => r[0] && !isNaN(parseInt(r[0], 10)));
-  
-  let activeWeeksCount = 0;
+  // Exact Google Sheets formula:
+  // =COUNTIFS(Penunggakan!$C$2:$AE$2;"<="&TODAY();Penunggakan!$C$3:$AE$3;"<>")
+  // Check column date <= todayWIB AND row 3 value is not empty ("<>")
+  let formulaCount = 0;
   weeks.forEach(w => {
-    const hasAnyPayment = studentRows.some(r => {
-      const cellVal = (r[w.colIndex] || '').replace(',', '.').trim();
-      return parseFloat(cellVal) > 0;
-    });
-    if (hasAnyPayment) {
-      activeWeeksCount++;
+    const valInRow3 = (row3[w.colIndex] || '').trim();
+    if (w.isElapsed && valInRow3 !== '') {
+      formulaCount++;
     }
   });
 
-  if (activeWeeksCount === 0) activeWeeksCount = 1;
-
+  // Target 1 minggu = Rp 3.000
+  const activeWeeksCount = formulaCount > 0 ? formulaCount : weeks.filter(w => w.isElapsed).length;
   const targetWajibPerStudent = activeWeeksCount * 3000;
 
+  const startStudentIdx = headerRowIndex !== -1 ? headerRowIndex + 1 : 2;
+  const studentRows = grid.slice(startStudentIdx).filter(r => r[0] && !isNaN(parseInt(r[0].trim(), 10)));
   const students: KasStudentEntry[] = [];
   let totalKasTerkumpul = 0;
   let totalTunggakan = 0;
 
   studentRows.forEach(r => {
-    const absen = parseInt(r[0], 10);
+    const absen = parseInt(r[0].trim(), 10);
     const nama = (r[1] || '').trim();
     const payments: Record<number, number> = {};
     let totalBayar = 0;
@@ -477,31 +525,41 @@ export function parseKasData(
 
   if (rekapCSV) {
     const rekRows = parseRawCSVGrid(rekapCSV);
-    rekRows.forEach(r => {
+    rekRows.forEach((r, idx) => {
       const col1 = (r[1] || '').trim();
       const col2 = (r[2] || '').trim();
       const col3 = (r[3] || '').trim();
       const col4 = (r[4] || '').trim();
 
-      // Check for Saldo in row 0/1
-      if (col1.toLowerCase() === 'saldo' && rekRows[1] && rekRows[1][1]) {
-        saldoTotal = parseRupiahNumber(rekRows[1][1]);
+      // Check for Saldo in row, amount is in the next row
+      if (col1.toLowerCase() === 'saldo' && rekRows[idx + 1]) {
+        const val = parseRupiahNumber(rekRows[idx + 1][1] || '');
+        if (val !== 0) saldoTotal = val;
       }
-      if (col1.toLowerCase() === 'pendapatan' && col3.toLowerCase() === 'pengeluaran') {
-        // next row has numbers
+
+      // Check for Pendapatan & Pengeluaran headers
+      if (col1.toLowerCase() === 'pendapatan' && col3.toLowerCase() === 'pengeluaran' && rekRows[idx + 1]) {
+        const p1 = parseRupiahNumber(rekRows[idx + 1][1] || '');
+        const p2 = parseRupiahNumber(rekRows[idx + 1][3] || '');
+        if (p1 !== 0) totalPendapatan = p1;
+        if (p2 !== 0) totalPengeluaran = p2;
       }
-      if (r[1] && r[1].toLowerCase().includes('kas semester ganjil')) {
-        kasSemesterGanjil = parseRupiahNumber(col2) || kasSemesterGanjil;
+
+      if (col1.toLowerCase().includes('kas semester ganjil')) {
+        const val = parseRupiahNumber(col2);
+        if (val !== 0) kasSemesterGanjil = val;
       }
-      if (r[1] && r[1].toLowerCase().includes('kas semester genap')) {
-        kasSemesterGenap = parseRupiahNumber(col2);
+      if (col1.toLowerCase().includes('kas semester genap')) {
+        const val = parseRupiahNumber(col2);
+        if (val !== 0) kasSemesterGenap = val;
       }
-      if (r[1] && r[1].toLowerCase().includes('pendapatan lain')) {
-        pendapatanLain = parseRupiahNumber(col2);
+      if (col1.toLowerCase().includes('pendapatan lain')) {
+        const val = parseRupiahNumber(col2);
+        if (val !== 0) pendapatanLain = val;
       }
 
       // Monthly expenses in col 3 & 4
-      if (col3 && (col3.includes('2026') || col3.includes('2027'))) {
+      if (col3 && (col3.includes('2026') || col3.includes('2027')) && col3.toLowerCase() !== 'total') {
         const nominal = parseRupiahNumber(col4);
         pengeluaranPerBulan.push({
           bulan: col3,
@@ -509,14 +567,6 @@ export function parseKasData(
         });
       }
     });
-
-    // Check specific summary values
-    if (rekRows.length >= 4) {
-      const p1 = parseRupiahNumber(rekRows[3][1] || '');
-      const p2 = parseRupiahNumber(rekRows[3][3] || '');
-      if (p1 > 0) totalPendapatan = p1;
-      if (p2 > 0) totalPengeluaran = p2;
-    }
   }
 
   // If summary was not directly parsed from rekap sheet, derive cleanly
@@ -546,6 +596,8 @@ export function parseKasData(
   return {
     weeks,
     students,
+    activeWeeksCount,
+    targetWajibPerStudent,
     totalKasTerkumpul,
     totalTunggakan,
     ratePerWeek: 3000,

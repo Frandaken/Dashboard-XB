@@ -122,8 +122,9 @@ app.get('/api/calendar/:feed', async (req, res) => {
     return res.status(404).json({ error: `Unknown calendar feed: ${feed}` });
   }
 
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
   const cached = cache.get(`cal:${feed}`);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  if (!forceFresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     res.setHeader('Content-Type', cached.contentType);
     res.setHeader('X-Cache', 'HIT');
     return res.send(cached.data);
@@ -155,15 +156,20 @@ app.get('/api/sheets/:key', async (req, res) => {
     return res.status(404).json({ error: `Unknown sheet key: ${key}` });
   }
 
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
   const cached = cache.get(`sheet:${key}`);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  if (!forceFresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     res.setHeader('Content-Type', cached.contentType);
     res.setHeader('X-Cache', 'HIT');
     return res.send(cached.data);
   }
 
   try {
-    const csvText = await fetchWithRetry(url);
+    const upstreamUrl = forceFresh ? `${url}&_cb=${Date.now()}` : url;
+    const headers = forceFresh
+      ? { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      : {};
+    const csvText = await fetchWithRetry(upstreamUrl, headers);
     const contentType = 'text/plain; charset=utf-8';
     cache.set(`sheet:${key}`, { data: csvText, contentType, timestamp: Date.now() });
     res.setHeader('Content-Type', contentType);
