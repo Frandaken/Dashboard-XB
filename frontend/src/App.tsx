@@ -607,7 +607,7 @@ export default function App() {
 
   return (
     // 5. Overflow scrolling on mobile enabled (min-h-screen overflow-y-auto on mobile, desktop keeps clean full viewport)
-    <div className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#FAF7F2] dark:bg-black text-[#1C1917] dark:text-[#F8FAFC] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#F8F9FA] dark:bg-[#111215] text-[#191B1F] dark:text-[#F1F3F5] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200">
       {/* 5-minute pre-lesson in-app toast popup (auto closes after 5 seconds) */}
       <NextLessonToast
         info={nextLessonNotice}
@@ -645,22 +645,21 @@ export default function App() {
               className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden"
             >
               {/* Date Title with Navigation */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#222222] flex-shrink-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="w-3 h-3 rounded-full bg-[#2C4E3A] dark:bg-[#34D399] ring-2 ring-[#2C4E3A]/20" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <h2
                     key={activeISO}
-                    className="font-display font-bold text-lg sm:text-xl text-stone-900 dark:text-white tracking-tight leading-tight animate-fade-in"
+                    className="font-editorial font-bold text-xl sm:text-2xl lg:text-3xl text-stone-900 dark:text-stone-100 tracking-tight leading-tight animate-fade-in"
                   >
                     {activeInfo.formattedDate}
                   </h2>
                   {activeISO === todayWIB.iso ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] border border-[#86EFAC] dark:border-[#0E492B]">
+                    <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-emerald-50 dark:bg-[#122A1E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35">
                       Hari Ini
                     </span>
                   ) : (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-[#261B06] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-[#523A0F]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-stone-100 dark:bg-[#1B1D22] text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
                         {(todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6) && activeISO === defaultSchoolISO
                           ? `Jadwal ${activeInfo.dowName} Depan`
                           : 'Sedang Ditampilkan'}
@@ -670,7 +669,7 @@ export default function App() {
                           setActiveISO(todayWIB.iso);
                           setIsManualDate(true);
                         }}
-                        className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] border border-[#86EFAC] dark:border-[#0E492B] hover:bg-[#BBF7D0] transition cursor-pointer"
+                        className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-emerald-50 dark:bg-[#122A1E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] transition cursor-pointer"
                         title={`Lihat Jadwal Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
                         aria-label="Kembali ke jadwal hari ini"
                       >
@@ -685,7 +684,7 @@ export default function App() {
                   <button
                     onClick={() => handleStepDay(-1)}
                     aria-label="Jadwal Hari Sebelumnya"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-[#FAF7F2] dark:hover:bg-[#1C1C1C] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
                     title="Hari Sebelumnya"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -694,7 +693,7 @@ export default function App() {
                   <button
                     onClick={() => handleStepDay(1)}
                     aria-label="Jadwal Hari Berikutnya"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-[#FAF7F2] dark:hover:bg-[#1C1C1C] text-xs font-bold text-stone-800 dark:text-stone-200 transition cursor-pointer shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
                     title="Hari Berikutnya"
                   >
                     <span className="inline">Berikutnya</span>
@@ -710,10 +709,10 @@ export default function App() {
               >
                 {/* Smart Notice if displayed date differs from WIB date */}
                 {activeISO !== todayWIB.iso && !isManualDate && (
-                  <div className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-[#071F14] border border-emerald-300 dark:border-[#0E492B] text-emerald-950 dark:text-[#A7F3D0] text-xs flex items-center gap-2 flex-shrink-0 shadow-2xs">
+                  <div className="px-3.5 py-2 rounded-xl bg-stone-100/90 dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 text-stone-700 dark:text-stone-300 text-xs flex items-center gap-2 flex-shrink-0">
                     <div className="flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4 text-emerald-700 dark:text-[#34D399] flex-shrink-0" />
-                      <span className="font-medium">
+                      <CalendarIcon className="w-4 h-4 text-emerald-800 dark:text-emerald-400 flex-shrink-0" />
+                      <span className="font-normal">
                         {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
                           ? `Hari ini hari libur sekolah (${todayWIB.formattedDate}). Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`
                           : `Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`}

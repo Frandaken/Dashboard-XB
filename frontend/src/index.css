@@ -2,9 +2,9 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Glass backdrop blur tint supporting dynamic app theme (Light / OLED Black) */
+/* Glass backdrop blur tint supporting dynamic app theme */
 .modal-backdrop-tint {
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: rgba(18, 19, 22, 0.45);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -24,12 +24,12 @@ html.dark .modal-backdrop-tint,
   .dark body,
   .dark #root {
     color-scheme: dark;
-    background-color: #000000;
+    background-color: #111215;
   }
 
   body {
-    background-color: #FAF7F2;
-    color: #1C1917;
+    background-color: #F8F9FA;
+    color: #191B1F;
     margin: 0;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -39,19 +39,23 @@ html.dark .modal-backdrop-tint,
   }
 
   .dark body {
-    background-color: #000000;
-    color: #F8FAFC;
+    background-color: #111215;
+    color: #F1F3F5;
   }
 
   /* Accessibility focus ring standard */
   :focus-visible {
-    outline: 2px solid #2C4E3A;
+    outline: 2px solid #1E3A2F;
     outline-offset: 2px;
   }
 
   .dark :focus-visible {
     outline: 2px solid #34D399;
   }
+}
+
+.font-editorial {
+  font-family: 'Fraunces', Georgia, serif;
 }
 
 @keyframes fadeIn {
@@ -66,7 +70,7 @@ html.dark .modal-backdrop-tint,
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: opacity, transform;
 }
 

@@ -363,18 +363,18 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#FAF7F2] dark:bg-black text-[#1C1917] dark:text-[#F8FAFC] rounded-2xl border border-[#D8D2C5] dark:border-[#222222] shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-[#18191C] text-stone-900 dark:text-stone-100 rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0A0A0A] flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-200/80 dark:border-stone-800/80 bg-stone-50/70 dark:bg-[#141518] flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/25 flex items-center justify-center font-bold">
               <Users className="w-4 h-4" />
             </div>
             <div>
-              <h2 id="group-generator-title" className="font-display font-bold text-base sm:text-lg leading-tight">
+              <h2 id="group-generator-title" className="font-editorial font-bold text-base sm:text-lg leading-tight text-stone-900 dark:text-stone-100">
                 Random Group Name Picker (Team Generator)
               </h2>
-              <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
+              <p className="text-xs text-stone-500 dark:text-stone-400 font-normal">
                 SMA Putra Nirmala • Kelas XB
               </p>
             </div>
@@ -383,7 +383,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
           <button
             onClick={onClose}
             aria-label="Tutup Group Generator"
-            className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1C1C1C] flex items-center justify-center text-stone-600 dark:text-stone-200 transition cursor-pointer"
+            className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -394,18 +394,18 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
           {/* Controls Bar */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* 1. Name Mode Toggle */}
-            <div className="p-3 bg-white dark:bg-[#0A0A0A] rounded-xl border border-[#D8D2C5] dark:border-[#222222] space-y-2">
-              <label className="text-xs font-bold text-stone-800 dark:text-stone-200 block">
+            <div className="p-3 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
+              <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 block">
                 Format Nama:
               </label>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setNameMode('panggilan')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
                     nameMode === 'panggilan'
-                      ? 'bg-[#2C4E3A] text-white shadow-2xs'
-                      : 'bg-stone-100 dark:bg-[#161616] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#222222]'
+                      ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 shadow-2xs'
+                      : 'bg-white dark:bg-[#18191C] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#222429]'
                   }`}
                 >
                   Nama Panggilan
@@ -413,10 +413,10 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                 <button
                   type="button"
                   onClick={() => setNameMode('nama')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
                     nameMode === 'nama'
-                      ? 'bg-[#2C4E3A] text-white shadow-2xs'
-                      : 'bg-stone-100 dark:bg-[#161616] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#222222]'
+                      ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 shadow-2xs'
+                      : 'bg-white dark:bg-[#18191C] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#222429]'
                   }`}
                 >
                   Nama Panjang
@@ -425,19 +425,19 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
             </div>
 
             {/* 2. Number of Groups vs Max People */}
-            <div className="p-3 bg-white dark:bg-[#0A0A0A] rounded-xl border border-[#D8D2C5] dark:border-[#222222] space-y-2">
+            <div className="p-3 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-stone-800 dark:text-stone-200">
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">
                   Metode Pembagian:
                 </label>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => setSplitMode('numGroups')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
                       splitMode === 'numGroups'
-                        ? 'bg-[#2C4E3A] text-white'
-                        : 'bg-stone-100 dark:bg-[#161616] text-stone-600 dark:text-stone-400'
+                        ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
+                        : 'bg-white dark:bg-[#18191C] text-stone-600 dark:text-stone-400 border border-stone-200/80 dark:border-stone-800/80'
                     }`}
                   >
                     Jml Kelompok
@@ -445,10 +445,10 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                   <button
                     type="button"
                     onClick={() => setSplitMode('maxPeople')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
                       splitMode === 'maxPeople'
-                        ? 'bg-[#2C4E3A] text-white'
-                        : 'bg-stone-100 dark:bg-[#161616] text-stone-600 dark:text-stone-400'
+                        ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
+                        : 'bg-white dark:bg-[#18191C] text-stone-600 dark:text-stone-400 border border-stone-200/80 dark:border-stone-800/80'
                     }`}
                   >
                     Maks Orang
@@ -464,9 +464,9 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                     max={Math.min(12, Math.max(2, activeStudents.length))}
                     value={numGroups}
                     onChange={e => setNumGroups(Number(e.target.value))}
-                    className="flex-1 accent-[#2C4E3A]"
+                    className="flex-1 accent-emerald-700"
                   />
-                  <span className="font-mono font-bold text-sm bg-stone-100 dark:bg-[#161616] px-2.5 py-1 rounded-md border border-[#D8D2C5] dark:border-[#262626] min-w-[65px] text-center">
+                  <span className="font-mono font-bold text-sm bg-white dark:bg-[#18191C] text-stone-900 dark:text-stone-100 px-2.5 py-1 rounded-md border border-stone-200/80 dark:border-stone-800/80 min-w-[65px] text-center">
                     {numGroups} Grup
                   </span>
                 </div>
@@ -478,9 +478,9 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                     max={Math.min(15, Math.max(2, activeStudents.length))}
                     value={maxPeople}
                     onChange={e => setMaxPeople(Number(e.target.value))}
-                    className="flex-1 accent-[#2C4E3A]"
+                    className="flex-1 accent-emerald-700"
                   />
-                  <span className="font-mono font-bold text-sm bg-stone-100 dark:bg-[#161616] px-2.5 py-1 rounded-md border border-[#D8D2C5] dark:border-[#262626] min-w-[75px] text-center">
+                  <span className="font-mono font-bold text-sm bg-white dark:bg-[#18191C] text-stone-900 dark:text-stone-100 px-2.5 py-1 rounded-md border border-stone-200/80 dark:border-stone-800/80 min-w-[75px] text-center">
                     {maxPeople} Org/Grup
                   </span>
                 </div>
@@ -488,13 +488,13 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
             </div>
 
             {/* 3. Balanced Gender & Representative Options */}
-            <div className="p-3 bg-white dark:bg-[#0A0A0A] rounded-xl border border-[#D8D2C5] dark:border-[#222222] flex flex-col justify-center space-y-2">
+            <div className="p-3 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex flex-col justify-center space-y-2">
               <label className="flex items-center gap-2 text-xs font-semibold text-stone-800 dark:text-stone-200 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={genderBalance}
                   onChange={e => setGenderBalance(e.target.checked)}
-                  className="rounded text-[#2C4E3A] focus:ring-[#2C4E3A] accent-[#2C4E3A] w-4 h-4"
+                  className="rounded text-emerald-700 focus:ring-emerald-700 accent-emerald-700 w-4 h-4"
                 />
                 <span>Seimbangkan Gender (L / P Seimbang)</span>
               </label>
@@ -504,7 +504,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                   type="checkbox"
                   checked={pickRepresentative}
                   onChange={e => setPickRepresentative(e.target.checked)}
-                  className="rounded text-[#2C4E3A] focus:ring-[#2C4E3A] accent-[#2C4E3A] w-4 h-4"
+                  className="rounded text-emerald-700 focus:ring-emerald-700 accent-emerald-700 w-4 h-4"
                 />
                 <span>Pilih Perwakilan (Ketua Kelompok)</span>
               </label>
@@ -512,22 +512,22 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
           </div>
 
           {/* Action Trigger Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-[#0A0A0A] p-3 rounded-xl border border-[#D8D2C5] dark:border-[#222222]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-stone-50/50 dark:bg-[#141518]/60 p-3 rounded-xl border border-stone-200/80 dark:border-stone-800/80">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-stone-700 dark:text-stone-300">
-                Siswa Aktif: <strong className="text-[#2C4E3A] dark:text-[#34D399]">{activeStudents.length}</strong> / {STUDENTS_DATA.length}
+              <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+                Siswa Aktif: <strong className="text-emerald-700 dark:text-emerald-400">{activeStudents.length}</strong> / {STUDENTS_DATA.length}
               </span>
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] font-semibold px-2 py-0.5 rounded bg-stone-100 dark:bg-[#161616] hover:bg-stone-200 dark:hover:bg-[#222222] text-stone-700 dark:text-stone-300 cursor-pointer"
+                className="text-[11px] font-semibold px-2 py-0.5 rounded bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#222429] text-stone-700 dark:text-stone-300 cursor-pointer"
               >
                 Pilih Semua
               </button>
               <button
                 type="button"
                 onClick={handleDeselectAll}
-                className="text-[11px] font-semibold px-2 py-0.5 rounded bg-stone-100 dark:bg-[#161616] hover:bg-stone-200 dark:hover:bg-[#222222] text-stone-700 dark:text-stone-300 cursor-pointer"
+                className="text-[11px] font-semibold px-2 py-0.5 rounded bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#222429] text-stone-700 dark:text-stone-300 cursor-pointer"
               >
                 Hapus Semua
               </button>
@@ -538,7 +538,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                 type="button"
                 onClick={handleGenerate}
                 disabled={activeStudents.length === 0}
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#2C4E3A] hover:bg-[#233F2E] disabled:bg-stone-400 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 disabled:bg-stone-300 text-white font-semibold text-xs sm:text-sm shadow-sm transition flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700"
               >
                 <Shuffle className="w-4 h-4" />
                 <span>{generatedGroups ? 'ACAK ULANG (REGROUP)' : 'MULAI ACAK KELOMPOK'}</span>
@@ -547,12 +547,12 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
           </div>
 
           {/* Participant Selectors (Collapse/Grid) */}
-          <details className="bg-white dark:bg-[#0A0A0A] p-3 rounded-xl border border-[#D8D2C5] dark:border-[#222222] group">
-            <summary className="text-xs font-bold text-stone-800 dark:text-stone-200 cursor-pointer flex items-center justify-between">
+          <details className="bg-stone-50/50 dark:bg-[#141518]/60 p-3 rounded-xl border border-stone-200/80 dark:border-stone-800/80 group">
+            <summary className="text-xs font-semibold text-stone-800 dark:text-stone-200 cursor-pointer flex items-center justify-between">
               <span>Atur Siswa yang Masuk Undian ({activeStudents.length} Terpilih)</span>
-              <span className="text-[11px] text-stone-500 group-open:hidden">Klik untuk melihat & atur absensi</span>
+              <span className="text-[11px] text-stone-500 group-open:hidden">Klik untuk melihat &amp; atur absensi</span>
             </summary>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 mt-3 pt-3 border-t border-[#D8D2C5] dark:border-[#222222]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 mt-3 pt-3 border-t border-stone-200/80 dark:border-stone-800/80">
               {STUDENTS_DATA.map(s => {
                 const isSelected = selectedAbsens.includes(s.absen);
                 return (
@@ -560,15 +560,15 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                     key={s.absen}
                     className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${
                       isSelected
-                        ? 'border-[#2C4E3A] dark:border-[#34D399] bg-[#DCFCE7]/40 dark:bg-[#071F14] text-stone-900 dark:text-stone-100 font-semibold'
-                        : 'border-[#D8D2C5] dark:border-[#262626] bg-stone-50 dark:bg-[#121212] text-stone-400 line-through'
+                        ? 'border-emerald-600/30 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-[#122A1E]/50 text-stone-900 dark:text-stone-100 font-semibold'
+                        : 'border-stone-200/70 dark:border-stone-800/70 bg-stone-100/40 dark:bg-[#121212] text-stone-400 line-through'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleToggleStudent(s.absen)}
-                      className="rounded text-[#2C4E3A] accent-[#2C4E3A] w-3.5 h-3.5"
+                      className="rounded text-emerald-700 accent-emerald-700 w-3.5 h-3.5"
                     />
                     <span className="font-mono text-[10px] text-stone-500">#{s.absen}</span>
                     <span className="truncate">{s.panggilan}</span>
@@ -582,9 +582,9 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
           {generatedGroups && (
             <div className="space-y-3 pt-2">
               {/* Action Toolbar Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#D8D2C5] dark:border-[#222222]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-200/80 dark:border-stone-800/80">
                 <div>
-                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white">
+                  <h3 className="font-editorial font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100">
                     Hasil Pembagian Kelompok ({generatedGroups.length})
                   </h3>
                 </div>
@@ -594,7 +594,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                     <button
                       type="button"
                       onClick={handleSkipAnimation}
-                      className="px-2.5 py-1 rounded-lg bg-[#2C4E3A] hover:bg-[#233F2E] text-white text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
+                      className="px-2.5 py-1 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
                     >
                       <FastForward className="w-3.5 h-3.5" />
                       <span>Lewati Animasi</span>
@@ -605,7 +605,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                         <button
                           type="button"
                           onClick={handleRepickRepresentatives}
-                          className="px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-[#261B06] hover:bg-amber-100 dark:hover:bg-[#382608] text-amber-800 dark:text-amber-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-lg border border-amber-300/80 dark:border-amber-900/60 bg-amber-50 dark:bg-[#20170A] hover:bg-amber-100 text-amber-900 dark:text-amber-300 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           <span>Kocok Ulang Ketua</span>
@@ -615,7 +615,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                       <button
                         type="button"
                         onClick={handleCopyText}
-                        className="px-3 py-1.5 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-50 dark:hover:bg-[#1A1A1A] text-stone-800 dark:text-stone-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        className="px-3 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#222429] text-stone-800 dark:text-stone-200 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       >
                         {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-stone-500" />}
                         <span>{copied ? 'Tersalin!' : 'Salin WhatsApp'}</span>
@@ -624,7 +624,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                       <button
                         type="button"
                         onClick={handleDownloadCSV}
-                        className="px-3 py-1.5 rounded-lg bg-[#2C4E3A] hover:bg-[#233F2E] text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                         title="Unduh hasil pembagian ini sebagai file CSV baru"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -643,19 +643,19 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                   return (
                     <div
                       key={group.id}
-                      className="bg-white dark:bg-[#0A0A0A] rounded-xl border border-[#D8D2C5] dark:border-[#222222] p-3.5 shadow-xs flex flex-col justify-between"
+                      className="bg-white dark:bg-[#18191C] rounded-xl border border-stone-200/80 dark:border-stone-800/80 p-3.5 shadow-2xs flex flex-col justify-between"
                     >
                       <div>
                         {/* Editable Group Title */}
-                        <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[#D8D2C5]/70 dark:border-[#222222]">
+                        <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-stone-200/70 dark:border-stone-800/70">
                           <input
                             type="text"
                             value={group.name}
                             onChange={e => handleRenameGroup(group.id, e.target.value)}
-                            className="font-bold text-sm text-stone-900 dark:text-white bg-transparent border-b border-dashed border-stone-400 dark:border-stone-600 focus:border-[#2C4E3A] focus:outline-hidden w-full"
+                            className="font-bold text-sm text-stone-900 dark:text-stone-100 bg-transparent border-b border-dashed border-stone-300 dark:border-stone-700 focus:border-emerald-700 focus:outline-hidden w-full"
                             title="Klik untuk mengubah nama kelompok"
                           />
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-[#161616] text-stone-600 dark:text-stone-300 border border-transparent dark:border-[#262626] flex-shrink-0">
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200/60 dark:border-stone-700/60 flex-shrink-0">
                             {groupRevealedMembers.length}/{group.members.length} Siswa
                           </span>
                         </div>
@@ -671,7 +671,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                               return (
                                 <li
                                   key={member.absen}
-                                  className="h-8 rounded-lg border border-dashed border-stone-200/50 dark:border-[#1E1E1E] bg-stone-50/20 dark:bg-transparent"
+                                  className="h-8 rounded-lg border border-dashed border-stone-200/70 dark:border-stone-800/70 bg-stone-50/30 dark:bg-transparent"
                                 />
                               );
                             }
@@ -679,10 +679,10 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                             return (
                               <li
                                 key={member.absen}
-                                className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs animate-in fade-in duration-500 ${
+                                className={`flex items-center justify-between gap-2 p-1.5 rounded-lg text-xs transition ${
                                   isRep && pickRepresentative && showRepresentatives
-                                    ? 'bg-amber-50 dark:bg-[#221805] border border-amber-300 dark:border-[#523A0F] font-bold text-stone-900 dark:text-white'
-                                    : 'hover:bg-stone-50 dark:hover:bg-[#141414] text-stone-700 dark:text-stone-200'
+                                    ? 'bg-amber-50 dark:bg-[#20170A] border border-amber-300/80 dark:border-amber-900/60 font-bold text-stone-900 dark:text-stone-100'
+                                    : 'hover:bg-stone-50 dark:hover:bg-[#1E1F23] text-stone-700 dark:text-stone-200'
                                 }`}
                               >
                                 <div className="flex items-center gap-1.5 min-w-0">
@@ -693,8 +693,8 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
                                   <span
                                     className={`text-[9px] px-1 rounded font-bold ${
                                       member.gender === 'L'
-                                        ? 'bg-blue-100 dark:bg-[#07182E] text-blue-700 dark:text-blue-300 border border-transparent dark:border-[#0E3560]'
-                                        : 'bg-rose-100 dark:bg-[#260B0F] text-rose-700 dark:text-rose-300 border border-transparent dark:border-[#5C141D]'
+                                        ? 'bg-blue-50 dark:bg-[#07182E] text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-[#0E3560]'
+                                        : 'bg-rose-50 dark:bg-[#260B0F] text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-[#5C141D]'
                                     }`}
                                   >
                                     {member.gender}
@@ -703,7 +703,7 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
 
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   {isRep && pickRepresentative && showRepresentatives && (
-                                    <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 dark:bg-[#3D2C15] text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 animate-in fade-in duration-500">
+                                    <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300/80 dark:border-amber-900/60">
                                       <Crown className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                                       <span>Ketua</span>
                                     </span>
@@ -723,10 +723,10 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0A0A0A] flex items-center justify-end flex-shrink-0">
+        <div className="px-5 py-3 border-t border-stone-200/80 dark:border-stone-800/80 bg-stone-50/70 dark:bg-[#141518] flex items-center justify-end flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-stone-100 dark:bg-[#161616] hover:bg-stone-200 dark:hover:bg-[#222222] text-stone-800 dark:text-stone-200 text-xs font-semibold transition cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-white text-white dark:text-stone-900 text-xs font-semibold transition cursor-pointer"
           >
             Tutup
           </button>

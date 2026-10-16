@@ -43,29 +43,26 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
   return (
     <div
       id="calendar-panel"
-      className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 flex flex-col justify-between shadow-xs transition-colors"
+      className="bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl p-3 sm:p-3.5 flex flex-col justify-between transition-colors"
     >
       <div>
         {/* Calendar Header */}
-        <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-[#E8E2D5] dark:border-[#222222]">
-          <div className="flex items-center gap-2">
-            <CalIcon className="w-4 h-4 text-[#2C4E3A] dark:text-[#34D399]" />
-            <h2 className="font-display font-bold text-sm sm:text-base text-stone-900 dark:text-white">
-              Kalender
-            </h2>
-          </div>
+        <div className="flex items-center justify-between gap-2 mb-2.5 pb-2.5 border-b border-stone-100 dark:border-stone-800/60">
+          <h2 className="font-editorial font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 tracking-tight">
+            Kalender
+          </h2>
 
           <div className="flex items-center gap-1.5">
             <button
               id="cal-btn-prev"
               onClick={onPrevMonth}
               aria-label="Bulan Sebelumnya"
-              className="w-8 h-8 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1A1A1A] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="font-bold text-xs sm:text-sm text-stone-900 dark:text-stone-50 px-2 min-w-[105px] text-center font-display">
+            <span className="font-editorial font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100 px-2 min-w-[115px] text-center">
               {MONTH_ID[viewMonth]} {viewYear}
             </span>
 
@@ -73,7 +70,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-next"
               onClick={onNextMonth}
               aria-label="Bulan Berikutnya"
-              className="w-8 h-8 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1A1A1A] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -82,21 +79,21 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-today"
               onClick={onToday}
               aria-label="Lompat ke tanggal hari ini"
-              className="text-xs font-bold px-2.5 py-1.5 rounded-lg border border-[#86EFAC] dark:border-[#0E492B] bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] hover:bg-[#BBF7D0] dark:hover:bg-[#0C3322] transition ml-1 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="text-xs sm:text-sm font-semibold px-2.5 py-1.5 rounded-lg border border-emerald-600/20 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] transition ml-1 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               Hari Ini
             </button>
           </div>
         </div>
 
-        {/* Days of Week - Full width column header perfectly aligned with days grid below */}
-        <div className="grid grid-cols-7 gap-1 text-center mb-1" role="row">
+        {/* Days of Week */}
+        <div className="grid grid-cols-7 gap-1 text-center mb-1.5" role="row">
           {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((d, i) => (
             <div
               key={d}
               role="columnheader"
-              className={`w-full py-1 text-center text-[11px] sm:text-xs font-bold uppercase flex items-center justify-center ${
-                i === 0 ? 'text-rose-600 dark:text-rose-400' : 'text-stone-600 dark:text-stone-400'
+              className={`w-full py-1 text-center text-xs sm:text-sm font-semibold flex items-center justify-center ${
+                i === 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-stone-500 dark:text-stone-400'
               }`}
             >
               {d}
@@ -104,7 +101,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
           ))}
         </div>
 
-        {/* Days Grid - Each cell is w-full to guarantee 100% strict vertical column alignment */}
+        {/* Days Grid */}
         <div className="grid grid-cols-7 gap-1" role="grid">
           {blanks.map(b => (
             <div key={`blank-${b}`} className="w-full h-8 sm:h-9" aria-hidden="true" />
@@ -119,27 +116,27 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             const birthdays = hasBirthdayFn(iso);
             const hasBday = birthdays.length > 0;
 
-            let cellClass = 'relative w-full h-8 sm:h-9 rounded-lg flex flex-col items-center justify-center text-xs transition cursor-pointer select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A] ';
+            let cellClass = 'relative w-full h-8 sm:h-9 rounded-md flex flex-col items-center justify-center text-xs transition cursor-pointer select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] ';
 
             // Condition 1: BOTH Today AND Preview
             if (isToday && isPreview) {
-              cellClass += 'bg-[#2C4E3A] dark:bg-[#15462D] text-white font-bold shadow-xs ring-2 ring-[#34D399] z-10';
+              cellClass += 'bg-[#1E3A2F] dark:bg-[#1E4A35] text-white font-semibold z-10';
             }
             // Condition 2: TODAY (Real date, user previewing another date)
             else if (isToday) {
-              cellClass += 'bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#A7F3D0] border-2 border-[#16A34A] dark:border-[#34D399] font-bold';
+              cellClass += 'bg-emerald-50 dark:bg-[#10291D] text-emerald-900 dark:text-emerald-200 ring-1 ring-emerald-500/40 font-semibold';
             }
             // Condition 3: PREVIEW DATE (Currently displayed in dashboard)
             else if (isPreview) {
-              cellClass += 'bg-[#FFEDD5] dark:bg-[#2A1508] text-[#9A3412] dark:text-[#FDBA74] border-2 border-[#EA580C] dark:border-[#FB923C] font-bold ring-1 ring-[#EA580C]/40 z-10';
+              cellClass += 'bg-stone-200 dark:bg-stone-700/80 text-stone-900 dark:text-stone-100 font-semibold ring-1 ring-stone-400 dark:ring-stone-500 z-10';
             }
             // Condition 4: Has data (school schedule, doa, mbg, piket)
             else if (hasData) {
-              cellClass += 'bg-[#FAF7F2] dark:bg-[#121212] text-stone-900 dark:text-stone-100 border border-[#D8D2C5] dark:border-[#222222] hover:bg-stone-200 dark:hover:bg-[#1A1A1A] font-semibold';
+              cellClass += 'bg-stone-50/80 dark:bg-[#141518] text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-[#1D1E22] font-medium';
             }
             // Condition 5: Normal empty day
             else {
-              cellClass += 'text-stone-500 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-[#141414] border border-transparent font-normal';
+              cellClass += 'text-stone-400 dark:text-stone-600 hover:bg-stone-50 dark:hover:bg-[#15161A] font-normal';
             }
 
             const weekOfDate = getWeekOfMonth(viewYear, viewMonth, day);
@@ -160,15 +157,15 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
                 aria-label={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel}`}
                 title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}
               >
-                <span className="leading-none text-xs font-semibold">{day}</span>
+                <span className="leading-none text-xs tabular-nums">{day}</span>
 
                 {/* Status indicator dots */}
-                <div className="flex items-center gap-0.5 mt-0.5 h-1.5">
+                <div className="flex items-center gap-0.5 mt-0.5 h-1">
                   {/* Task indicator dot */}
                   {hasTask && (
                     <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isToday && isPreview ? 'bg-amber-300' : 'bg-[#D97706] dark:bg-[#FBBF24]'
+                      className={`w-1 h-1 rounded-full ${
+                        isToday && isPreview ? 'bg-amber-300' : 'bg-amber-500 dark:bg-amber-400'
                       }`}
                       title="Ada Tugas"
                     />
@@ -176,8 +173,8 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
                   {/* Birthday indicator dot */}
                   {hasBday && (
                     <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isToday && isPreview ? 'bg-rose-300' : 'bg-[#E11D48] dark:bg-[#FB7185]'
+                      className={`w-1 h-1 rounded-full ${
+                        isToday && isPreview ? 'bg-rose-300' : 'bg-rose-500 dark:bg-rose-400'
                       }`}
                       title="Ulang Tahun"
                     />
@@ -189,30 +186,29 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
         </div>
 
         {/* CALENDAR LEGEND BAR */}
-        <div className="mt-2.5 pt-2 border-t border-[#E8E2D5] dark:border-[#222222] flex items-center justify-between flex-wrap gap-2 text-[11px] font-medium text-stone-600 dark:text-stone-300">
+        <div className="mt-2.5 pt-2 border-t border-stone-100 dark:border-stone-800/60 flex items-center justify-between flex-wrap gap-2 text-[11px] text-stone-500 dark:text-stone-400">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#2C4E3A] dark:bg-[#34D399]" />
+            <span className="w-2 h-2 rounded-full bg-[#1E3A2F] dark:bg-[#34D399]" />
             <span>Hari Ini</span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] dark:bg-[#FBBF24]" />
+            <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400" />
             <span>Ada Tugas</span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#E11D48] dark:bg-[#FB7185]" />
+            <span className="w-2 h-2 rounded-full bg-rose-500 dark:bg-rose-400" />
             <span>Ulang Tahun</span>
           </div>
         </div>
       </div>
 
-      {/* Birthday Banner - ONLY DISPLAYED IF SOMEONE HAS BIRTHDAY TODAY */}
+      {/* Birthday Banner */}
       {birthdaysToday && birthdaysToday.length > 0 && (
-        <div className="mt-2.5 pt-2 border-t border-[#E8E2D5] dark:border-[#222222]">
+        <div className="mt-2.5 pt-2 border-t border-stone-100 dark:border-stone-800/60">
           <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#EA580C] dark:bg-[#FB923C]" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9A3412] dark:text-[#FDBA74]">
+            <span className="text-[11px] font-semibold text-stone-700 dark:text-stone-300">
               Ulang Tahun Hari Ini
             </span>
           </div>
@@ -221,7 +217,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             {birthdaysToday.map((name, i) => (
               <span
                 key={i}
-                className="px-2.5 py-1 rounded-full bg-[#FFEDD5] dark:bg-[#241208] text-[#9A3412] dark:text-[#FDBA74] font-semibold text-xs border border-[#FDBA74] dark:border-[#4A200E] flex items-center gap-1"
+                className="px-2.5 py-1 rounded-md bg-rose-50 dark:bg-[#251016] text-rose-900 dark:text-rose-300 font-medium text-xs border border-rose-200/60 dark:border-rose-900/40 flex items-center gap-1"
               >
                 <span>🎂</span>
                 <span>{name}</span>

@@ -82,30 +82,30 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#FAF7F2] dark:bg-black text-[#1C1917] dark:text-[#F8FAFC] rounded-2xl border border-[#D8D2C5] dark:border-[#222222] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-[#18191C] text-stone-900 dark:text-stone-100 rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0A0A0A] flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-200/80 dark:border-stone-800/80 bg-stone-50/70 dark:bg-[#141518] flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#2C4E3A] dark:bg-[#34D399] text-white dark:text-[#0A0A0A] flex items-center justify-center shadow-xs">
-              <Music className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/25 flex items-center justify-center shadow-xs">
+              <Music className="w-4 h-4" />
             </div>
             <div>
               <h2
                 id="song-lyrics-title"
-                className="font-display font-bold text-base sm:text-lg text-stone-900 dark:text-white leading-tight"
+                className="font-editorial font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 leading-tight"
               >
                 {songData.title}
               </h2>
-              <div className="flex items-center gap-1.5 text-xs text-stone-600 dark:text-stone-300 mt-0.5 font-medium flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-normal flex-wrap">
                 <span className="flex items-center gap-1">
                   <User className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500" />
-                  <span>Ciptaan: <strong>{songData.composer}</strong></span>
+                  <span>Ciptaan: <strong className="font-semibold text-stone-700 dark:text-stone-300">{songData.composer}</strong></span>
                 </span>
                 {weekNumber && (
-                  <span className="text-stone-500 dark:text-stone-400">• Minggu ke-{weekNumber}</span>
+                  <span className="text-stone-400 dark:text-stone-500">• Minggu ke-{weekNumber}</span>
                 )}
-                <span className="text-stone-400 dark:text-stone-600 hidden sm:inline">•</span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-semibold hidden sm:inline">
+                <span className="text-stone-300 dark:text-stone-700 hidden sm:inline">•</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-medium hidden sm:inline">
                   SMA Putra Nirmala
                 </span>
               </div>
@@ -116,7 +116,7 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
             <button
               onClick={onClose}
               aria-label="Tutup Lirik Lagu"
-              className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1C1C1C] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-200 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700"
             >
               <X className="w-4 h-4" />
             </button>
@@ -125,14 +125,14 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
 
         {/* Lyrics body with touch scroll */}
         <div className="p-4 sm:p-5 overflow-y-auto text-center flex-1">
-          <div className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-5 sm:p-6 shadow-2xs">
+          <div className="bg-stone-50/50 dark:bg-[#141518]/70 border border-stone-200/80 dark:border-stone-800/80 rounded-xl p-5 sm:p-6 shadow-2xs">
             {verses.map((verse, vIdx) => (
-              <div key={vIdx} className={`font-serif text-sm sm:text-base text-stone-900 dark:text-stone-100 ${vIdx > 0 ? "mt-3.5 pt-0.5" : ""}`}>
+              <div key={vIdx} className={`font-serif text-sm sm:text-base text-stone-900 dark:text-stone-100 ${vIdx > 0 ? "mt-4 pt-1" : ""}`}>
                 {verse.map((line, lIdx) =>
                   line === '' ? (
-                    <div key={lIdx} className="h-2" />
+                    <div key={lIdx} className="h-2.5" />
                   ) : (
-                    <p key={lIdx} className="italic font-medium tracking-wide leading-snug">
+                    <p key={lIdx} className="italic font-normal tracking-wide leading-relaxed">
                       {line}
                     </p>
                   )
@@ -143,10 +143,10 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#D8D2C5] dark:border-[#222222] bg-[#FAF7F2] dark:bg-[#0A0A0A] flex justify-end flex-shrink-0">
+        <div className="px-5 py-3 border-t border-stone-200/80 dark:border-stone-800/80 bg-stone-50/70 dark:bg-[#141518] flex justify-end flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-[#2C4E3A] dark:bg-[#34D399] hover:bg-[#203a2a] dark:hover:bg-[#2EB882] text-white dark:text-[#0A0A0A] text-xs font-bold transition cursor-pointer shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+            className="px-4 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-white text-white dark:text-stone-900 text-xs font-semibold transition cursor-pointer shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-stone-600"
           >
             Tutup
           </button>

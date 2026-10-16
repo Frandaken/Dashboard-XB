@@ -9,6 +9,7 @@ interface ScheduleBlocksProps {
   pelajaran?: PeriodItem[];
   dowName: string;
   iceBreaking?: IceBreakingSchedule;
+  compact?: boolean;
 }
 
 export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
@@ -17,7 +18,8 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   doa,
   pelajaran = [],
   dowName,
-  iceBreaking
+  iceBreaking,
+  compact = false
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
 
@@ -49,34 +51,48 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   let academicCounter = 0;
 
   return (
-    <div id="schedule-blocks-grid" className="flex flex-col gap-2.5 flex-1 min-h-0">
+    <div id="schedule-blocks-grid" className={`flex flex-col ${compact ? 'gap-2.5' : 'gap-3'} flex-1 min-h-0`}>
       {/* ROW 1: MBG & PIKET KEBERSIHAN */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 flex-shrink-0">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${compact ? 'gap-2.5' : 'gap-3'} flex-shrink-0`}>
         {/* 1. MAKAN BERGIZI GRATIS (MBG) */}
         <div
           id="card-mbg"
-          className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors"
+          className={`bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl ${
+            compact ? 'p-3' : 'p-3.5 sm:p-4'
+          } flex flex-col justify-start transition-colors`}
         >
-          <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222]">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#E0602F] dark:bg-[#FB923C] flex-shrink-0 ring-2 ring-[#E0602F]/20" />
-            <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-stone-100 dark:border-stone-800/60">
+            <h3
+              className={
+                compact
+                  ? 'text-stone-900 dark:text-stone-100 font-semibold text-xs sm:text-sm tracking-tight'
+                  : 'text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base tracking-tight'
+              }
+            >
               Makan Bergizi Gratis (MBG)
             </h3>
+            <span className="text-[11px] sm:text-xs font-medium text-stone-500 dark:text-stone-400">
+              Petugas Harian
+            </span>
           </div>
 
           {mbg?.petugas && mbg.petugas.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
+            <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'} pt-0.5`}>
               {mbg.petugas.map((name, i) => (
                 <span
                   key={i}
-                  className="px-2.5 py-1 rounded-full bg-[#FFEDD5] dark:bg-[#241208] text-[#9A3412] dark:text-[#FDBA74] font-semibold text-xs border border-[#FDBA74] dark:border-[#4A200E]"
+                  className={
+                    compact
+                      ? 'px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800/80 text-stone-800 dark:text-stone-200 font-medium text-xs sm:text-sm border border-stone-200/80 dark:border-stone-700/60'
+                      : 'px-3.5 py-1.5 rounded-lg bg-stone-100/90 dark:bg-stone-800/80 text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base md:text-lg border border-stone-200/80 dark:border-stone-700/60 shadow-2xs'
+                  }
                 >
                   {name}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-stone-500 dark:text-stone-400 italic text-xs py-1 font-normal">
+            <p className="text-stone-400 dark:text-stone-500 italic text-xs sm:text-sm py-1 font-normal">
               Tidak ada petugas MBG hari ini.
             </p>
           )}
@@ -85,33 +101,42 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         {/* 2. PIKET KEBERSIHAN */}
         <div
           id="card-piket"
-          className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors"
+          className={`bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl ${
+            compact ? 'p-3' : 'p-3.5 sm:p-4'
+          } flex flex-col justify-start transition-colors`}
         >
-          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222]">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] dark:bg-[#FBBF24] flex-shrink-0 ring-2 ring-[#D97706]/20" />
-              <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
-                Piket Kebersihan
-              </h3>
-            </div>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-[#FEF9C3] dark:bg-[#211B05] text-[#854D0E] dark:text-[#FDE68A] border border-[#FACC15] dark:border-[#47360A]">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-stone-100 dark:border-stone-800/60">
+            <h3
+              className={
+                compact
+                  ? 'text-stone-900 dark:text-stone-100 font-semibold text-xs sm:text-sm tracking-tight'
+                  : 'text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base tracking-tight'
+              }
+            >
+              Piket Kebersihan
+            </h3>
+            <span className="text-[11px] sm:text-xs font-medium text-stone-700 dark:text-stone-300 px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800/60 border border-stone-200/60 dark:border-stone-700/50">
               Hari {dowName}
             </span>
           </div>
 
           {piket?.petugas && piket.petugas.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
+            <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'} pt-0.5`}>
               {piket.petugas.map((name, i) => (
                 <span
                   key={i}
-                  className="px-2.5 py-1 rounded-full bg-[#FEF9C3] dark:bg-[#211B05] text-[#854D0E] dark:text-[#FDE68A] font-semibold text-xs border border-[#FACC15] dark:border-[#47360A]"
+                  className={
+                    compact
+                      ? 'px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800/80 text-stone-800 dark:text-stone-200 font-medium text-xs sm:text-sm border border-stone-200/80 dark:border-stone-700/60'
+                      : 'px-3.5 py-1.5 rounded-lg bg-stone-100/90 dark:bg-stone-800/80 text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base md:text-lg border border-stone-200/80 dark:border-stone-700/60 shadow-2xs'
+                  }
                 >
                   {name}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-stone-500 dark:text-stone-400 italic text-xs py-1 font-normal">
+            <p className="text-stone-400 dark:text-stone-500 italic text-xs sm:text-sm py-1 font-normal">
               Tidak ada jadwal piket kebersihan hari {dowName}.
             </p>
           )}
@@ -122,33 +147,45 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
       {iceBreaking && (
         <div
           id="card-ice-breaking"
-          className="bg-emerald-50/60 dark:bg-[#072416]/50 border border-emerald-300 dark:border-[#105432] rounded-xl p-3 sm:p-3.5 flex flex-col justify-start shadow-xs transition-colors flex-shrink-0"
+          className={`bg-emerald-50/50 dark:bg-[#12241A] border border-emerald-600/20 dark:border-emerald-500/20 rounded-xl ${
+            compact ? 'p-3' : 'p-3.5 sm:p-4'
+          } flex flex-col justify-start transition-colors flex-shrink-0`}
         >
-          <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-emerald-200 dark:border-[#13442A]">
+          <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-emerald-600/10 dark:border-emerald-500/20">
             <div className="flex items-center gap-2">
-              <PartyPopper className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
-              <h3 className="text-emerald-950 dark:text-emerald-200 font-bold text-xs uppercase tracking-wider">
+              <PartyPopper className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} text-emerald-700 dark:text-emerald-400 flex-shrink-0`} />
+              <h3
+                className={
+                  compact
+                    ? 'text-emerald-950 dark:text-emerald-200 font-semibold text-xs sm:text-sm tracking-tight'
+                    : 'text-emerald-950 dark:text-emerald-200 font-bold text-sm sm:text-base tracking-tight'
+                }
+              >
                 Petugas Ice Breaking
               </h3>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-white dark:bg-[#0A0A0A] text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-[#105432]">
+            <span className="text-[11px] sm:text-xs font-medium px-2 py-0.5 rounded-md bg-white/90 dark:bg-[#18191C] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35">
               Jam Pertama: {iceBreaking.pelajaranPertama}
             </span>
           </div>
 
           {iceBreaking.petugas && iceBreaking.petugas.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
+            <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'} pt-0.5`}>
               {iceBreaking.petugas.map((name, i) => (
                 <span
                   key={i}
-                  className="px-2.5 py-1 rounded-full bg-white dark:bg-[#0A0A0A] text-emerald-950 dark:text-emerald-200 font-bold text-xs border border-emerald-300 dark:border-[#105432] shadow-2xs"
+                  className={
+                    compact
+                      ? 'px-2.5 py-1 rounded-md bg-white dark:bg-[#18191C] text-emerald-950 dark:text-emerald-100 font-medium text-xs sm:text-sm border border-emerald-600/25 dark:border-emerald-500/35'
+                      : 'px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#18191C] text-emerald-950 dark:text-emerald-100 font-bold text-sm sm:text-base md:text-lg border border-emerald-600/25 dark:border-emerald-500/35 shadow-2xs'
+                  }
                 >
                   {name}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-stone-500 dark:text-stone-400 italic text-xs py-1 font-normal">
+            <p className="text-stone-400 dark:text-stone-500 italic text-xs sm:text-sm py-1 font-normal">
               Belum ada nama petugas yang dicatat untuk hari ini.
             </p>
           )}
@@ -158,21 +195,32 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
       {/* ROW 2: PETUGAS DOA & BACAAN INJIL */}
       <div
         id="card-doa"
-        className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 shadow-xs transition-colors flex-shrink-0"
+        className={`bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl ${
+          compact ? 'p-3' : 'p-3.5 sm:p-4'
+        } transition-colors flex-shrink-0`}
       >
-        <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222] flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] dark:bg-[#34D399] flex-shrink-0 ring-2 ring-[#16A34A]/20" />
-            <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
-              Doa & Bacaan Injil
-            </h3>
-          </div>
+        <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-stone-100 dark:border-stone-800/60 flex-wrap">
+          <h3
+            className={
+              compact
+                ? 'text-stone-900 dark:text-stone-100 font-semibold text-xs sm:text-sm tracking-tight'
+                : 'text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base tracking-tight'
+            }
+          >
+            Doa &amp; Petugas Liturgi
+          </h3>
           {bacaanText && (
-            <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] sm:text-xs font-medium text-stone-500 dark:text-stone-400">
                 Bacaan Injil:
               </span>
-              <span className="font-black text-base sm:text-lg lg:text-xl text-[#14532D] dark:text-[#34D399] bg-[#DCFCE7] dark:bg-[#082216] px-4 py-1.5 rounded-xl border border-[#86EFAC] dark:border-[#0E492B] shadow-xs tracking-normal">
+              <span
+                className={
+                  compact
+                    ? 'font-editorial text-xs sm:text-sm font-semibold text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] px-2 py-0.5 rounded-md border border-emerald-600/25'
+                    : 'font-editorial text-base sm:text-lg md:text-xl font-bold text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] px-3.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 shadow-2xs'
+                }
+              >
                 {bacaanText}
               </span>
             </div>
@@ -180,7 +228,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         </div>
 
         {/* MINI-BOXES: DOA PAGI, RENUNGAN, MALAIKAT TUHAN, DOA PENUTUP */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className={`grid grid-cols-2 sm:grid-cols-4 ${compact ? 'gap-2' : 'gap-2.5'}`}>
           {[
             { label: 'Doa Pagi', name: doa?.doaPagi, isTugas: false },
             { label: 'Renungan', name: doa?.renungan, isTugas: false },
@@ -191,25 +239,25 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
             return (
               <div
                 key={idx}
-                className={`rounded-lg p-2.5 flex flex-col justify-between transition-all ${
+                className={`${compact ? 'rounded-lg p-2.5' : 'rounded-xl p-3'} flex flex-col justify-between transition-all ${
                   isMalaikatWithTugas
-                    ? 'bg-emerald-50/80 dark:bg-emerald-950/25 border-2 border-emerald-500 dark:border-emerald-400 outline outline-2 outline-emerald-500/70 dark:outline-emerald-400/70 outline-offset-1 shadow-xs ring-2 ring-emerald-500/20'
-                    : 'bg-[#FAF7F2] dark:bg-[#121212] border border-[#D8D2C5] dark:border-[#222222]'
+                    ? 'bg-emerald-50/90 dark:bg-emerald-950/35 border-2 border-emerald-500 dark:border-emerald-400 outline outline-2 outline-emerald-500/70 dark:outline-emerald-400/70 outline-offset-1 ring-2 ring-emerald-500/20 shadow-xs'
+                    : 'bg-stone-50/80 dark:bg-[#141518] border border-stone-200/70 dark:border-stone-800/70'
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
                   <span
-                    className={`text-[11px] font-bold uppercase tracking-wide ${
+                    className={`${compact ? 'text-[11px] sm:text-xs' : 'text-xs sm:text-sm'} font-semibold tracking-tight ${
                       isMalaikatWithTugas
                         ? 'text-emerald-800 dark:text-emerald-300'
-                        : 'text-stone-600 dark:text-stone-300'
+                        : 'text-stone-500 dark:text-stone-400'
                     }`}
                   >
                     {role.label}
                   </span>
                   {isMalaikatWithTugas && (
                     <span
-                      className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-400 dark:border-emerald-600"
+                      className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-900 dark:text-emerald-200 border border-emerald-400 dark:border-emerald-600"
                       title="Tugas Malaikat Tuhan Aktif (TRUE)"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -218,11 +266,11 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                   )}
                 </div>
                 <span
-                  className={`font-bold text-xs sm:text-sm truncate mt-1 ${
-                    isMalaikatWithTugas
-                      ? 'text-emerald-950 dark:text-emerald-100 font-extrabold'
-                      : 'text-stone-900 dark:text-stone-50'
-                  }`}
+                  className={`${
+                    compact
+                      ? 'font-semibold text-xs sm:text-sm text-stone-800 dark:text-stone-200 truncate mt-1'
+                      : 'font-bold text-sm sm:text-base md:text-lg truncate mt-2 text-stone-900 dark:text-stone-100'
+                  } ${isMalaikatWithTugas ? 'text-emerald-950 dark:text-emerald-100 font-bold' : ''}`}
                 >
                   {role.name || '—'}
                 </span>
@@ -232,25 +280,36 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         </div>
       </div>
 
-      {/* ROW 3: JADWAL PELAJARAN (KEEP EACH SUBJECT / SCHEDULE SEPARATE FOR MAXIMUM CLARITY) */}
+      {/* ROW 3: JADWAL PELAJARAN */}
       <div
         id="card-pelajaran"
-        className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 shadow-xs flex-1 min-h-0 flex flex-col transition-colors overflow-hidden"
+        className={`bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl ${
+          compact ? 'p-3' : 'p-3.5 sm:p-4'
+        } flex-1 min-h-0 flex flex-col transition-colors overflow-hidden`}
       >
-        <div className="flex items-center justify-between mb-2.5 pb-1.5 border-b border-[#E8E2D5] dark:border-[#222222] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED] dark:bg-[#A78BFA] flex-shrink-0 ring-2 ring-[#7C3AED]/20" />
-            <h3 className="text-stone-800 dark:text-stone-200 font-bold text-xs uppercase tracking-wider">
-              Jadwal Pelajaran
-            </h3>
-          </div>
-          <span className="text-xs sm:text-sm font-bold text-[#581C87] dark:text-[#E9D5FF] bg-[#F3E8FF] dark:bg-[#1C0D2E] px-3 py-1 rounded-md border border-[#D8B4FE] dark:border-[#3D1A63]">
-            {totalJamPelajaran} Jam Pelajaran
+        <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-stone-100 dark:border-stone-800/60 flex-shrink-0">
+          <h3
+            className={
+              compact
+                ? 'text-stone-900 dark:text-stone-100 font-semibold text-xs sm:text-sm tracking-tight'
+                : 'text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base tracking-tight'
+            }
+          >
+            Jadwal Pelajaran
+          </h3>
+          <span className="text-[11px] sm:text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800/70 px-2.5 py-0.5 rounded-md border border-stone-200/60 dark:border-stone-700/50">
+            {totalJamPelajaran} Sesi Pelajaran
           </span>
         </div>
 
         {pelajaran && pelajaran.length > 0 ? (
-          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 overflow-y-auto flex-1 pr-1">
+          <div
+            className={
+              compact
+                ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto flex-1 pr-1'
+                : 'grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pr-1'
+            }
+          >
             {pelajaran.map((p, idx) => {
               const isNonAcademicFriday = isFriday && isLiterasiOrSenam(p);
               let sessionNumber: number | string = idx + 1;
@@ -266,40 +325,50 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               return (
                 <div
                   key={`${p.cleanName}-${p.time}-${idx}`}
-                  className={`p-3 rounded-xl border flex flex-col justify-between transition-shadow shadow-2xs ${
+                  className={`${compact ? 'p-2.5 rounded-lg' : 'p-3.5 rounded-xl'} border flex flex-col justify-between transition-colors ${
                     p.hasTask
-                      ? 'bg-[#FEF9EE] dark:bg-[#1C1508] border-[#FCD34D] dark:border-[#4D380E]'
+                      ? 'bg-amber-50/60 dark:bg-[#1A1409] border-amber-300/80 dark:border-amber-900/70'
                       : isNonAcademicFriday
-                      ? 'bg-[#F0FDF4] dark:bg-[#061C12] border-[#BBF7D0] dark:border-[#0E492B]'
-                      : 'bg-[#FAF7F2] dark:bg-[#121212] border-[#D8D2C5] dark:border-[#222222] hover:border-[#2C4E3A]/50 dark:hover:border-[#34D399]/50'
+                      ? 'bg-emerald-50/50 dark:bg-[#0E2018] border-emerald-200 dark:border-emerald-900/50'
+                      : 'bg-stone-50/80 dark:bg-[#141518] border-stone-200/80 dark:border-stone-800/80 hover:border-stone-400 dark:hover:border-stone-600'
                   }`}
                 >
                   {/* Header: Sesi index badge & Time Badge */}
                   <div className="flex items-center justify-between gap-1.5 mb-1.5">
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={`w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center flex-shrink-0 ${
+                        className={`${
+                          compact
+                            ? 'w-5 h-5 rounded text-[11px] font-mono font-semibold'
+                            : 'w-6 h-6 sm:w-7 sm:h-7 rounded-md text-xs sm:text-sm font-mono font-bold'
+                        } flex items-center justify-center flex-shrink-0 ${
                           isNonAcademicFriday
-                            ? 'bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] ring-1 ring-[#34D399]/40'
-                            : 'bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-200'
+                            ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
+                            : 'bg-stone-200/90 dark:bg-stone-800 text-stone-800 dark:text-stone-200'
                         }`}
                         title={isNonAcademicFriday ? 'Kegiatan Pembiasaan (Jam ke-0)' : `Jam Pelajaran ke-${sessionNumber}`}
                       >
                         {sessionNumber}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-[#161616] text-stone-800 dark:text-stone-200 font-mono font-semibold text-xs border border-[#D8D2C5] dark:border-[#262626] tracking-tight">
+                      <span
+                        className={
+                          compact
+                            ? 'font-mono text-xs font-semibold text-stone-700 dark:text-stone-300 tabular-nums'
+                            : 'font-mono text-xs sm:text-sm md:text-base font-bold text-stone-700 dark:text-stone-300 tabular-nums'
+                        }
+                      >
                         {p.time}
                       </span>
                     </div>
 
                     {p.hasTask && (
-                      <span className="px-2 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#261B06] text-[#78350F] dark:text-[#FDE68A] font-bold text-[10px] uppercase border border-[#FCD34D] dark:border-[#523A0F]">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300/70 dark:border-amber-800/70">
                         Tugas
                       </span>
                     )}
 
                     {isNonAcademicFriday && !p.hasTask && (
-                      <span className="px-2 py-0.5 rounded-md bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] font-bold text-[10px] uppercase border border-[#86EFAC] dark:border-[#0E492B]">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800/60">
                         Pembiasaan
                       </span>
                     )}
@@ -307,7 +376,11 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
 
                   {/* Subject Title */}
                   <div
-                    className="font-bold text-sm text-stone-900 dark:text-white leading-snug line-clamp-2"
+                    className={
+                      compact
+                        ? 'font-semibold text-xs sm:text-sm text-stone-900 dark:text-stone-100 leading-snug line-clamp-2 my-0.5'
+                        : 'font-bold text-base sm:text-lg md:text-xl text-stone-900 dark:text-stone-100 leading-snug line-clamp-2 my-1'
+                    }
                     title={p.summary || p.cleanName}
                   >
                     {p.cleanName}
@@ -324,15 +397,15 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                     const hasDetails = p.hasDetails !== undefined ? p.hasDetails : !!details;
 
                     return (
-                      <div className="mt-2 bg-[#FEF3C7]/90 dark:bg-[#1A1205] p-2 sm:p-2.5 rounded-lg border border-[#FCD34D]/80 dark:border-[#422C05] text-xs">
+                      <div className="mt-2 bg-amber-100/70 dark:bg-[#20170A] p-2 rounded-md border border-amber-300/70 dark:border-amber-900/60 text-xs">
                         <div className="flex items-start justify-between gap-1.5">
                           <div
                             onClick={hasDetails ? () => toggleTaskExpand(taskKey) : undefined}
-                            className={`font-medium text-[#78350F] dark:text-[#FDE68A] leading-snug break-words flex-1 ${
-                              hasDetails ? 'cursor-pointer hover:text-[#B45309] dark:hover:text-[#FBBF24] transition-colors' : ''
+                            className={`font-medium text-amber-950 dark:text-amber-200 leading-snug break-words flex-1 ${
+                              hasDetails ? 'cursor-pointer hover:text-amber-800 dark:hover:text-amber-100 transition-colors' : ''
                             }`}
                           >
-                            <strong className="font-bold text-[#92400E] dark:text-[#FBBF24]">Tugas:</strong> {title}
+                            <strong className="font-bold text-amber-900 dark:text-amber-300">Tugas:</strong> {title}
                           </div>
                           {hasDetails && (
                             <button
@@ -340,7 +413,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                               onClick={() => toggleTaskExpand(taskKey)}
                               aria-expanded={isExpanded}
                               aria-label={isExpanded ? 'Tutup detail penugasan' : 'Lihat detail penugasan'}
-                              className="flex items-center gap-0.5 text-[10px] font-bold text-[#92400E] dark:text-[#FBBF24] hover:text-[#78350F] dark:hover:text-[#FDE68A] px-1.5 py-0.5 rounded bg-white/70 dark:bg-[#261B06] border border-[#FCD34D] dark:border-[#523A0F] transition cursor-pointer flex-shrink-0"
+                              className="flex items-center gap-0.5 text-[11px] font-bold text-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded bg-white/90 dark:bg-[#150F07] border border-amber-300/70 dark:border-amber-900/70 transition cursor-pointer flex-shrink-0"
                             >
                               <span>{isExpanded ? 'Tutup' : 'Detail'}</span>
                               <ChevronDown
@@ -353,21 +426,21 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                         </div>
 
                         {hasDetails && isExpanded && (
-                          <div className="mt-2 pt-1.5 border-t border-[#FCD34D]/60 dark:border-[#382606] text-[11px] text-stone-800 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/80 dark:bg-[#140D04] p-2 rounded border border-[#FCD34D]/40 dark:border-[#2E1E05] animate-fade-in">
+                          <div className="mt-1.5 pt-1.5 border-t border-amber-300/60 dark:border-amber-900/60 text-xs text-stone-900 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/90 dark:bg-[#120C05] p-2 rounded border border-amber-200 dark:border-amber-900/40 animate-fade-in font-normal">
                             {details}
                           </div>
                         )}
                       </div>
                     );
                   })() : (
-                    <div className="h-1.5" />
+                    <div className="h-1" />
                   )}
                 </div>
               );
             })}
           </div>
         ) : (
-          <p className="text-stone-500 dark:text-stone-400 italic text-xs py-3 font-medium">
+          <p className="text-stone-400 dark:text-stone-500 italic text-xs sm:text-sm py-2 font-normal">
             Tidak ada jadwal mata pelajaran untuk hari ini.
           </p>
         )}

@@ -35,19 +35,14 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
   return (
     <div
       id="song-schedule-card"
-      className="bg-white dark:bg-[#0A0A0A] border border-[#D8D2C5] dark:border-[#222222] rounded-xl p-3 sm:p-3.5 shadow-xs mt-2 flex flex-col gap-2.5 transition-colors"
+      className="bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl p-3 sm:p-3.5 mt-2 flex flex-col gap-2.5 transition-colors"
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#E8E2D5] dark:border-[#222222]">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-[#2C4E3A] dark:bg-[#34D399] text-white dark:text-[#0A0A0A] flex items-center justify-center flex-shrink-0 shadow-2xs">
-            <Music className="w-3.5 h-3.5" />
-          </div>
-          <h3 className="font-bold text-xs uppercase tracking-wider text-stone-800 dark:text-stone-200">
-            Lagu Wajib Minggu Ini
-          </h3>
-        </div>
-        <span className="text-xs font-semibold text-[#14532D] dark:text-[#34D399] bg-[#DCFCE7] dark:bg-[#071F14] px-2.5 py-0.5 rounded-full border border-[#86EFAC] dark:border-[#0E492B]">
+      <div className="flex items-center justify-between pb-2.5 border-b border-stone-100 dark:border-stone-800/60">
+        <h3 className="font-editorial font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 tracking-tight">
+          Lagu Wajib Minggu Ini
+        </h3>
+        <span className="text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800/70 px-2.5 py-0.5 rounded-md border border-stone-200/60 dark:border-stone-700/50">
           Minggu ke-{week} • {MONTH_ID[month]} {year}
         </span>
       </div>
@@ -66,25 +61,25 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
             setShowLyrics(true);
           }
         }}
-        className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition ${
+        className={`p-3 sm:p-3.5 rounded-xl border flex items-center justify-between gap-3 transition ${
           !isBlank
-            ? 'bg-[#FAF7F2] dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1A1A1A] border-[#D8D2C5] dark:border-[#222222] hover:border-[#2C4E3A]/60 cursor-pointer shadow-2xs group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]'
-            : 'bg-stone-100/70 dark:bg-[#0A0A0A] border-[#E8E2D5] dark:border-[#222222] cursor-default'
+            ? 'bg-stone-50/80 dark:bg-[#141518] hover:bg-stone-100 dark:hover:bg-[#1E2025] border-stone-200/80 dark:border-stone-800/80 hover:border-stone-400 dark:hover:border-stone-600 cursor-pointer group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]'
+            : 'bg-stone-50/40 dark:bg-[#141518]/50 border-stone-200/40 dark:border-stone-800/40 cursor-default'
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-xs font-bold px-2 py-1 rounded-md bg-[#2C4E3A] dark:bg-[#34D399] text-white dark:text-[#0A0A0A] flex-shrink-0">
+          <span className="text-xs sm:text-sm font-mono font-bold px-2.5 py-1 rounded-md bg-stone-200/90 dark:bg-stone-800 text-stone-800 dark:text-stone-200 flex-shrink-0">
             M{week}
           </span>
           <div className="min-w-0">
-            <span className="text-[11px] uppercase font-bold tracking-wider text-stone-600 dark:text-stone-400 block leading-tight">
+            <span className="text-xs text-stone-500 dark:text-stone-400 block leading-tight font-medium">
               Lagu Wajib Nasional
             </span>
             <span
-              className={`text-sm font-bold truncate block leading-snug ${
+              className={`text-sm sm:text-base font-bold truncate block leading-snug mt-0.5 ${
                 !isBlank
-                  ? 'text-stone-900 dark:text-white group-hover:text-[#2C4E3A] dark:group-hover:text-[#34D399] transition-colors'
-                  : 'text-stone-500 dark:text-stone-400 italic font-medium'
+                  ? 'text-stone-900 dark:text-stone-100 group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors'
+                  : 'text-stone-400 dark:text-stone-500 italic'
               }`}
             >
               {!isBlank ? songTitle : '—'}
@@ -101,7 +96,7 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
                 setShowLyrics(true);
               }}
               aria-label={`Lihat teks lirik lagu ${songTitle}`}
-              className="text-xs font-bold text-[#14532D] dark:text-[#34D399] bg-white dark:bg-[#161616] hover:bg-[#DCFCE7] dark:hover:bg-[#071F14] px-3 py-1.5 rounded-lg border border-[#86EFAC] dark:border-[#0E492B] flex items-center gap-1.5 transition cursor-pointer shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="text-xs font-medium text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] hover:bg-emerald-100/80 dark:hover:bg-[#1A382B] px-2.5 py-1 rounded-md border border-emerald-600/20 dark:border-emerald-500/30 flex items-center gap-1.5 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>Lirik</span>

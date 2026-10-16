@@ -444,18 +444,18 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
         if (e.target === e.currentTarget && !isSpinning) onClose();
       }}
     >
-      <div className="bg-[#FAF7F2] dark:bg-black text-[#1C1917] dark:text-[#F8FAFC] rounded-2xl border border-[#D8D2C5] dark:border-[#222222] shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-[#18191C] text-stone-900 dark:text-stone-100 rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#D8D2C5] dark:border-[#222222] bg-white dark:bg-[#0A0A0A] flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-200/80 dark:border-stone-800/80 bg-stone-50/70 dark:bg-[#141518] flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/25 flex items-center justify-center font-bold">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h2 id="wheel-title" className="font-display font-bold text-base sm:text-lg leading-tight">
+              <h2 id="wheel-title" className="font-editorial font-bold text-base sm:text-lg leading-tight text-stone-900 dark:text-stone-100">
                 Random Name Picker (Wheel of Names)
               </h2>
-              <p className="text-xs text-stone-600 dark:text-stone-300 font-medium">
+              <p className="text-xs text-stone-500 dark:text-stone-400 font-normal">
                 SMA Putra Nirmala • Kelas XB
               </p>
             </div>
@@ -465,16 +465,16 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               title={soundEnabled ? 'Matikan Suara' : 'Aktifkan Suara'}
-              className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1C1C1C] flex items-center justify-center text-stone-600 dark:text-stone-200 transition cursor-pointer"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <VolumeX className="w-4 h-4 text-stone-400" />}
+              {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400" /> : <VolumeX className="w-4 h-4 text-stone-400" />}
             </button>
 
             <button
               onClick={onClose}
               disabled={isSpinning}
               aria-label="Tutup Wheel of Names"
-              className="w-9 h-9 rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-white dark:bg-[#121212] hover:bg-stone-100 dark:hover:bg-[#1C1C1C] flex items-center justify-center text-stone-600 dark:text-stone-200 transition cursor-pointer disabled:opacity-50"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer disabled:opacity-50"
             >
               <X className="w-4 h-4" />
             </button>
@@ -494,7 +494,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                 ref={canvasRef}
                 width={400}
                 height={400}
-                className="w-[280px] h-[280px] sm:w-[350px] sm:h-[350px] md:w-[380px] md:h-[380px] drop-shadow-md rounded-full bg-white/40 dark:bg-black/20"
+                className="w-[280px] h-[280px] sm:w-[350px] sm:h-[350px] md:w-[380px] md:h-[380px] drop-shadow-md rounded-full bg-stone-50/50 dark:bg-stone-900/40"
               />
             </div>
 
@@ -503,7 +503,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
               type="button"
               onClick={handleSpin}
               disabled={isSpinning || activeStudents.length === 0}
-              className="mt-4 px-6 py-2.5 rounded-xl bg-[#2C4E3A] hover:bg-[#233F2E] disabled:bg-stone-400 dark:disabled:bg-stone-700 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#2C4E3A]"
+              className="mt-4 px-6 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 disabled:bg-stone-300 dark:disabled:bg-stone-800 text-white font-semibold text-sm shadow-sm transition cursor-pointer flex items-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700"
             >
               <Play className="w-4 h-4 fill-white" />
               <span>{isSpinning ? 'Sedang Memutar Roda...' : 'PUTAR RODA (SPIN)'}</span>
@@ -513,35 +513,35 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
           {/* Controls & Entries / History Section */}
           <div className="lg:col-span-5 flex flex-col gap-3 h-full justify-between min-h-[360px]">
             {/* Top Tab Switcher */}
-            <div className="flex items-center gap-1.5 p-1 bg-stone-200/70 dark:bg-[#161616] rounded-xl border border-[#D8D2C5] dark:border-[#262626] flex-shrink-0">
+            <div className="flex items-center gap-1 p-1 bg-stone-100 dark:bg-[#121316] rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setRightTab('entries')}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                   rightTab === 'entries'
-                    ? 'bg-white dark:bg-[#222222] text-[#2C4E3A] dark:text-[#34D399] shadow-xs'
+                    ? 'bg-white dark:bg-[#222429] text-stone-900 dark:text-stone-100 shadow-2xs font-bold'
                     : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
                 <span>Daftar Siswa</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-100 dark:bg-[#2A2A2A] text-stone-600 dark:text-stone-300 font-bold">
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-100 dark:bg-[#1A1A1A] text-stone-600 dark:text-stone-300 font-semibold">
                   {activeStudents.length}
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => setRightTab('history')}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                   rightTab === 'history'
-                    ? 'bg-white dark:bg-[#222222] text-[#2C4E3A] dark:text-[#34D399] shadow-xs'
+                    ? 'bg-white dark:bg-[#222429] text-stone-900 dark:text-stone-100 shadow-2xs font-bold'
                     : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
                 <span>Riwayat Putaran</span>
                 {history.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-bold">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-semibold">
                     {history.length}
                   </span>
                 )}
@@ -551,18 +551,18 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
             {rightTab === 'entries' ? (
               <>
                 {/* Name Mode Toggle */}
-                <div className="p-3 bg-white dark:bg-[#0A0A0A] rounded-xl border border-[#D8D2C5] dark:border-[#222222] space-y-2 flex-shrink-0">
-                  <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block">
+                <div className="p-3 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2 flex-shrink-0">
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 block">
                     Format Nama Siswa:
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setNameMode('panggilan')}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer ${
                         nameMode === 'panggilan'
-                          ? 'bg-[#2C4E3A] text-white shadow-2xs'
-                          : 'bg-stone-100 dark:bg-[#161616] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#222222]'
+                          ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 shadow-2xs'
+                          : 'bg-white dark:bg-[#18191C] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#222429]'
                       }`}
                     >
                       Nama Pendek / Panggilan
@@ -570,10 +570,10 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                     <button
                       type="button"
                       onClick={() => setNameMode('nama')}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer ${
                         nameMode === 'nama'
-                          ? 'bg-[#2C4E3A] text-white shadow-2xs'
-                          : 'bg-stone-100 dark:bg-[#161616] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#222222]'
+                          ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 shadow-2xs'
+                          : 'bg-white dark:bg-[#18191C] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#222429]'
                       }`}
                     >
                       Nama Panjang Lengkap
@@ -582,13 +582,13 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                 </div>
 
                 {/* Entries List Textarea */}
-                <div className="p-3 bg-white dark:bg-[#0A0A0A] rounded-xl border border-[#D8D2C5] dark:border-[#222222] flex-1 flex flex-col min-h-[220px]">
+                <div className="p-3 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex-1 flex flex-col min-h-[220px]">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-stone-800 dark:text-stone-200">
+                      <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">
                         Daftar Entri Roda
                       </span>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] border border-[#86EFAC] dark:border-[#0E492B]">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/25">
                         {activeStudents.length} Nama
                       </span>
                     </div>
@@ -600,7 +600,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                         onClick={handleShuffle}
                         disabled={isSpinning || activeStudents.length <= 1}
                         title="Acak urutan nama di roda secara acak"
-                        className="text-xs font-semibold text-stone-700 dark:text-stone-300 hover:text-[#2C4E3A] dark:hover:text-[#34D399] flex items-center gap-1 cursor-pointer disabled:opacity-50 px-2 py-1 rounded-md hover:bg-stone-100 dark:hover:bg-[#1C1C1C] transition border border-stone-200 dark:border-stone-800"
+                        className="text-xs font-medium text-stone-700 dark:text-stone-300 hover:text-emerald-700 dark:hover:text-emerald-400 flex items-center gap-1 cursor-pointer disabled:opacity-50 px-2 py-1 rounded-md hover:bg-stone-100 dark:hover:bg-[#1C1C1C] transition border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C]"
                       >
                         <Shuffle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                         <span>Shuffle</span>
@@ -612,7 +612,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                         onClick={handleReset}
                         disabled={isSpinning}
                         title="Kembalikan seluruh 33 murid kelas XB"
-                        className="text-xs font-semibold text-[#2C4E3A] dark:text-[#34D399] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50 px-2 py-1 rounded-md hover:bg-stone-100 dark:hover:bg-[#1C1C1C] transition"
+                        className="text-xs font-medium text-emerald-800 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50 px-2 py-1 rounded-md hover:bg-stone-100 dark:hover:bg-[#1C1C1C] transition"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>Reset</span>
@@ -626,23 +626,23 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                     disabled={isSpinning}
                     placeholder="Masukkan satu nama per baris..."
                     rows={8}
-                    className="w-full flex-1 p-2.5 text-xs font-mono rounded-lg border border-[#D8D2C5] dark:border-[#262626] bg-[#FAF7F2] dark:bg-[#121212] text-stone-900 dark:text-stone-100 resize-none focus:outline-hidden focus:ring-1 focus:ring-[#2C4E3A] dark:focus:ring-[#34D399]"
+                    className="w-full flex-1 p-2.5 text-xs font-mono rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] text-stone-900 dark:text-stone-100 resize-none focus:outline-hidden focus:ring-1 focus:ring-emerald-700"
                   />
                 </div>
               </>
             ) : (
               /* Riwayat Putaran Sesi (Session History Tab) */
-              <div className="p-3 bg-white dark:bg-[#0A0A0A] rounded-xl border border-[#D8D2C5] dark:border-[#222222] flex-1 flex flex-col min-h-[300px]">
+              <div className="p-3 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex-1 flex flex-col min-h-[300px]">
                 {/* History Filter Chips & Clear Action */}
-                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#D8D2C5] dark:border-[#222222] flex-shrink-0">
+                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setHistoryFilter('all')}
-                      className={`px-2 py-1 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                      className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                         historyFilter === 'all'
-                          ? 'bg-[#2C4E3A] text-white shadow-2xs'
-                          : 'bg-stone-100 dark:bg-[#1C1C1C] text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                          ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 shadow-2xs'
+                          : 'bg-white dark:bg-[#18191C] text-stone-600 dark:text-stone-400 border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100'
                       }`}
                     >
                       Semua ({history.length})
@@ -650,10 +650,10 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                     <button
                       type="button"
                       onClick={() => setHistoryFilter('removed')}
-                      className={`px-2 py-1 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                      className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                         historyFilter === 'removed'
-                          ? 'bg-red-600 text-white shadow-2xs'
-                          : 'bg-stone-100 dark:bg-[#1C1C1C] text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                          ? 'bg-rose-700 text-white shadow-2xs'
+                          : 'bg-white dark:bg-[#18191C] text-stone-600 dark:text-stone-400 border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100'
                       }`}
                     >
                       Dihapus ({removedCount})
@@ -661,10 +661,10 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                     <button
                       type="button"
                       onClick={() => setHistoryFilter('kept')}
-                      className={`px-2 py-1 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                      className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                         historyFilter === 'kept'
-                          ? 'bg-emerald-700 text-white shadow-2xs'
-                          : 'bg-stone-100 dark:bg-[#1C1C1C] text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                          ? 'bg-emerald-800 text-white shadow-2xs'
+                          : 'bg-white dark:bg-[#18191C] text-stone-600 dark:text-stone-400 border border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100'
                       }`}
                     >
                       Disimpan ({keptCount})
@@ -676,7 +676,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                       type="button"
                       onClick={handleClearHistory}
                       title="Bersihkan riwayat sesi ini"
-                      className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Hapus Semua</span>
@@ -704,14 +704,14 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                     filteredHistory.map(item => (
                       <div
                         key={item.id}
-                        className="p-2.5 rounded-lg border border-[#D8D2C5] dark:border-[#222222] bg-[#FAF7F2] dark:bg-[#141414] flex items-center justify-between gap-2.5 text-xs transition"
+                        className="p-2.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] flex items-center justify-between gap-2.5 text-xs transition"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="w-6 h-6 rounded-md bg-stone-200 dark:bg-[#262626] font-mono text-[11px] font-bold text-stone-700 dark:text-stone-300 flex items-center justify-center flex-shrink-0">
+                          <span className="w-6 h-6 rounded-md bg-stone-100 dark:bg-stone-800 font-mono text-[11px] font-semibold text-stone-700 dark:text-stone-300 flex items-center justify-center flex-shrink-0">
                             #{item.spinNumber}
                           </span>
                           <div className="min-w-0">
-                            <div className="font-bold text-stone-900 dark:text-white truncate">
+                            <div className="font-semibold text-stone-900 dark:text-stone-100 truncate">
                               {nameMode === 'nama' ? item.student.nama : item.student.panggilan}
                             </div>
                             <div className="text-[10px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
@@ -724,12 +724,12 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
 
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {item.removed ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 dark:bg-[#260B0E] text-red-700 dark:text-red-300 border border-red-200 dark:border-[#4B1419] flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/40 flex items-center gap-1">
                               <Trash2 className="w-3 h-3" />
                               <span>Dihapus</span>
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DCFCE7] dark:bg-[#071F14] text-[#14532D] dark:text-[#34D399] border border-[#86EFAC] dark:border-[#0E492B] flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/25 flex items-center gap-1">
                               <Check className="w-3 h-3" />
                               <span>Disimpan</span>
                             </span>
@@ -739,7 +739,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                             type="button"
                             onClick={() => handleToggleHistoryRemoved(item)}
                             title={item.removed ? 'Kembalikan siswa ke dalam roda' : 'Hapus siswa dari roda'}
-                            className="p-1 rounded-md text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white hover:bg-stone-200 dark:hover:bg-[#262626] transition cursor-pointer"
+                            className="p-1 rounded-md text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-[#222429] transition cursor-pointer"
                           >
                             <RotateCw className="w-3.5 h-3.5" />
                           </button>
@@ -761,28 +761,28 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
               if (e.target === e.currentTarget) setShowWinnerDialog(false);
             }}
           >
-            <div className="bg-white dark:bg-[#0A0A0A] border-2 border-[#2C4E3A] dark:border-[#34D399] rounded-2xl p-6 shadow-2xl max-w-sm w-full text-center space-y-4">
-              <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-[#261B06] text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-[#523A0F] flex items-center justify-center mx-auto shadow-inner animate-bounce">
-                <Award className="w-8 h-8" />
+            <div className="bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-2xl max-w-sm w-full text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-[#20170A] text-amber-700 dark:text-amber-400 border border-amber-300/80 dark:border-amber-900/60 flex items-center justify-center mx-auto shadow-2xs">
+                <Award className="w-7 h-7" />
               </div>
 
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                <p className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                   🎉 Siswa Terpilih! 🎉
                 </p>
-                <h3 className="text-2xl font-black text-stone-900 dark:text-white mt-1">
+                <h3 className="font-editorial text-2xl font-bold text-stone-900 dark:text-stone-100 mt-1">
                   {nameMode === 'nama' ? winner.nama : winner.panggilan}
                 </h3>
-                <p className="text-xs text-stone-600 dark:text-stone-300 mt-0.5">
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-normal">
                   Absen #{winner.absen} • {winner.gender === 'L' ? 'Laki-laki' : 'Perempuan'}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#D8D2C5] dark:border-[#222222]">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-200/80 dark:border-stone-800/80">
                 <button
                   type="button"
                   onClick={handleRemoveWinner}
-                  className="px-3 py-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-[#21090B] hover:bg-red-100 dark:hover:bg-[#2F0D10] text-red-700 dark:text-red-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-700 dark:text-rose-300 text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Hapus Siswa</span>
@@ -790,7 +790,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
                 <button
                   type="button"
                   onClick={() => setShowWinnerDialog(false)}
-                  className="px-3 py-2 rounded-xl bg-[#2C4E3A] hover:bg-[#233F2E] text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-white text-white dark:text-stone-900 text-xs font-semibold transition shadow-xs cursor-pointer"
                 >
                   Lanjut / Simpan
                 </button>
