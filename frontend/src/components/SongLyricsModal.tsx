@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Music, User } from 'lucide-react';
+import { X, Music, User, Sun, Moon } from 'lucide-react';
 import { SONG_LYRICS_DB, formatLyricsVerses } from '../data/songSchedule';
 
 interface SongLyricsModalProps {
@@ -9,6 +9,7 @@ interface SongLyricsModalProps {
   songTitle: string;
   weekNumber?: number;
   darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
@@ -16,7 +17,8 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
   onClose,
   songTitle,
   weekNumber,
-  darkMode
+  darkMode,
+  onToggleDarkMode
 }) => {
   // Real-time tracking of app theme (Light mode / OLED black)
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -113,6 +115,22 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={isDark ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {isDark ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
+
             <button
               onClick={onClose}
               aria-label="Tutup Lirik Lagu"

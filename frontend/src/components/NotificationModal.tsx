@@ -12,7 +12,9 @@ import {
   PartyPopper,
   Info,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
@@ -20,12 +22,14 @@ interface NotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const NotificationModal: React.FC<NotificationModalProps> = ({
   isOpen,
   onClose,
-  darkMode
+  darkMode,
+  onToggleDarkMode
 }) => {
   const {
     isSupported,
@@ -105,13 +109,25 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Tutup Pengaturan Notifikasi"
-            className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#141518] hover:bg-stone-100 dark:hover:bg-stone-800/60 flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onToggleDarkMode && (
+              <button
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? 'Ganti ke mode terang' : 'Ganti ke mode gelap'}
+                title={darkMode ? 'Mode Terang' : 'Mode Gelap'}
+                className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#141518] hover:bg-stone-100 dark:hover:bg-stone-800/60 flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
+              >
+                {darkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-stone-600 dark:text-stone-300" />}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Tutup Pengaturan Notifikasi"
+              className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#141518] hover:bg-stone-100 dark:hover:bg-stone-800/60 flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}

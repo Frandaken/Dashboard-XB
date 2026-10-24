@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, PartyPopper, Calendar, Clock, CheckCircle2 } from 'lucide-react';
+import { X, Search, PartyPopper, Calendar, Clock, CheckCircle2, Sun, Moon } from 'lucide-react';
 import { IceBreakingSchedule, PeriodItem } from '../types';
 import { getFirstLessonSession } from '../utils/iceBreakingUtils';
 
@@ -10,6 +10,8 @@ interface IceBreakingScheduleModalProps {
   pelajaranByDate?: Record<string, PeriodItem[]>;
   todayISO: string;
   onSelectDate?: (iso: string) => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const IceBreakingScheduleModal: React.FC<IceBreakingScheduleModalProps> = ({
@@ -18,7 +20,9 @@ export const IceBreakingScheduleModal: React.FC<IceBreakingScheduleModalProps> =
   schedules,
   pelajaranByDate = {},
   todayISO,
-  onSelectDate
+  onSelectDate,
+  darkMode,
+  onToggleDarkMode
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'upcoming' | 'assigned'>('all');
@@ -90,13 +94,31 @@ export const IceBreakingScheduleModal: React.FC<IceBreakingScheduleModalProps> =
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Tutup Jadwal Ice Breaking"
-            className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#141518] hover:bg-stone-100 dark:hover:bg-stone-800/60 flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {darkMode ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              aria-label="Tutup Jadwal Ice Breaking"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Filter & Search Bar */}

@@ -10,7 +10,9 @@ import {
   RotateCcw,
   UserCheck,
   Shield,
-  FastForward
+  FastForward,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Student, STUDENTS_DATA } from '../data/studentsData';
 import { cryptoShuffle, cryptoRandomInt } from '../utils/cryptoRandom';
@@ -18,6 +20,8 @@ import { cryptoShuffle, cryptoRandomInt } from '../utils/cryptoRandom';
 interface GroupGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 interface GeneratedGroup {
@@ -27,7 +31,12 @@ interface GeneratedGroup {
   representativeId?: number; // student absen
 }
 
-export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen, onClose }) => {
+export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({
+  isOpen,
+  onClose,
+  darkMode,
+  onToggleDarkMode
+}) => {
   const [nameMode, setNameMode] = useState<'panggilan' | 'nama'>('panggilan');
   const [selectedAbsens, setSelectedAbsens] = useState<number[]>(() => STUDENTS_DATA.map(s => s.absen));
   const [splitMode, setSplitMode] = useState<'numGroups' | 'maxPeople'>('numGroups');
@@ -380,13 +389,31 @@ export const GroupGeneratorModal: React.FC<GroupGeneratorModalProps> = ({ isOpen
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Tutup Group Generator"
-            className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {darkMode ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              aria-label="Tutup Group Generator"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-600 dark:text-stone-300 transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Body */}

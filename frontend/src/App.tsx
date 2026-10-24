@@ -574,16 +574,22 @@ export default function App() {
         <WheelOfNamesModal
           isOpen={isRandomPickerOpen}
           onClose={() => setIsRandomPickerOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
 
         <GroupGeneratorModal
           isOpen={isGroupGeneratorOpen}
           onClose={() => setIsGroupGeneratorOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
 
         <AllSongsModal
           isOpen={isAllSongsOpen}
           onClose={() => setIsAllSongsOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
 
         <IceBreakingScheduleModal
@@ -592,6 +598,8 @@ export default function App() {
           schedules={dataStore.iceBreakingByDate}
           pelajaranByDate={dataStore.pelajaranByDate}
           todayISO={todayWIB.iso}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
 
         <KasMuridModal
@@ -600,6 +608,15 @@ export default function App() {
           kasData={dataStore.kasData}
           onRefresh={() => fetchData(true)}
           isRefreshing={isLoading}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <NotificationModal
+          isOpen={isNotificationModalOpen}
+          onClose={() => setIsNotificationModalOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
       </>
     );
@@ -765,6 +782,7 @@ export default function App() {
                 currentDate={safeActiveDate}
                 darkMode={darkMode}
                 onToggleDarkMode={toggleDarkMode}
+                onOpenAllSongs={() => setIsAllSongsOpen(true)}
               />
             </aside>
           </main>
@@ -797,6 +815,8 @@ export default function App() {
           <WheelOfNamesModal
             isOpen={isRandomPickerOpen}
             onClose={() => setIsRandomPickerOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
           />
         )}
 
@@ -805,6 +825,8 @@ export default function App() {
           <GroupGeneratorModal
             isOpen={isGroupGeneratorOpen}
             onClose={() => setIsGroupGeneratorOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
           />
         )}
 
@@ -826,6 +848,8 @@ export default function App() {
             schedules={dataStore.iceBreakingByDate}
             pelajaranByDate={dataStore.pelajaranByDate}
             todayISO={todayWIB.iso}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
             onSelectDate={iso => {
               setSelectedISO(iso);
               setActiveISO(iso);
@@ -842,6 +866,8 @@ export default function App() {
             kasData={dataStore.kasData}
             onRefresh={() => fetchData(true)}
             isRefreshing={isLoading}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
           />
         )}
 
@@ -859,6 +885,7 @@ export default function App() {
             birthdays={selectedDetails.birthdays}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
+            onOpenAllSongs={() => setIsAllSongsOpen(true)}
           />
         )}
 
@@ -868,6 +895,7 @@ export default function App() {
             isOpen={isNotificationModalOpen}
             onClose={() => setIsNotificationModalOpen(false)}
             darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
           />
         )}
       </React.Suspense>

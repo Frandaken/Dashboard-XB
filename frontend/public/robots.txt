@@ -15,6 +15,28 @@ Allow: /
 User-agent: Slurp
 Allow: /
 
+# Social media link preview crawlers (MUST be allowed for WhatsApp, Telegram, Twitter, LinkedIn, Facebook preview)
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+User-agent: Discordbot
+Allow: /
+
 # Block AI crawlers, scrapers, and LLM training bots
 User-agent: GPTBot
 Disallow: /
@@ -47,9 +69,6 @@ User-agent: Diffbot
 Disallow: /
 
 User-agent: PerplexityBot
-Disallow: /
-
-User-agent: FacebookBot
 Disallow: /
 
 User-agent: Omgilibot

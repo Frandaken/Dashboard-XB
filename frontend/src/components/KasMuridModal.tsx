@@ -18,7 +18,9 @@ import {
   UserCheck,
   UserX,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { KasDataStore, KasStudentEntry, KasPengeluaranItem, KasPendapatanLainItem } from '../types';
 
@@ -28,6 +30,8 @@ interface KasMuridModalProps {
   kasData?: KasDataStore;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 type TabType = 'penunggakan' | 'pengeluaran' | 'pendapatan' | 'rekap';
@@ -38,7 +42,9 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
   onClose,
   kasData,
   onRefresh,
-  isRefreshing = false
+  isRefreshing = false,
+  darkMode,
+  onToggleDarkMode
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('penunggakan');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -132,7 +138,14 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="kas-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 modal-backdrop-tint animate-fade-in"
+      style={{
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)'
+      }}
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="w-full max-w-6xl max-h-[94vh] bg-white dark:bg-[#18191C] rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl flex flex-col overflow-hidden text-stone-900 dark:text-stone-100 transition-colors"
@@ -155,6 +168,21 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {darkMode ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
             {onRefresh && (
               <button
                 type="button"

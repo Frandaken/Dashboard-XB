@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Music, BookOpen, PartyPopper, Clock } from 'lucide-react';
+import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
 import { parseISODateParts } from '../utils/dateUtils';
@@ -8,6 +8,7 @@ import { getFirstLessonSession } from '../utils/iceBreakingUtils';
 import { TaskBanner } from './TaskBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
 import { SongLyricsModal } from './SongLyricsModal';
+import { AllSongsModal } from './AllSongsModal';
 
 interface DayDetailModalProps {
   isoDate: string | null;
@@ -21,6 +22,7 @@ interface DayDetailModalProps {
   birthdays?: string[];
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
+  onOpenAllSongs?: () => void;
 }
 
 export const DayDetailModal: React.FC<DayDetailModalProps> = ({
@@ -34,9 +36,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   tasks = [],
   birthdays = [],
   darkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
+  onOpenAllSongs
 }) => {
   const [showLyricsModal, setShowLyricsModal] = useState(false);
+  const [showAllSongsModal, setShowAllSongsModal] = useState(false);
 
   // Real-time tracking of app theme (Light mode / OLED black)
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -123,6 +127,22 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={isDark ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {isDark ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
+
             <button
               id="modal-close-btn"
               onClick={onClose}
@@ -137,58 +157,67 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         {/* Modal Content with smooth touch scrolling */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 min-h-0">
           {/* Lagu Nasional Minggu Ini */}
-          <div
-            onClick={() => {
-              if (hasSong) setShowLyricsModal(true);
-            }}
-            role={hasSong ? 'button' : undefined}
-            tabIndex={hasSong ? 0 : undefined}
-            aria-label={hasSong ? `Buka lirik lagu ${daySong.song}` : undefined}
-            onKeyDown={e => {
-              if (hasSong && (e.key === 'Enter' || e.key === ' ')) {
-                e.preventDefault();
-                setShowLyricsModal(true);
-              }
-            }}
-            title={hasSong ? 'Klik untuk melihat lirik lagu' : undefined}
-            className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition select-none ${
-              hasSong
-                ? 'bg-stone-50/70 dark:bg-[#151619] border-stone-200/80 dark:border-stone-800/80 hover:border-emerald-600/40 dark:hover:border-emerald-500/40 cursor-pointer shadow-xs group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700'
-                : 'bg-stone-50/40 dark:bg-[#151619]/40 border-stone-200/60 dark:border-stone-800/60 cursor-default'
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition ${
-                  hasSong
-                    ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20'
-                    : 'bg-stone-200/80 dark:bg-stone-800 text-stone-400 dark:text-stone-500'
-                }`}
-              >
-                <Music className="w-4 h-4" />
+          {hasSong ? (
+            <div
+              onClick={() => setShowLyricsModal(true)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Buka lirik lagu ${daySong.song}`}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setShowLyricsModal(true);
+                }
+              }}
+              title="Klik untuk melihat lirik lagu"
+              className="p-3 rounded-xl border flex items-center justify-between gap-3 transition select-none bg-stone-50/70 dark:bg-[#151619] border-stone-200/80 dark:border-stone-800/80 hover:border-emerald-600/40 dark:hover:border-emerald-500/40 cursor-pointer shadow-xs group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20">
+                  <Music className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 block leading-tight">
+                    Lagu Wajib (Minggu ke-{daySong.week})
+                  </span>
+                  <span className="text-xs sm:text-sm font-semibold truncate block leading-tight mt-0.5 text-stone-900 dark:text-stone-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">
+                    {daySong.song}
+                  </span>
+                </div>
               </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 block leading-tight">
-                  Lagu Wajib (Minggu ke-{daySong.week})
-                </span>
-                <span
-                  className={`text-xs sm:text-sm font-semibold truncate block leading-tight mt-0.5 ${
-                    hasSong
-                      ? 'text-stone-900 dark:text-stone-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400'
-                      : 'text-stone-500 dark:text-stone-400 italic font-normal'
-                  }`}
-                >
-                  {hasSong ? daySong.song : '— (Tidak ada lagu wajib / Kosong)'}
-                </span>
-              </div>
-            </div>
-            {hasSong && (
               <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-[#122A1E] px-2.5 py-1 rounded-md border border-emerald-600/25 dark:border-emerald-500/35 flex items-center gap-1.5 flex-shrink-0">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>Lirik</span>
               </span>
-            )}
-          </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenAllSongs) {
+                  onOpenAllSongs();
+                } else {
+                  setShowAllSongsModal(true);
+                }
+              }}
+              className="w-full text-left p-3 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20 group-hover:scale-105 transition-transform">
+                  <Music className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-stone-900 dark:text-stone-100 group-hover:text-emerald-800 dark:group-hover:text-emerald-300 transition-colors block leading-tight">
+                    Koleksi Lagu Wajib Nasional
+                  </span>
+                  <span className="text-xs text-stone-500 dark:text-stone-400 block mt-0.5">
+                    Tidak ada lagu wajib di tanggal ini • Buka koleksi lirik lagu
+                  </span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
+            </button>
+          )}
 
           {/* Birthday Alert for this day */}
           {birthdays.length > 0 && (
@@ -267,6 +296,17 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           songTitle={daySong.song}
           weekNumber={daySong.week}
           darkMode={isDark}
+          onToggleDarkMode={onToggleDarkMode}
+        />
+      )}
+
+      {/* Pop Up Koleksi Semua Lagu */}
+      {!hasSong && showAllSongsModal && (
+        <AllSongsModal
+          isOpen={showAllSongsModal}
+          onClose={() => setShowAllSongsModal(false)}
+          darkMode={isDark}
+          onToggleDarkMode={onToggleDarkMode}
         />
       )}
     </div>

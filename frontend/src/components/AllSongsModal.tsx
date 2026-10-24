@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Music, User, Calendar, Search } from 'lucide-react';
+import { X, Music, User, Calendar, Search, Sun, Moon } from 'lucide-react';
 import { SONG_LYRICS_DB, ALL_SONGS_LIST, MONTHLY_SONG_SCHEDULE, formatLyricsVerses } from '../data/songSchedule';
 import { MONTH_ID } from '../data/demoData';
 
@@ -99,7 +99,7 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="all-songs-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 modal-backdrop-tint transition-colors duration-200 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 modal-backdrop-tint transition-colors duration-200 animate-in fade-in duration-150"
       style={{
         backgroundColor: isDark ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.25)',
         backdropFilter: 'blur(12px)',
@@ -130,6 +130,22 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {darkMode ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
+
             <button
               onClick={onClose}
               aria-label="Tutup Koleksi Lagu"

@@ -489,6 +489,32 @@ app.post('/api/push/broadcast', async (req, res) => {
   }
 });
 
+const DEFAULT_ORIGIN = 'https://ais-pre-y4tabmyurktjc6be5oxpm7-28906603340.asia-southeast1.run.app';
+
+function getRequestBaseUrl(req: express.Request): string {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const proto = typeof forwardedProto === 'string'
+    ? forwardedProto.split(',')[0].trim()
+    : (req.protocol === 'http' || req.protocol === 'https' ? req.protocol : 'https');
+  const forwardedHost = req.headers['x-forwarded-host'];
+  const host = typeof forwardedHost === 'string'
+    ? forwardedHost.split(',')[0].trim()
+    : req.get('host');
+  if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+    return `${proto}://${host}`;
+  }
+  return DEFAULT_ORIGIN;
+}
+
+function injectAbsoluteMeta(html: string, req: express.Request): string {
+  const baseUrl = getRequestBaseUrl(req);
+  return html
+    .replaceAll(DEFAULT_ORIGIN, baseUrl)
+    .replaceAll('content="/og-image.png"', `content="${baseUrl}/og-image.png"`)
+    .replaceAll('content="/"', `content="${baseUrl}/"`)
+    .replaceAll('href="/og-image.png"', `href="${baseUrl}/og-image.png"`);
+}
+
 async function startServer() {
   process.env.DISABLE_HMR = 'true';
   if (process.env.NODE_ENV !== 'production') {
@@ -501,17 +527,45 @@ async function startServer() {
       },
       appType: 'spa',
     });
+
+    // Custom HTML handler to inject dynamic OpenGraph absolute URLs for social bots (WhatsApp, FB, etc.)
+    app.use(async (req, res, next) => {
+      const url = req.originalUrl || req.url;
+      const cleanPath = url.split('?')[0];
+      if (req.method !== 'GET' || cleanPath.startsWith('/api') || cleanPath.startsWith('/@') || path.extname(cleanPath)) {
+        return next();
+      }
+
+      const isBot = /facebookexternalhit|WhatsApp|Twitterbot|Slackbot|TelegramBot|Discordbot/i.test(req.headers['user-agent'] || '');
+      const isHtml = req.headers.accept?.includes('text/html') || !path.extname(cleanPath) || isBot;
+
+      if (!isHtml) return next();
+
+      try {
+        const indexPath = path.resolve('frontend', 'index.html');
+        let template = fs.readFileSync(indexPath, 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        template = injectAbsoluteMeta(template, req);
+        res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).send(template);
+      } catch (e) {
+        next(e);
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = fs.existsSync(path.join(process.cwd(), 'frontend', 'dist'))
       ? path.join(process.cwd(), 'frontend', 'dist')
       : path.join(process.cwd(), 'dist');
     if (fs.existsSync(distPath)) {
-      app.use(express.static(distPath));
-      app.get('*', (req, res) => {
+      app.use(express.static(distPath, { index: false }));
+      app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api')) return next();
         const indexPath = path.join(distPath, 'index.html');
         if (fs.existsSync(indexPath)) {
-          res.sendFile(indexPath);
+          let template = fs.readFileSync(indexPath, 'utf-8');
+          template = injectAbsoluteMeta(template, req);
+          res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).send(template);
         } else {
           res.status(404).send('Not Found');
         }

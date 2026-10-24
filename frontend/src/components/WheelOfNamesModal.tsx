@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, RotateCcw, Volume2, VolumeX, Sparkles, Trash2, Award, Play, Shuffle, History, List, Check, RotateCw } from 'lucide-react';
+import { X, RotateCcw, Volume2, VolumeX, Sparkles, Trash2, Award, Play, Shuffle, History, List, Check, RotateCw, Sun, Moon } from 'lucide-react';
 import { Student, STUDENTS_DATA } from '../data/studentsData';
 import { cryptoRandomFloat } from '../utils/cryptoRandom';
 import { playTickSound, playFanfareSound } from '../utils/audioEffects';
@@ -7,6 +7,8 @@ import { playTickSound, playFanfareSound } from '../utils/audioEffects';
 interface WheelOfNamesModalProps {
   isOpen: boolean;
   onClose: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export interface SpinHistoryItem {
@@ -32,7 +34,12 @@ const WHEEL_COLORS = [
   '#2563EB', // Blue
 ];
 
-export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, onClose }) => {
+export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({
+  isOpen,
+  onClose,
+  darkMode,
+  onToggleDarkMode
+}) => {
   const [nameMode, setNameMode] = useState<'panggilan' | 'nama'>('panggilan');
   const [activeStudents, setActiveStudents] = useState<Student[]>(() => [...STUDENTS_DATA]);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -166,11 +173,15 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
       ctx.restore();
     }
 
+    const isDark = typeof darkMode === 'boolean'
+      ? darkMode
+      : (typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : false);
+
     // Outer wheel border
     ctx.save();
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = '#FFFFFF';
+    ctx.strokeStyle = isDark ? '#2D3039' : '#FFFFFF';
     ctx.lineWidth = 4;
     ctx.stroke();
     ctx.restore();
@@ -179,14 +190,14 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
     ctx.save();
     ctx.beginPath();
     ctx.arc(centerX, centerY, 32, 0, Math.PI * 2);
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = isDark ? '#1E2025' : '#FFFFFF';
     ctx.shadowColor = 'rgba(0,0,0,0.3)';
     ctx.shadowBlur = 8;
     ctx.fill();
 
     ctx.beginPath();
     ctx.arc(centerX, centerY, 24, 0, Math.PI * 2);
-    ctx.fillStyle = '#2C4E3A';
+    ctx.fillStyle = isDark ? '#143823' : '#2C4E3A';
     ctx.fill();
 
     ctx.fillStyle = '#FFFFFF';
@@ -208,7 +219,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
     ctx.shadowColor = 'rgba(0,0,0,0.35)';
     ctx.shadowBlur = 4;
     ctx.fill();
-    ctx.strokeStyle = '#FFFFFF';
+    ctx.strokeStyle = isDark ? '#1E2025' : '#FFFFFF';
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
@@ -218,7 +229,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
     ctx.fillStyle = '#FFFFFF';
     ctx.fill();
     ctx.restore();
-  }, [activeStudents, nameMode]);
+  }, [activeStudents, nameMode, darkMode]);
 
   // Helper to determine exactly which slice is currently under the pointer at 0 rad (3 o'clock)
   const getSliceAtPointer = useCallback((angle: number, totalSlices: number): number => {
@@ -245,7 +256,7 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
       cancelAnimationFrame(rafId);
       clearTimeout(timerId);
     };
-  }, [isOpen, drawWheel]);
+  }, [isOpen, drawWheel, darkMode]);
 
   // Handle spin
   const handleSpin = () => {
@@ -462,6 +473,22 @@ export const WheelOfNamesModal: React.FC<WheelOfNamesModalProps> = ({ isOpen, on
           </div>
 
           <div className="flex items-center gap-2">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {darkMode ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
+
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               title={soundEnabled ? 'Matikan Suara' : 'Aktifkan Suara'}

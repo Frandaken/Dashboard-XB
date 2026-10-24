@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -25,7 +25,9 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onOpenIceBreaking,
   onOpenNotifications,
   hasNotificationActive,
-  onOpenKasMurid
+  onOpenKasMurid,
+  darkMode,
+  onToggleDarkMode
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,6 +76,22 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                {darkMode ? (
+                  <Sun className="w-4 h-4 text-amber-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-stone-700" />
+                )}
+              </button>
+            )}
+
             {/* Tombol kecil notifikasi di atas jika notifikasi sudah aktif */}
             {hasNotificationActive && onOpenNotifications && (
               <button
