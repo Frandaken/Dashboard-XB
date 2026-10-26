@@ -26,6 +26,10 @@ services:
     environment:
       - PORT=3003
       - NODE_ENV=production
+      - DATA_DIR=/app/data
+      - UPLOADS_DIR=/app/data/uploads
+    volumes:
+      - ./data:/app/data
     restart: unless-stopped
     networks:
       dashboard-net:

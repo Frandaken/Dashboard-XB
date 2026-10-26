@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon, Copy, Check } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
 import { parseISODateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../data/songSchedule';
 import { getFirstLessonSession } from '../utils/iceBreakingUtils';
+import { formatDailySummary, copyTextToClipboard } from '../utils/summaryFormatter';
 import { TaskBanner } from './TaskBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
 import { SongLyricsModal } from './SongLyricsModal';
@@ -41,6 +42,26 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 }) => {
   const [showLyricsModal, setShowLyricsModal] = useState(false);
   const [showAllSongsModal, setShowAllSongsModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyDailySummary = useCallback(async () => {
+    if (!isoDate) return;
+    const text = formatDailySummary({
+      isoDate,
+      doa,
+      pelajaran,
+      tasks,
+      piket,
+      mbg,
+      iceBreaking,
+      birthdays
+    });
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [isoDate, doa, pelajaran, tasks, piket, mbg, iceBreaking, birthdays]);
 
   // Real-time tracking of app theme (Light mode / OLED black)
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -127,6 +148,31 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Tombol Salin Ringkasan Hari Ini */}
+            <button
+              type="button"
+              onClick={handleCopyDailySummary}
+              aria-label={copied ? 'Tersalin ke clipboard' : 'Salin Ringkasan Hari Ini'}
+              title={copied ? 'Tersalin ke clipboard!' : 'Salin Ringkasan Hari Ini'}
+              className={`h-8 px-2.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+                copied
+                  ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40'
+                  : 'bg-white dark:bg-[#1E1F23] text-stone-700 dark:text-stone-300 border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#25272C]'
+              }`}
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-[11px] font-bold">Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-stone-600 dark:text-stone-300" />
+                  <span className="hidden sm:inline text-xs">Salin Jadwal</span>
+                </>
+              )}
+            </button>
+
             {onToggleDarkMode && (
               <button
                 type="button"

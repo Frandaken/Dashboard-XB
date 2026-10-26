@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ interface HamburgerMenuModalProps {
   onJumpToToday?: () => void;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
+  onCopyWeeklySummary?: () => Promise<boolean>;
 }
 
 export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
@@ -27,8 +28,19 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   hasNotificationActive,
   onOpenKasMurid,
   darkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
+  onCopyWeeklySummary
 }) => {
+  const [weeklyCopied, setWeeklyCopied] = useState(false);
+
+  const handleCopyWeekly = async () => {
+    if (!onCopyWeeklySummary) return;
+    const ok = await onCopyWeeklySummary();
+    if (ok) {
+      setWeeklyCopied(true);
+      setTimeout(() => setWeeklyCopied(false), 2500);
+    }
+  };
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -146,6 +158,49 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
                   </div>
                   <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
                     Data penunggakan iuran Rp 3.000/minggu, pengeluaran, saldo kas, &amp; rekap siswa.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
+            </button>
+          )}
+
+          {/* Action: Salin Jadwal 1 Pekan */}
+          {onCopyWeeklySummary && (
+            <button
+              type="button"
+              onClick={handleCopyWeekly}
+              className="w-full text-left p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
+                  weeklyCopied
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-500/50'
+                    : 'bg-emerald-50 dark:bg-[#13281E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20 dark:border-emerald-500/20 group-hover:scale-105'
+                }`}>
+                  {weeklyCopied ? (
+                    <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <ClipboardList className="w-5 h-5" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                      Salin Jadwal 1 Pekan
+                    </span>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border transition-colors ${
+                      weeklyCopied
+                        ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 border-emerald-500/40'
+                        : 'bg-emerald-50 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/20 dark:border-emerald-500/20'
+                    }`}>
+                      {weeklyCopied ? 'Tersalin!' : 'Format Teks'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
+                    {weeklyCopied
+                      ? 'Rangkuman jadwal Senin s.d. Jumat berhasil disalin ke clipboard.'
+                      : 'Salin ringkasan pelajaran, tugas, piket, MBG, & doa 5 hari ke depan.'}
                   </p>
                 </div>
               </div>

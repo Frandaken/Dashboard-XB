@@ -28,6 +28,7 @@ import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
 import { KAS_DEMO_CSV } from './data/kasDemoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
 import { getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
+import { formatWeeklySummary, copyTextToClipboard } from './utils/summaryFormatter';
 
 export default function App() {
   // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
@@ -317,7 +318,13 @@ export default function App() {
           headers: forceFresh ? { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' } : {}
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get('content-type') || '';
         const text = await res.text();
+        const trimmed = text.trim();
+        // If an API endpoint returns HTML (e.g. <!doctype html> from SPA fallback or proxy error), reject it to trigger fallback
+        if (path.startsWith('/api/') && (contentType.includes('text/html') || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html'))) {
+          throw new Error(`API ${path} returned HTML content instead of expected data`);
+        }
         return { text, isFallback: false };
       } catch (err) {
         console.warn(`Fetch ${path} gagal, menggunakan data lokal:`, err);
@@ -535,6 +542,14 @@ export default function App() {
     return new Date(Date.UTC(activeInfo.year, activeInfo.month, activeInfo.day, 12, 0, 0));
   }, [activeInfo.year, activeInfo.month, activeInfo.day]);
 
+  const handleCopyWeeklySummary = useCallback(async () => {
+    const text = formatWeeklySummary({
+      baseIso: activeISO || todayWIB.iso,
+      store: dataStore
+    });
+    return await copyTextToClipboard(text);
+  }, [activeISO, todayWIB.iso, dataStore]);
+
   if (is404) {
     return (
       <>
@@ -569,6 +584,7 @@ export default function App() {
           }}
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
+          onCopyWeeklySummary={handleCopyWeeklySummary}
         />
 
         <WheelOfNamesModal
@@ -806,6 +822,7 @@ export default function App() {
         onJumpToToday={handleJumpToToday}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
+        onCopyWeeklySummary={handleCopyWeeklySummary}
       />
 
       {/* Lazy-Loaded Modals wrapped in Suspense for optimal bundle splitting */}

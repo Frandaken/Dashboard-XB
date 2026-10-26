@@ -17,7 +17,22 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(dataDir, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Serve uploaded receipts and files statically
+app.use('/api/uploads', express.static(UPLOADS_DIR));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Upstream Google Calendar feeds
 const CALENDAR_FEEDS = {
@@ -30,7 +45,11 @@ const SHEET_FEEDS = {
   doa: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=0&single=true&output=csv",
   mbg: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=215098819&single=true&output=csv",
   piket: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1149044316&single=true&output=csv",
-  icebreaking: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1073417057&single=true&output=csv"
+  icebreaking: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1073417057&single=true&output=csv",
+  penunggakan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=2142387216&single=true&output=csv",
+  pengeluaran: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=47581979&single=true&output=csv",
+  pendapatan_lain: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=775852732&single=true&output=csv",
+  rekap: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=172836771&single=true&output=csv"
 };
 
 const cache = new Map();
@@ -155,6 +174,77 @@ app.post('/api/kelompok/export', (req, res) => {
     fs.writeFileSync(filePath, csvContent, 'utf8');
     return res.json({ ok: true, filename: safeFilename, path: filePath });
   } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// Bukti Nota Mapping & Upload Endpoints (Persisted in data/ volume)
+// ==========================================
+const BUKTI_MAPPING_FILE = path.join(dataDir, 'bukti-mapping.json');
+
+function getBuktiMapping() {
+  if (fs.existsSync(BUKTI_MAPPING_FILE)) {
+    try {
+      return JSON.parse(fs.readFileSync(BUKTI_MAPPING_FILE, 'utf8'));
+    } catch (e) {
+      console.warn('Failed to parse bukti-mapping.json:', e);
+    }
+  }
+  return {};
+}
+
+function saveBuktiMapping(mapping) {
+  try {
+    fs.writeFileSync(BUKTI_MAPPING_FILE, JSON.stringify(mapping, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to save bukti-mapping.json:', e);
+  }
+}
+
+app.get('/api/kas/bukti-mapping', (req, res) => {
+  res.json({ ok: true, mapping: getBuktiMapping() });
+});
+
+app.post('/api/kas/upload-bukti', (req, res) => {
+  try {
+    const { pengeluaranId, filename, base64Data, contentType, linkUrl } = req.body || {};
+    if (!pengeluaranId) {
+      return res.status(400).json({ error: 'pengeluaranId is required' });
+    }
+
+    let resultUrl = '';
+    let savedFilename = '';
+
+    if (base64Data) {
+      const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+
+      const ext = path.extname(filename || '').toLowerCase() || (contentType === 'application/pdf' ? '.pdf' : '.jpg');
+      const baseClean = path.basename(filename || 'nota', ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+      savedFilename = `nota_${Date.now()}_${baseClean}${ext}`;
+
+      const filePath = path.join(UPLOADS_DIR, savedFilename);
+      fs.writeFileSync(filePath, buffer);
+      resultUrl = `/api/uploads/${savedFilename}`;
+    } else if (linkUrl) {
+      resultUrl = linkUrl.trim();
+    } else {
+      return res.status(400).json({ error: 'Either base64Data or linkUrl is required' });
+    }
+
+    const mapping = getBuktiMapping();
+    mapping[pengeluaranId] = resultUrl;
+    saveBuktiMapping(mapping);
+
+    return res.json({
+      ok: true,
+      url: resultUrl,
+      filename: savedFilename || undefined,
+      pengeluaranId
+    });
+  } catch (err) {
+    console.error('Error handling upload-bukti:', err);
     return res.status(500).json({ error: err.message });
   }
 });

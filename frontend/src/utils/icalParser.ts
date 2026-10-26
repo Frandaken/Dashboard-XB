@@ -60,6 +60,13 @@ export function parsePelajaranICS(
     return { pelajaranByDate, tasksByDate };
   }
 
+  // Guard against HTML error pages or non-iCal payloads (e.g. <!doctype html> from network or proxy fallback)
+  const trimmed = icsText.trim();
+  if (trimmed.startsWith('<') || !trimmed.includes('BEGIN:VCALENDAR')) {
+    console.warn('parsePelajaranICS: Received non-iCal payload (likely HTML or network error), skipping parsing');
+    return { pelajaranByDate, tasksByDate };
+  }
+
   try {
     const jcal = ICAL.parse(icsText);
     const comp = new ICAL.Component(jcal);
@@ -250,6 +257,13 @@ export function parseBirthdayICS(
   const birthdayByMonthDay: Record<string, string[]> = {};
 
   if (!icsText || typeof icsText !== 'string' || !icsText.trim()) {
+    return birthdayByMonthDay;
+  }
+
+  // Guard against HTML error pages or non-iCal payloads (e.g. <!doctype html> from network or proxy fallback)
+  const trimmed = icsText.trim();
+  if (trimmed.startsWith('<') || !trimmed.includes('BEGIN:VCALENDAR')) {
+    console.warn('parseBirthdayICS: Received non-iCal payload (likely HTML or network error), skipping parsing');
     return birthdayByMonthDay;
   }
 

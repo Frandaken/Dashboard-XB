@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Wallet,
@@ -20,9 +20,15 @@ import {
   CreditCard,
   DollarSign,
   Sun,
-  Moon
+  Moon,
+  Eye,
+  Camera,
+  Plus,
+  Image as ImageIcon
 } from 'lucide-react';
 import { KasDataStore, KasStudentEntry, KasPengeluaranItem, KasPendapatanLainItem } from '../types';
+import { ReceiptLightboxModal, ReceiptLightboxData } from './ReceiptLightboxModal';
+import { UploadReceiptModal } from './UploadReceiptModal';
 
 interface KasMuridModalProps {
   isOpen: boolean;
@@ -50,6 +56,27 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [selectedStudent, setSelectedStudent] = useState<KasStudentEntry | null>(null);
+
+  // Bukti nota states
+  const [buktiMapping, setBuktiMapping] = useState<Record<string, string>>({});
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptLightboxData | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ id: string; title: string; currentUrl?: string } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch('/api/kas/bukti-mapping')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.ok && data.mapping) {
+          setBuktiMapping(data.mapping);
+        }
+      })
+      .catch(err => console.warn('Failed to load bukti mapping:', err));
+  }, [isOpen]);
+
+  const handleUploadSuccess = (id: string, newUrl: string) => {
+    setBuktiMapping(prev => ({ ...prev, [id]: newUrl }));
+  };
 
   if (!isOpen) return null;
 
@@ -138,7 +165,7 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="kas-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 modal-backdrop-tint animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-1.5 sm:p-4 modal-backdrop-tint animate-fade-in"
       style={{
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)'
@@ -148,26 +175,26 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
       }}
     >
       <div
-        className="w-full max-w-6xl max-h-[94vh] bg-white dark:bg-[#18191C] rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl flex flex-col overflow-hidden text-stone-900 dark:text-stone-100 transition-colors"
+        className="w-full max-w-6xl h-[95dvh] sm:h-auto sm:max-h-[94vh] bg-white dark:bg-[#18191C] rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl flex flex-col overflow-hidden text-stone-900 dark:text-stone-100 transition-colors"
         onClick={e => e.stopPropagation()}
       >
-        {/* MODAL HEADER */}
-        <div className="px-4 sm:px-6 py-3.5 bg-stone-50/70 dark:bg-[#141518] border-b border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between gap-3 flex-shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0 border border-emerald-600/25">
+        {/* MODAL HEADER - Pinned at top with title, dark mode toggle, refresh & close */}
+        <div className="px-3.5 sm:px-6 py-3 sm:py-3.5 bg-stone-50/90 dark:bg-[#141518]/90 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between gap-2.5 sm:gap-3 flex-shrink-0 z-30">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0 border border-emerald-600/25">
               <Wallet className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
             </div>
             <div className="min-w-0">
-              <h2 id="kas-modal-title" className="text-base sm:text-lg font-bold font-editorial tracking-tight text-stone-900 dark:text-stone-100 leading-tight">
+              <h2 id="kas-modal-title" className="text-sm sm:text-lg font-bold font-editorial tracking-tight text-stone-900 dark:text-stone-100 leading-tight truncate">
                 Buku Kas Murid Kelas XB
               </h2>
-              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 leading-none">
+              <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 leading-none">
                 Iuran Wajib Rp 3.000 / minggu • SMA Putra Nirmala
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             {onToggleDarkMode && (
               <button
                 type="button"
@@ -189,7 +216,7 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 onClick={onRefresh}
                 disabled={isRefreshing}
                 title="Perbarui data dari Google Sheets"
-                className="p-2 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] text-stone-700 dark:text-stone-300 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                className="p-1.5 sm:p-2 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#1E1F23] hover:bg-stone-100 dark:hover:bg-[#25272C] text-stone-700 dark:text-stone-300 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
                 <span className="hidden sm:inline text-xs font-semibold">Segarkan</span>
@@ -215,131 +242,133 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
           </div>
         </div>
 
-        {/* TOP SUMMARY METRICS BAR */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 p-3 sm:p-4 bg-stone-50/50 dark:bg-[#141518]/60 border-b border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
-          {/* Card 1: Saldo Kas */}
-          <div className="p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
-              <span className="font-medium">Saldo Kas Aktif</span>
-              <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        {/* UNIFIED SCROLLABLE DASHBOARD VIEWPORT (Entire kas dashboard can be scrolled smoothly on mobile) */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col">
+          {/* TOP SUMMARY METRICS BAR */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 bg-stone-50/50 dark:bg-[#141518]/60 border-b border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
+            {/* Card 1: Saldo Kas */}
+            <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
+              <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
+                <span className="font-medium text-[11px] sm:text-xs">Saldo Kas Aktif</span>
+                <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="font-editorial font-bold text-base sm:text-xl text-emerald-800 dark:text-emerald-400 leading-tight">
+                {formatRupiah(rekap?.saldoTotal ?? (totalTerkumpul + (rekap?.pendapatanLain ?? 0) - (rekap?.totalPengeluaran ?? 0)))}
+              </div>
+              <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5 truncate">
+                Total kas siap digunakan
+              </div>
             </div>
-            <div className="font-editorial font-bold text-lg sm:text-xl text-emerald-800 dark:text-emerald-400">
-              {formatRupiah(rekap?.saldoTotal ?? (totalTerkumpul + (rekap?.pendapatanLain ?? 0) - (rekap?.totalPengeluaran ?? 0)))}
+
+            {/* Card 2: Kas Terkumpul */}
+            <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
+              <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
+                <span className="font-medium text-[11px] sm:text-xs">Total Iuran Murid</span>
+                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="font-editorial font-bold text-base sm:text-xl text-blue-800 dark:text-blue-400 leading-tight">
+                {formatRupiah(totalTerkumpul)}
+              </div>
+              <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5 truncate">
+                Dari {totalStudents} murid kelas XB
+              </div>
             </div>
-            <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5">
-              Total kas siap digunakan
+
+            {/* Card 3: Total Pengeluaran */}
+            <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
+              <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
+                <span className="font-medium text-[11px] sm:text-xs">Total Pengeluaran</span>
+                <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div className="font-editorial font-bold text-base sm:text-xl text-rose-700 dark:text-rose-400 leading-tight">
+                {formatRupiah(rekap?.totalPengeluaran ?? 0)}
+              </div>
+              <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5 truncate">
+                {pengeluaranList.length > 0 ? `${pengeluaranList.length} transaksi` : 'Belum ada pengeluaran'}
+              </div>
+            </div>
+
+            {/* Card 4: Penunggakan */}
+            <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
+              <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
+                <span className="font-medium text-[11px] sm:text-xs">Total Tunggakan</span>
+                <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="font-editorial font-bold text-base sm:text-xl text-amber-700 dark:text-amber-400 leading-tight">
+                {formatRupiah(totalTunggakan)}
+              </div>
+              <div className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5 font-medium truncate">
+                {nunggakCount} murid belum lunas
+              </div>
             </div>
           </div>
 
-          {/* Card 2: Kas Terkumpul */}
-          <div className="p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
-              <span className="font-medium">Total Iuran Murid</span>
-              <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="font-editorial font-bold text-lg sm:text-xl text-blue-800 dark:text-blue-400">
-              {formatRupiah(totalTerkumpul)}
-            </div>
-            <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5">
-              Dari {totalStudents} murid kelas XB
-            </div>
+          {/* NAVIGATION TABS (Sticky right beneath Header when scrolling) */}
+          <div className="sticky top-0 z-20 px-3 sm:px-6 pt-2 sm:pt-3 bg-white/95 dark:bg-[#18191C]/95 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800/80 flex items-center gap-1.5 sm:gap-4 overflow-x-auto no-scrollbar shadow-2xs sm:shadow-none flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('penunggakan')}
+              className={`pb-2.5 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'penunggakan'
+                  ? 'border-emerald-700 text-emerald-800 dark:text-emerald-400 font-bold'
+                  : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+              }`}
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Iuran &amp; Penunggakan Murid</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 font-semibold ml-1">
+                Utama
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('pengeluaran')}
+              className={`pb-2.5 px-2.5 sm:px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'pengeluaran'
+                  ? 'border-emerald-600 text-emerald-800 dark:text-emerald-400'
+                  : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+              }`}
+            >
+              <Receipt className="w-4 h-4" />
+              <span>Pengeluaran Kelas</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-[#2C0D11] text-rose-800 dark:text-rose-300 font-bold ml-1">
+                {pengeluaranList.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('pendapatan')}
+              className={`pb-2.5 px-2.5 sm:px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'pendapatan'
+                  ? 'border-emerald-600 text-emerald-800 dark:text-emerald-400'
+                  : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+              }`}
+            >
+              <ArrowUpRight className="w-4 h-4" />
+              <span>Pendapatan Lain</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-[#0D1D2C] text-blue-800 dark:text-blue-300 font-bold ml-1">
+                {pendapatanLainList.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('rekap')}
+              className={`pb-2.5 px-2.5 sm:px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'rekap'
+                  ? 'border-emerald-600 text-emerald-800 dark:text-emerald-400'
+                  : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>Rekap Keseluruhan</span>
+            </button>
           </div>
 
-          {/* Card 3: Total Pengeluaran */}
-          <div className="p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
-              <span className="font-medium">Total Pengeluaran</span>
-              <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-            </div>
-            <div className="font-editorial font-bold text-lg sm:text-xl text-rose-700 dark:text-rose-400">
-              {formatRupiah(rekap?.totalPengeluaran ?? 0)}
-            </div>
-            <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5">
-              {pengeluaranList.length > 0 ? `${pengeluaranList.length} transaksi pembelanjaan` : 'Belum ada pengeluaran'}
-            </div>
-          </div>
-
-          {/* Card 4: Penunggakan */}
-          <div className="p-3 rounded-xl bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-1">
-              <span className="font-medium">Total Tunggakan</span>
-              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="font-editorial font-bold text-lg sm:text-xl text-amber-700 dark:text-amber-400">
-              {formatRupiah(totalTunggakan)}
-            </div>
-            <div className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5 font-medium">
-              {nunggakCount} murid belum lunas
-            </div>
-          </div>
-        </div>
-
-        {/* NAVIGATION TABS */}
-        <div className="px-4 sm:px-6 pt-3 bg-white dark:bg-[#18191C] border-b border-stone-200/80 dark:border-stone-800/80 flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('penunggakan')}
-            className={`pb-2.5 px-3 text-xs sm:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'penunggakan'
-                ? 'border-emerald-700 text-emerald-800 dark:text-emerald-400 font-bold'
-                : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Iuran &amp; Penunggakan Murid</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 font-semibold ml-1">
-              Utama
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('pengeluaran')}
-            className={`pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'pengeluaran'
-                ? 'border-emerald-600 text-emerald-800 dark:text-emerald-400'
-                : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
-            }`}
-          >
-            <Receipt className="w-4 h-4" />
-            <span>Pengeluaran Kelas</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-[#2C0D11] text-rose-800 dark:text-rose-300 font-bold ml-1">
-              {pengeluaranList.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('pendapatan')}
-            className={`pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'pendapatan'
-                ? 'border-emerald-600 text-emerald-800 dark:text-emerald-400'
-                : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
-            }`}
-          >
-            <ArrowUpRight className="w-4 h-4" />
-            <span>Pendapatan Lain</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-[#0D1D2C] text-blue-800 dark:text-blue-300 font-bold ml-1">
-              {pendapatanLainList.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('rekap')}
-            className={`pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'rekap'
-                ? 'border-emerald-600 text-emerald-800 dark:text-emerald-400'
-                : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Rekap Keseluruhan</span>
-          </button>
-        </div>
-
-        {/* TAB BODY CONTENT */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
+          {/* TAB BODY CONTENT */}
+          <div className="p-3 sm:p-5 flex-1">
           {/* TAB 1: PENUNGGAKAN */}
           {activeTab === 'penunggakan' && (
             <div className="space-y-4">
@@ -409,27 +438,16 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 </div>
               </div>
 
-              {/* Status Info Banner */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/70 dark:bg-[#122A1E]/60 border border-emerald-600/25 dark:border-emerald-500/25 text-xs text-emerald-950 dark:text-emerald-200">
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
-                  <div>
-                    <span className="font-bold">
-                      Minggu Berjalan: {kasData?.activeWeeksCount ?? 12} Minggu
-                    </span>
-                    <span className="mx-2 opacity-40">•</span>
-                    <span>
-                      Target Wajib: <strong>{formatRupiah(kasData?.targetWajibPerStudent ?? ((kasData?.activeWeeksCount ?? 12) * 3000))}</strong> per murid
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               {/* Responsive Table */}
               <div className="bg-white dark:bg-[#18191C] rounded-xl border border-stone-200/80 dark:border-stone-800/80 overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto max-h-[50vh]">
+                {/* Mobile scroll hint */}
+                <div className="flex items-center justify-between px-3 py-1.5 bg-stone-50/70 dark:bg-[#141518] border-b border-stone-200/80 dark:border-stone-800/80 text-[11px] text-stone-500 dark:text-stone-400 sm:hidden">
+                  <span>Daftar Murid ({filteredStudents.length})</span>
+                  <span className="text-[10px] text-emerald-800 dark:text-emerald-400 font-medium">← Geser kolom ke kanan →</span>
+                </div>
+                <div className="overflow-x-auto sm:max-h-[55vh]">
                   <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-stone-50 dark:bg-[#141518] text-stone-700 dark:text-stone-300 sticky top-0 z-10 border-b border-stone-200/80 dark:border-stone-800/80">
+                    <thead className="bg-stone-50 dark:bg-[#141518] text-stone-700 dark:text-stone-300 sticky top-[43px] sm:top-0 z-10 border-b border-stone-200/80 dark:border-stone-800/80">
                       <tr>
                         <th className="py-2.5 px-3 font-semibold w-12 text-center">No</th>
                         <th className="py-2.5 px-3 font-semibold min-w-[200px]">Nama Siswa</th>
@@ -562,54 +580,111 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 </div>
               </div>
 
+              <div className="p-3 bg-stone-50 dark:bg-[#141518]/90 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-400">
+                <Receipt className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 text-[11px] leading-relaxed">
+                  <span className="font-semibold text-stone-800 dark:text-stone-200">Bukti Nota & Kwitansi:</span> Foto struk dapat dimasukkan lewat link Google Drive di kolom <span className="font-semibold text-emerald-700 dark:text-emerald-400">Bukti (Kolom G)</span> spreadsheet, atau diunggah langsung lewat tombol di setiap kartu pengeluaran. File tersimpan otomatis di host Docker volume (<code className="bg-stone-200 dark:bg-stone-800 px-1 py-0.5 rounded text-[10px]">./data/uploads</code>).
+                </div>
+              </div>
+
               {pengeluaranList.length === 0 ? (
                 <div className="py-12 text-center text-xs text-stone-500 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80">
                   Belum ada catatan transaksi pengeluaran di lembar Google Sheets.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {pengeluaranList.map((item, idx) => (
-                    <div
-                      key={item.id || idx}
-                      className="p-3.5 rounded-xl bg-white dark:bg-[#141518] border border-stone-200/80 dark:border-stone-800/80 shadow-xs flex flex-col justify-between gap-3 hover:border-stone-300 dark:hover:border-stone-700 transition"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between text-xs text-stone-500 mb-1">
-                          <span className="flex items-center gap-1 font-medium">
-                            <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                            {item.tanggal}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/80">
-                            Pengeluaran
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-stone-900 dark:text-white text-sm">
-                          {item.barang}
-                        </h4>
-                        <div className="text-xs text-stone-600 dark:text-stone-400 mt-1 flex items-center justify-between">
-                          <span>Kuantitas: {item.kuantitas} item</span>
-                          <span>@ {formatRupiah(item.hargaSatuan)}</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                  {pengeluaranList.map((item, idx) => {
+                    const receiptUrl = (buktiMapping[item.id] || item.bukti || '').trim();
+                    return (
+                      <div
+                        key={item.id || idx}
+                        className="p-3.5 rounded-xl bg-white dark:bg-[#141518] border border-stone-200/80 dark:border-stone-800/80 shadow-xs flex flex-col justify-between gap-3 hover:border-stone-300 dark:hover:border-stone-700 transition"
+                      >
                         <div>
-                          <span className="text-[10px] text-stone-500 block">Harga Total:</span>
-                          <span className="font-editorial font-bold text-sm text-rose-700 dark:text-rose-400">
-                            {formatRupiah(item.hargaTotal)}
-                          </span>
-                        </div>
-                        {item.saldo && (
-                          <div className="text-right">
-                            <span className="text-[10px] text-stone-500 block">Saldo Setelahnya:</span>
-                            <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
-                              {item.saldo}
+                          <div className="flex items-center justify-between text-xs text-stone-500 mb-1">
+                            <span className="flex items-center gap-1 font-medium">
+                              <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                              {item.tanggal}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/80">
+                              Pengeluaran
                             </span>
                           </div>
-                        )}
+                          <h4 className="font-bold text-stone-900 dark:text-white text-sm">
+                            {item.barang}
+                          </h4>
+                          <div className="text-xs text-stone-600 dark:text-stone-400 mt-1 flex items-center justify-between">
+                            <span>Kuantitas: {item.kuantitas} item</span>
+                            <span>@ {formatRupiah(item.hargaSatuan)}</span>
+                          </div>
+                          {item.saldo && (
+                            <div className="text-[11px] text-stone-500 mt-1.5 flex items-center justify-between">
+                              <span>Saldo Setelahnya:</span>
+                              <span className="font-semibold text-stone-700 dark:text-stone-300">{item.saldo}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* BUKTI NOTA & TOTAL */}
+                        <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2">
+                          {receiptUrl ? (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveReceipt({
+                                    title: item.barang,
+                                    subtitle: `${item.tanggal} • ${formatRupiah(item.hargaTotal)}`,
+                                    url: receiptUrl,
+                                    originalLink: receiptUrl
+                                  })
+                                }
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-[#122A1E] dark:text-emerald-300 border border-emerald-600/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Lihat Bukti</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setUploadTarget({
+                                    id: item.id,
+                                    title: `${item.barang} (${item.tanggal})`,
+                                    currentUrl: receiptUrl
+                                  })
+                                }
+                                title="Ganti / Perbarui Bukti"
+                                className="p-1 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition"
+                              >
+                                <Camera className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUploadTarget({
+                                  id: item.id,
+                                  title: `${item.barang} (${item.tanggal})`
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200 border border-dashed border-stone-300 dark:border-stone-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-stone-50 dark:hover:bg-[#1A1C20] transition cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Unggah Bukti</span>
+                            </button>
+                          )}
+
+                          <div className="text-right flex-shrink-0">
+                            <span className="text-[10px] text-stone-500 block">Total:</span>
+                            <span className="font-editorial font-bold text-sm text-rose-700 dark:text-rose-400">
+                              {formatRupiah(item.hargaTotal)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -641,31 +716,87 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {pendapatanLainList.map((item, idx) => (
-                    <div
-                      key={item.id || idx}
-                      className="p-4 rounded-xl bg-white dark:bg-[#141518] border border-stone-200/80 dark:border-stone-800/80 shadow-xs"
-                    >
-                      <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
-                        <span className="flex items-center gap-1 font-medium">
-                          <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                          {item.tanggal}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80">
-                          Pemasukan Khusus
-                        </span>
+                  {pendapatanLainList.map((item, idx) => {
+                    const receiptUrl = (buktiMapping[item.id] || item.bukti || '').trim();
+                    return (
+                      <div
+                        key={item.id || idx}
+                        className="p-4 rounded-xl bg-white dark:bg-[#141518] border border-stone-200/80 dark:border-stone-800/80 shadow-xs flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+                            <span className="flex items-center gap-1 font-medium">
+                              <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                              {item.tanggal}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80">
+                              Pemasukan Khusus
+                            </span>
+                          </div>
+                          <h4 className="font-bold text-base text-stone-900 dark:text-white">
+                            {item.keterangan}
+                          </h4>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800 gap-2">
+                          {receiptUrl ? (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveReceipt({
+                                    title: item.keterangan,
+                                    subtitle: `${item.tanggal} • ${formatRupiah(item.jumlah)}`,
+                                    url: receiptUrl,
+                                    originalLink: receiptUrl
+                                  })
+                                }
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-300 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Lihat Bukti</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setUploadTarget({
+                                    id: item.id,
+                                    title: `${item.keterangan} (${item.tanggal})`,
+                                    currentUrl: receiptUrl
+                                  })
+                                }
+                                title="Ganti / Perbarui Bukti"
+                                className="p-1 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition"
+                              >
+                                <Camera className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUploadTarget({
+                                  id: item.id,
+                                  title: `${item.keterangan} (${item.tanggal})`
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200 border border-dashed border-stone-300 dark:border-stone-700 hover:border-blue-500 transition cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Unggah Bukti</span>
+                            </button>
+                          )}
+
+                          <div className="text-right">
+                            <span className="text-[10px] text-stone-500 block">Nominal:</span>
+                            <span className="font-editorial font-bold text-base text-emerald-700 dark:text-emerald-400">
+                              {formatRupiah(item.jumlah)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <h4 className="font-bold text-base text-stone-900 dark:text-white">
-                        {item.keterangan}
-                      </h4>
-                      <div className="mt-3 flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800">
-                        <span className="text-xs text-stone-500">Nominal:</span>
-                        <span className="font-editorial font-bold text-lg text-emerald-700 dark:text-emerald-400">
-                          {formatRupiah(item.jumlah)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -749,10 +880,10 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="px-4 sm:px-6 py-3 bg-stone-50/80 dark:bg-[#141518] border-t border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between text-xs text-stone-500 flex-shrink-0">
+        <div className="mt-auto px-4 sm:px-6 py-3 bg-stone-50/80 dark:bg-[#141518] border-t border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between text-xs text-stone-500 flex-shrink-0">
           <div className="flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-stone-400" />
-            <span>Sinkronisasi otomatis dari Google Sheets resmi kelas</span>
+            <span className="text-[11px] sm:text-xs">Sinkronisasi otomatis dari Google Sheets resmi kelas</span>
           </div>
           <button
             type="button"
@@ -763,17 +894,18 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
           </button>
         </div>
       </div>
+    </div>
 
       {/* STUDENT INDIVIDUAL DETAIL MODAL (SUB-POPUP) */}
       {selectedStudent && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-3 bg-black/60 backdrop-blur-xs animate-fade-in"
           onClick={() => setSelectedStudent(null)}
         >
           <div
-            className="w-full max-w-lg bg-white dark:bg-[#18191C] rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl p-5 overflow-hidden flex flex-col gap-4 text-stone-900 dark:text-stone-100"
+            className="w-full max-w-lg max-h-[92dvh] overflow-y-auto bg-white dark:bg-[#18191C] rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-2xl p-4 sm:p-5 flex flex-col gap-3.5 sm:gap-4 text-stone-900 dark:text-stone-100"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-stone-200/80 dark:border-stone-800/80">
@@ -865,6 +997,21 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* LIGHTBOX POPUP FOR RECEIPT / BUKTI NOTA */}
+      <ReceiptLightboxModal
+        isOpen={!!activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+        data={activeReceipt}
+      />
+
+      {/* UPLOAD / LINK RECEIPT MODAL */}
+      <UploadReceiptModal
+        isOpen={!!uploadTarget}
+        onClose={() => setUploadTarget(null)}
+        target={uploadTarget}
+        onSuccess={handleUploadSuccess}
+      />
     </div>
   );
 };
