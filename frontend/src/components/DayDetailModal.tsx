@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon, Copy, Check } from 'lucide-react';
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
 import { parseISODateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../data/songSchedule';
@@ -24,6 +24,7 @@ interface DayDetailModalProps {
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
   onOpenAllSongs?: () => void;
+  onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
 }
 
 export const DayDetailModal: React.FC<DayDetailModalProps> = ({
@@ -38,7 +39,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   birthdays = [],
   darkMode,
   onToggleDarkMode,
-  onOpenAllSongs
+  onOpenAllSongs,
+  onOpenAttachment
 }) => {
   const [showLyricsModal, setShowLyricsModal] = useState(false);
   const [showAllSongsModal, setShowAllSongsModal] = useState(false);
@@ -276,7 +278,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
           {/* Penugasan Banner (if any) */}
           {tasks.length > 0 && (
-            <TaskBanner tasks={tasks} />
+            <TaskBanner tasks={tasks} onOpenAttachment={onOpenAttachment} />
           )}
 
           {/* Petugas Ice Breaking Card (if this date has ice breaking scheduled) */}
@@ -330,6 +332,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             pelajaran={pelajaran}
             dowName={dow}
             compact={true}
+            onOpenAttachment={onOpenAttachment}
           />
         </div>
       </div>

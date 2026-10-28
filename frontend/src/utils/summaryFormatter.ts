@@ -117,19 +117,81 @@ export function formatDailySummary(params: DailySummaryParams): string {
     lines.push('📚 *JADWAL PELAJARAN*');
     pelajaran.forEach((p, idx) => {
       const timePart = p.time ? `${p.time} | ` : '';
-      lines.push(`${idx + 1}. ${timePart}${p.cleanName}`);
+      let agendaSuffix = '';
+      if (p.hasTask && p.taskType === 'agenda') {
+        const agTitle = (p.taskTitle || p.taskText || '').trim();
+        if (agTitle) {
+          agendaSuffix = ` — _(Agenda: ${agTitle})_`;
+        }
+      }
+      lines.push(`${idx + 1}. ${timePart}${p.cleanName}${agendaSuffix}`);
     });
     lines.push('');
   }
 
-  // Tasks & Homework: Tampilkan tepat di bawah jadwal pelajaran jika ada tugas, kalau tidak ada tidak usah tampilkan
+  // Collect and separate Tasks (Sumatif/PR) vs Agenda Harian
   const validTasks = (tasks || []).filter(t => (t.taskTitle || t.taskText || '').trim().length > 0);
-  if (validTasks.length > 0) {
+
+  // Combine agenda tasks from tasks array and pelajaran items
+  const combinedAgenda: { subject: string; title: string; details?: string; attachment?: any }[] = [];
+  const seenAgenda = new Set<string>();
+
+  validTasks.filter(t => t.taskType === 'agenda').forEach(t => {
+    const title = (t.taskTitle || t.taskText || '').trim();
+    const key = `${t.subject}_${title}`.toLowerCase();
+    if (!seenAgenda.has(key)) {
+      seenAgenda.add(key);
+      combinedAgenda.push({
+        subject: t.subject,
+        title,
+        details: t.taskDetails,
+        attachment: t.attachment
+      });
+    }
+  });
+
+  pelajaran.filter(p => p.hasTask && p.taskType === 'agenda').forEach(p => {
+    const title = (p.taskTitle || (p.taskText ? p.taskText.split('\n')[0] : '')).trim();
+    if (title) {
+      const key = `${p.cleanName}_${title}`.toLowerCase();
+      if (!seenAgenda.has(key)) {
+        seenAgenda.add(key);
+        combinedAgenda.push({
+          subject: p.cleanName,
+          title,
+          details: p.taskDetails,
+          attachment: p.attachment
+        });
+      }
+    }
+  });
+
+  const academicTasks = validTasks.filter(t => t.taskType === 'sumatif' || t.taskType === 'pr');
+
+  // Tasks & Homework (Sumatif & PR only)
+  if (academicTasks.length > 0) {
     lines.push('📝 *TUGAS & PENUGASAN*');
-    validTasks.forEach(t => {
+    academicTasks.forEach(t => {
       const title = (t.taskTitle || t.taskText || '').trim();
       const details = t.taskDetails ? ` (${t.taskDetails.trim()})` : '';
-      lines.push(`- ${t.subject}: ${title}${details}`);
+      const attachNote = t.attachment ? ` [📎 Lampiran: ${t.attachment.filename || 'Gambar'}]` : '';
+      if (t.taskType === 'sumatif') {
+        // Khusus sumatif dibold di WhatsApp
+        lines.push(`- *${t.subject}: ${title}${details}${attachNote}*`);
+      } else {
+        lines.push(`- ${t.subject}: ${title}${details}${attachNote}`);
+      }
+    });
+    lines.push('');
+  }
+
+  // Agenda Harian: Tampilkan khusus untuk penugasan/agenda yang beratribut agenda
+  if (combinedAgenda.length > 0) {
+    lines.push('📌 *AGENDA HARIAN*');
+    combinedAgenda.forEach(ag => {
+      const details = ag.details ? ` (${ag.details.trim()})` : '';
+      const attachNote = ag.attachment ? ` [📎 Lampiran: ${ag.attachment.filename || 'Gambar'}]` : '';
+      lines.push(`- ${ag.subject}: ${ag.title}${details}${attachNote}`);
     });
     lines.push('');
   }
@@ -173,47 +235,103 @@ export function formatDailySummary(params: DailySummaryParams): string {
   return lines.join('\n');
 }
 
+export interface FlexibleSummaryOptions {
+  includeSong?: boolean;
+  includeDoa?: boolean;
+  includePiket?: boolean;
+  includeMbg?: boolean;
+  includeIceBreaking?: boolean;
+  includeLessons?: boolean;
+  includeTasks?: boolean;
+  includeAgenda?: boolean;
+  includeBirthdays?: boolean;
+  includeKasNote?: boolean;
+  titleHeader?: string;
+  websiteUrl?: string;
+}
+
 /**
- * Formats a clean, structured weekly schedule summary (Monday to Friday) using text formatting rules.
+ * Generates an array of ISO date strings between startIso and endIso (inclusive).
  */
-export function formatWeeklySummary(params: WeeklySummaryParams): string {
+export function getDateRangeISOs(startIso: string, endIso: string, schoolDaysOnly: boolean = true): string[] {
+  const result: string[] = [];
+  if (!startIso || !endIso) return result;
+
+  const [minIso, maxIso] = startIso <= endIso ? [startIso, endIso] : [endIso, startIso];
+  let current = minIso;
+
+  let count = 0;
+  while (current <= maxIso && count < 60) {
+    count++;
+    const parts = parseISODateParts(current);
+    if (!schoolDaysOnly || (parts.dayOfWeek !== 0 && parts.dayOfWeek !== 6)) {
+      result.push(current);
+    }
+    current = stepISODate(current, 1);
+  }
+  return result;
+}
+
+/**
+ * Formats a clean, structured schedule summary for any arbitrary list of dates.
+ */
+export function formatCustomRangeSummary(
+  dateIsos: string[],
+  store: ClassDataStore,
+  options?: FlexibleSummaryOptions
+): string {
   const {
-    baseIso,
-    store,
+    includeSong = true,
+    includeDoa = true,
+    includePiket = true,
+    includeMbg = true,
+    includeIceBreaking = true,
+    includeLessons = true,
+    includeTasks = true,
+    includeAgenda = true,
+    includeBirthdays = true,
+    includeKasNote = true,
+    titleHeader,
     websiteUrl = DEFAULT_SERVER_URL
-  } = params;
+  } = options || {};
 
   const serverUrl = sanitizeServerUrl(websiteUrl);
-  const schoolDays = getSchoolWeekISODates(baseIso);
-  const mondayParts = parseISODateParts(schoolDays[0]);
-  const fridayParts = parseISODateParts(schoolDays[4]);
-
-  const midDate = new Date(Date.UTC(mondayParts.year, mondayParts.month, mondayParts.day, 12, 0, 0));
-  const songData = getSongForDate(midDate);
-  const songComposer = SONG_LYRICS_DB[songData.song]?.composer;
+  if (!dateIsos || dateIsos.length === 0) {
+    return 'Tidak ada tanggal yang dipilih untuk diekspor.';
+  }
 
   const lines: string[] = [];
+  const firstParts = parseISODateParts(dateIsos[0]);
+  const lastParts = parseISODateParts(dateIsos[dateIsos.length - 1]);
 
-  // Header
-  lines.push('*AGENDA MINGGUAN KELAS XB — SMA PUTRA NIRMALA*');
-  lines.push(`🗓️ *Periode: ${mondayParts.day} ${MONTH_ID[mondayParts.month]} – ${fridayParts.day} ${MONTH_ID[fridayParts.month]} ${fridayParts.year}*`);
+  const defaultTitle = dateIsos.length === 5 && firstParts.dayOfWeek === 1 && lastParts.dayOfWeek === 5
+    ? '*AGENDA MINGGUAN KELAS XB — SMA PUTRA NIRMALA*'
+    : '*AGENDA KELAS XB — SMA PUTRA NIRMALA*';
+
+  lines.push(titleHeader || defaultTitle);
+  lines.push(`🗓️ *Periode: ${firstParts.day} ${MONTH_ID[firstParts.month]} – ${lastParts.day} ${MONTH_ID[lastParts.month]} ${lastParts.year}*`);
   lines.push('');
 
-  // Song of the week
-  if (songData.song && songData.song !== '-' && songData.song.toLowerCase() !== 'blank') {
-    lines.push('> 🎵 *Lagu Wajib Pekan Ini:*');
-    lines.push(`> ${songData.song}${songComposer ? ` (${songComposer})` : ''}`);
-    lines.push('');
+  // Song of the week (from middle date)
+  if (includeSong && dateIsos.length > 0) {
+    const midIdx = Math.floor(dateIsos.length / 2);
+    const midParts = parseISODateParts(dateIsos[midIdx]);
+    const midDate = new Date(Date.UTC(midParts.year, midParts.month, midParts.day, 12, 0, 0));
+    const songData = getSongForDate(midDate);
+    const songComposer = SONG_LYRICS_DB[songData.song]?.composer;
+    if (songData.song && songData.song !== '-' && songData.song.toLowerCase() !== 'blank') {
+      lines.push('> 🎵 *Lagu Wajib Pekan Ini:*');
+      lines.push(`> ${songData.song}${songComposer ? ` (${songComposer})` : ''}`);
+      lines.push('');
+    }
   }
 
   lines.push('━━━━━━━━━━━━━━━━━━━━');
   lines.push('');
 
-  // Weekly birthdays accumulator
-  const weeklyBirthdays: { dateStr: string; name: string }[] = [];
+  const rangeBirthdays: { dateStr: string; name: string }[] = [];
 
-  // Each school day (Monday to Friday)
-  schoolDays.forEach(dayIso => {
+  dateIsos.forEach(dayIso => {
     const dayParts = parseISODateParts(dayIso);
     const dayNameUpper = dayParts.dowName.toUpperCase();
     const monthUpper = MONTH_ID[dayParts.month].toUpperCase();
@@ -221,99 +339,140 @@ export function formatWeeklySummary(params: WeeklySummaryParams): string {
     lines.push(`*${dayNameUpper}, ${dayParts.day} ${monthUpper} ${dayParts.year}*`);
 
     // Lessons
-    const lessons = store.pelajaranByDate[dayIso] || [];
-    if (lessons.length > 0) {
-      const subjectList = Array.from(new Set(lessons.map(l => l.cleanName))).join(', ');
-      lines.push(`• *Pelajaran:* ${subjectList}`);
-    } else {
-      lines.push('• *Pelajaran:* -');
+    if (includeLessons) {
+      const lessons = store.pelajaranByDate[dayIso] || [];
+      if (lessons.length > 0) {
+        const subjectList = Array.from(new Set(lessons.map(l => l.cleanName))).join(', ');
+        lines.push(`• *Pelajaran:* ${subjectList}`);
+      } else {
+        lines.push('• *Pelajaran:* -');
+      }
     }
 
-    // Tasks: jika ada tugas, tampilkan di bawah bagian jadwal/pelajaran, kalau tidak ada tidak usah tampilkan
+    // Tasks & Agenda: Pisahkan tugas akademis (Sumatif & PR) dan agenda kegiatan
     const validTasks = (store.tasksByDate[dayIso] || []).filter(t => (t.taskTitle || t.taskText || '').trim().length > 0);
-    if (validTasks.length > 0) {
-      const taskStr = validTasks.map(t => {
+    const academicTasks = validTasks.filter(t => t.taskType === 'sumatif' || t.taskType === 'pr');
+    const agendaTasks = validTasks.filter(t => t.taskType === 'agenda');
+
+    if (includeTasks && academicTasks.length > 0) {
+      const taskStr = academicTasks.map(t => {
         const title = (t.taskTitle || t.taskText || '').trim();
-        return `${t.subject} (${title})`;
+        const attachStr = t.attachment ? ` [📎 ${t.attachment.filename || 'Gambar'}]` : '';
+        if (t.taskType === 'sumatif') {
+          // BOLD khusus untuk sumatif
+          return `*${t.subject} (${title}${attachStr})*`;
+        }
+        return `${t.subject} (${title}${attachStr})`;
       }).join('; ');
       lines.push(`• *Tugas:* ${taskStr}`);
     }
 
+    if (includeAgenda && agendaTasks.length > 0) {
+      const agendaStr = agendaTasks.map(t => {
+        const title = (t.taskTitle || t.taskText || '').trim();
+        const attachStr = t.attachment ? ` [📎 ${t.attachment.filename || 'Gambar'}]` : '';
+        return `${t.subject} (${title}${attachStr})`;
+      }).join('; ');
+      lines.push(`• *Agenda:* ${agendaStr}`);
+    }
+
     // Piket (lookup by day name)
-    const piket = store.piketByDow[dayParts.dowName];
-    if (piket && piket.petugas && piket.petugas.length > 0) {
-      lines.push(`• *Petugas Piket:* ${piket.petugas.join(', ')}`);
+    if (includePiket) {
+      const piket = store.piketByDow[dayParts.dowName];
+      if (piket && piket.petugas && piket.petugas.length > 0) {
+        lines.push(`• *Petugas Piket:* ${piket.petugas.join(', ')}`);
+      }
     }
 
     // MBG
-    const mbg = store.mbgByDate[dayIso];
-    if (mbg && mbg.petugas && mbg.petugas.length > 0) {
-      lines.push(`• *Petugas MBG:* ${mbg.petugas.join(', ')}`);
+    if (includeMbg) {
+      const mbg = store.mbgByDate[dayIso];
+      if (mbg && mbg.petugas && mbg.petugas.length > 0) {
+        lines.push(`• *Petugas MBG:* ${mbg.petugas.join(', ')}`);
+      }
     }
 
     // Ice Breaking
-    const ice = store.iceBreakingByDate[dayIso];
-    if (ice && ice.petugas && ice.petugas.length > 0) {
-      const subj = ice.pelajaranPertama ? ` (${ice.pelajaranPertama})` : '';
-      lines.push(`• *Ice Breaking:* ${ice.petugas.join(', ')}${subj}`);
+    if (includeIceBreaking) {
+      const ice = store.iceBreakingByDate[dayIso];
+      if (ice && ice.petugas && ice.petugas.length > 0) {
+        const subj = ice.pelajaranPertama ? ` (${ice.pelajaranPertama})` : '';
+        lines.push(`• *Ice Breaking:* ${ice.petugas.join(', ')}${subj}`);
+      }
     }
 
     // Doa (Tampilkan seluruh petugas doa: Doa Pagi, Renungan, Malaikat Tuhan, Doa Penutup)
-    const doa = store.doaByDate[dayIso];
-    if (doa && (doa.doaPagi || doa.renungan || doa.malaikatTuhan || doa.doaPenutup)) {
-      const doaParts: string[] = [];
-      if (doa.doaPagi) doaParts.push(`${doa.doaPagi} (Pagi)`);
-      if (doa.renungan) doaParts.push(`${doa.renungan} (Renungan)`);
-      if (doa.malaikatTuhan) {
-        const isTugas = Boolean(doa.tugasMalaikatTuhan);
-        const hasTugasText = doa.malaikatTuhan.toLowerCase().includes('tugas');
-        const malaikatLabel = isTugas && !hasTugasText
-          ? `*${doa.malaikatTuhan} (Malaikat - Tugas)*`
-          : `${doa.malaikatTuhan} (Malaikat)`;
-        doaParts.push(malaikatLabel);
-      } else if (doa.tugasMalaikatTuhan) {
-        doaParts.push('*(Malaikat - Tugas)*');
-      }
-      if (doa.doaPenutup) doaParts.push(`${doa.doaPenutup} (Penutup)`);
-      if (doaParts.length > 0) {
-        lines.push(`• *Petugas Doa:* ${doaParts.join(', ')}`);
+    if (includeDoa) {
+      const doa = store.doaByDate[dayIso];
+      if (doa && (doa.doaPagi || doa.renungan || doa.malaikatTuhan || doa.doaPenutup)) {
+        const doaParts: string[] = [];
+        if (doa.doaPagi) doaParts.push(`${doa.doaPagi} (Pagi)`);
+        if (doa.renungan) doaParts.push(`${doa.renungan} (Renungan)`);
+        if (doa.malaikatTuhan) {
+          const isTugas = Boolean(doa.tugasMalaikatTuhan);
+          const hasTugasText = doa.malaikatTuhan.toLowerCase().includes('tugas');
+          const malaikatLabel = isTugas && !hasTugasText
+            ? `*${doa.malaikatTuhan} (Malaikat - Tugas)*`
+            : `${doa.malaikatTuhan} (Malaikat)`;
+          doaParts.push(malaikatLabel);
+        } else if (doa.tugasMalaikatTuhan) {
+          doaParts.push('*(Malaikat - Tugas)*');
+        }
+        if (doa.doaPenutup) doaParts.push(`${doa.doaPenutup} (Penutup)`);
+        if (doaParts.length > 0) {
+          lines.push(`• *Petugas Doa:* ${doaParts.join(', ')}`);
+        }
       }
     }
 
     // Check birthdays for this day
-    const mStr = String(dayParts.month + 1).padStart(2, '0');
-    const dStr = String(dayParts.day).padStart(2, '0');
-    const bdays = store.birthdayByMonthDay[`${mStr}-${dStr}`] || [];
-    bdays.forEach(name => {
-      weeklyBirthdays.push({
-        dateStr: `${dayParts.day} ${MONTH_ID[dayParts.month].slice(0, 3)}`,
-        name
+    if (includeBirthdays) {
+      const mStr = String(dayParts.month + 1).padStart(2, '0');
+      const dStr = String(dayParts.day).padStart(2, '0');
+      const bdays = store.birthdayByMonthDay[`${mStr}-${dStr}`] || [];
+      bdays.forEach(name => {
+        rangeBirthdays.push({
+          dateStr: `${dayParts.day} ${MONTH_ID[dayParts.month].slice(0, 3)}`,
+          name
+        });
       });
-    });
+    }
 
     lines.push('');
   });
 
   lines.push('━━━━━━━━━━━━━━━━━━━━');
 
-  // Birthdays in this week
-  if (weeklyBirthdays.length > 0) {
-    lines.push('🎂 *Ulang Tahun Pekan Ini:*');
-    weeklyBirthdays.forEach(b => {
+  // Birthdays in this range
+  if (includeBirthdays && rangeBirthdays.length > 0) {
+    lines.push('🎂 *Ulang Tahun pada Periode Ini:*');
+    rangeBirthdays.forEach(b => {
       lines.push(`- ${b.dateStr}: ${b.name}`);
     });
     lines.push('');
   }
 
   // Kas note
-  lines.push('💰 *Pengingat Kas Murid:*');
-  lines.push('Iuran kas rutin Rp 3.000/minggu dapat diserahkan ke bendahara kelas.');
-  lines.push('');
+  if (includeKasNote) {
+    lines.push('💰 *Pengingat Kas Murid:*');
+    lines.push('Iuran kas rutin Rp 3.000/minggu dapat diserahkan ke bendahara kelas.');
+    lines.push('');
+  }
 
   // Footer
   lines.push(`_Info lengkap: ${serverUrl}_`);
 
   return lines.join('\n');
+}
+
+/**
+ * Formats a clean, structured weekly schedule summary (Monday to Friday) using text formatting rules.
+ */
+export function formatWeeklySummary(params: WeeklySummaryParams): string {
+  const schoolDays = getSchoolWeekISODates(params.baseIso);
+  return formatCustomRangeSummary(schoolDays, params.store, {
+    websiteUrl: params.websiteUrl
+  });
 }
 
 /**

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Copy, Check } from 'lucide-react';
 import { Header } from './components/Header';
 import { TaskBanner } from './components/TaskBanner';
 import { ScheduleBlocks } from './components/ScheduleBlocks';
@@ -18,17 +18,19 @@ const WheelOfNamesModal = React.lazy(() => import('./components/WheelOfNamesModa
 const GroupGeneratorModal = React.lazy(() => import('./components/GroupGeneratorModal').then(m => ({ default: m.GroupGeneratorModal })));
 const IceBreakingScheduleModal = React.lazy(() => import('./components/IceBreakingScheduleModal').then(m => ({ default: m.IceBreakingScheduleModal })));
 const KasMuridModal = React.lazy(() => import('./components/KasMuridModal').then(m => ({ default: m.KasMuridModal })));
+const WeeklyExportModal = React.lazy(() => import('./components/WeeklyExportModal').then(m => ({ default: m.WeeklyExportModal })));
+import { ReceiptLightboxModal, ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NotificationModal } from './components/NotificationModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
-import { ClassDataStore } from './types';
+import { ClassDataStore, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
 import { KAS_DEMO_CSV } from './data/kasDemoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
 import { getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
-import { formatWeeklySummary, copyTextToClipboard } from './utils/summaryFormatter';
+import { formatWeeklySummary, formatDailySummary, copyTextToClipboard } from './utils/summaryFormatter';
 
 export default function App() {
   // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
@@ -207,6 +209,17 @@ export default function App() {
   const [isRandomPickerOpen, setIsRandomPickerOpen] = useState<boolean>(false);
   const [isGroupGeneratorOpen, setIsGroupGeneratorOpen] = useState<boolean>(false);
   const [isKasModalOpen, setIsKasModalOpen] = useState<boolean>(false);
+  const [isWeeklyExportOpen, setIsWeeklyExportOpen] = useState<boolean>(false);
+  const [previewAttachment, setPreviewAttachment] = useState<ReceiptLightboxData | null>(null);
+
+  const handleOpenAttachment = useCallback((attachment: TaskAttachment, subjectTitle?: string) => {
+    setPreviewAttachment({
+      url: attachment.url,
+      title: subjectTitle ? `Lampiran: ${subjectTitle}` : (attachment.filename || 'Lampiran Tugas'),
+      subtitle: attachment.filename || 'File Lampiran',
+      originalLink: attachment.url
+    });
+  }, []);
 
   // 404 Route state & browser pathname listener
   const [is404, setIs404] = useState<boolean>(() => {
@@ -455,13 +468,18 @@ export default function App() {
   const activeDoa = dataStore.doaByDate[activeISO];
   const activeIceBreaking = dataStore.iceBreakingByDate[activeISO];
   const activePelajaran = dataStore.pelajaranByDate[activeISO] || [];
-  const activeTasks = dataStore.tasksByDate[activeISO] || [];
+  const activeTasks = useMemo(() => {
+    return (dataStore.tasksByDate[activeISO] || []).filter(t => t.taskType !== 'agenda');
+  }, [dataStore.tasksByDate, activeISO]);
 
   const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
 
-
   // Helper check for calendar dots
+  const hasTasksForISO = (iso: string): boolean => {
+    return (dataStore.tasksByDate[iso] || []).some(t => t.taskType !== 'agenda');
+  };
+
   const hasDataForISO = (iso: string): boolean => {
     const info = parseISODateParts(iso);
     const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
@@ -471,13 +489,9 @@ export default function App() {
       !!dataStore.iceBreakingByDate[iso] ||
       !!dataStore.piketByDow[info.dowName] ||
       (dataStore.pelajaranByDate[iso] && dataStore.pelajaranByDate[iso].length > 0) ||
-      (dataStore.tasksByDate[iso] && dataStore.tasksByDate[iso].length > 0) ||
+      hasTasksForISO(iso) ||
       (dataStore.birthdayByMonthDay[md] && dataStore.birthdayByMonthDay[md].length > 0)
     );
-  };
-
-  const hasTasksForISO = (iso: string): boolean => {
-    return !!dataStore.tasksByDate[iso] && dataStore.tasksByDate[iso].length > 0;
   };
 
   const getBirthdaysForISO = (iso: string): string[] => {
@@ -542,6 +556,27 @@ export default function App() {
     return new Date(Date.UTC(activeInfo.year, activeInfo.month, activeInfo.day, 12, 0, 0));
   }, [activeInfo.year, activeInfo.month, activeInfo.day]);
 
+  const [dailyCopied, setDailyCopied] = useState<boolean>(false);
+
+  const handleCopyDailySummary = useCallback(async () => {
+    const text = formatDailySummary({
+      isoDate: activeISO || todayWIB.iso,
+      doa: activeDoa,
+      pelajaran: activePelajaran,
+      tasks: dataStore.tasksByDate[activeISO] || [],
+      piket: activePiket,
+      mbg: activeMbg,
+      iceBreaking: activeIceBreaking,
+      birthdays: activeBirthdays
+    });
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      setDailyCopied(true);
+      setTimeout(() => setDailyCopied(false), 2000);
+    }
+    return ok;
+  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
+
   const handleCopyWeeklySummary = useCallback(async () => {
     const text = formatWeeklySummary({
       baseIso: activeISO || todayWIB.iso,
@@ -584,8 +619,19 @@ export default function App() {
           }}
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
-          onCopyWeeklySummary={handleCopyWeeklySummary}
+          onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
         />
+
+        {isWeeklyExportOpen && (
+          <WeeklyExportModal
+            isOpen={isWeeklyExportOpen}
+            onClose={() => setIsWeeklyExportOpen(false)}
+            store={dataStore}
+            baseIso={activeISO || todayWIB.iso}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
 
         <WheelOfNamesModal
           isOpen={isRandomPickerOpen}
@@ -712,8 +758,31 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Prev / Next Day Steppers with accessible touch targets */}
-                <div className="flex items-center gap-1.5">
+                {/* Prev / Next Day Steppers with accessible touch targets & Salin Agenda */}
+                <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                  <button
+                    onClick={handleCopyDailySummary}
+                    aria-label={dailyCopied ? 'Jadwal hari ini tersalin' : 'Salin Agenda & Jadwal Harian'}
+                    title={dailyCopied ? 'Tersalin ke clipboard!' : 'Salin Agenda & Jadwal Hari Ini ke WhatsApp'}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-semibold transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+                      dailyCopied
+                        ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40'
+                        : 'border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-stone-800 dark:text-stone-200'
+                    }`}
+                  >
+                    {dailyCopied ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span className="inline">Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 text-stone-600 dark:text-stone-300" />
+                        <span className="hidden sm:inline">Salin Agenda</span>
+                      </>
+                    )}
+                  </button>
+
                   <button
                     onClick={() => handleStepDay(-1)}
                     aria-label="Jadwal Hari Sebelumnya"
@@ -756,7 +825,10 @@ export default function App() {
 
                 {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
                 {activeTasks.length > 0 && (
-                  <TaskBanner tasks={activeTasks} />
+                  <TaskBanner
+                    tasks={activeTasks}
+                    onOpenAttachment={handleOpenAttachment}
+                  />
                 )}
 
                 {/* Schedule Blocks (MBG, Piket, Doa & Bacaan Injil, Jadwal Pelajaran) */}
@@ -767,6 +839,7 @@ export default function App() {
                   pelajaran={activePelajaran}
                   dowName={activeDow}
                   iceBreaking={activeIceBreaking}
+                  onOpenAttachment={handleOpenAttachment}
                 />
               </div>
             </section>
@@ -822,7 +895,7 @@ export default function App() {
         onJumpToToday={handleJumpToToday}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
-        onCopyWeeklySummary={handleCopyWeeklySummary}
+        onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
       />
 
       {/* Lazy-Loaded Modals wrapped in Suspense for optimal bundle splitting */}
@@ -903,6 +976,7 @@ export default function App() {
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
             onOpenAllSongs={() => setIsAllSongsOpen(true)}
+            onOpenAttachment={handleOpenAttachment}
           />
         )}
 
@@ -915,7 +989,27 @@ export default function App() {
             onToggleDarkMode={toggleDarkMode}
           />
         )}
+
+        {/* Weekly & Custom Range Schedule Export Modal */}
+        {isWeeklyExportOpen && (
+          <WeeklyExportModal
+            isOpen={isWeeklyExportOpen}
+            onClose={() => setIsWeeklyExportOpen(false)}
+            store={dataStore}
+            baseIso={activeISO || todayWIB.iso}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
       </React.Suspense>
+
+      {/* Lightbox Modal for Task Attachment Previews (Photos, Documents, Drive Files) */}
+      <ReceiptLightboxModal
+        isOpen={!!previewAttachment}
+        onClose={() => setPreviewAttachment(null)}
+        data={previewAttachment}
+        darkMode={darkMode}
+      />
     </div>
   );
 }

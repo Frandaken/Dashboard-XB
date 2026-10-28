@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronDown, PartyPopper } from 'lucide-react';
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, IceBreakingSchedule } from '../types';
+import { ChevronDown, PartyPopper, Image as ImageIcon } from 'lucide-react';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, IceBreakingSchedule, TaskAttachment } from '../types';
 
 interface ScheduleBlocksProps {
   mbg?: MbgSchedule;
@@ -10,6 +10,7 @@ interface ScheduleBlocksProps {
   dowName: string;
   iceBreaking?: IceBreakingSchedule;
   compact?: boolean;
+  onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
 }
 
 export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
@@ -19,7 +20,8 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   pelajaran = [],
   dowName,
   iceBreaking,
-  compact = false
+  compact = false,
+  onOpenAttachment
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
 
@@ -327,7 +329,11 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                   key={`${p.cleanName}-${p.time}-${idx}`}
                   className={`${compact ? 'p-2.5 rounded-lg' : 'p-3.5 rounded-xl'} border flex flex-col justify-between transition-colors ${
                     p.hasTask
-                      ? 'bg-amber-50/60 dark:bg-[#1A1409] border-amber-300/80 dark:border-amber-900/70'
+                      ? p.taskType === 'sumatif'
+                        ? 'bg-rose-50/60 dark:bg-[#1E1113] border-rose-300/80 dark:border-rose-900/70 shadow-xs'
+                        : p.taskType === 'pr'
+                        ? 'bg-amber-50/60 dark:bg-[#1A1409] border-amber-300/80 dark:border-amber-900/70'
+                        : 'bg-blue-50/50 dark:bg-[#0D1520] border-blue-200/80 dark:border-blue-900/60'
                       : isNonAcademicFriday
                       ? 'bg-emerald-50/50 dark:bg-[#0E2018] border-emerald-200 dark:border-emerald-900/50'
                       : 'bg-stone-50/80 dark:bg-[#141518] border-stone-200/80 dark:border-stone-800/80 hover:border-stone-400 dark:hover:border-stone-600'
@@ -362,8 +368,16 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                     </div>
 
                     {p.hasTask && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300/70 dark:border-amber-800/70">
-                        Tugas
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          p.taskType === 'sumatif'
+                            ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
+                            : p.taskType === 'pr'
+                            ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300/70 dark:border-amber-800/70'
+                            : 'bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 border border-blue-300/70 dark:border-blue-800/70'
+                        }`}
+                      >
+                        {p.taskType === 'sumatif' ? 'Sumatif' : p.taskType === 'pr' ? 'PR' : 'Agenda'}
                       </span>
                     )}
 
@@ -395,17 +409,36 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                       ? p.taskText.split('\n').slice(1).join('\n').trim()
                       : '');
                     const hasDetails = p.hasDetails !== undefined ? p.hasDetails : !!details;
+                    const isSumatif = p.taskType === 'sumatif';
+                    const isPr = p.taskType === 'pr';
+
+                    const boxBg = isSumatif
+                      ? 'bg-rose-100/70 dark:bg-[#250F13] border-rose-300/70 dark:border-rose-900/60'
+                      : isPr
+                      ? 'bg-amber-100/70 dark:bg-[#20170A] border-amber-300/70 dark:border-amber-900/60'
+                      : 'bg-blue-50/70 dark:bg-[#0D1520] border-blue-200 dark:border-blue-900/50';
+
+                    const labelColor = isSumatif
+                      ? 'text-rose-900 dark:text-rose-300'
+                      : isPr
+                      ? 'text-amber-900 dark:text-amber-300'
+                      : 'text-blue-900 dark:text-blue-300';
+
+                    const labelText = isSumatif ? 'Sumatif:' : isPr ? 'PR:' : 'Agenda:';
 
                     return (
-                      <div className="mt-2 bg-amber-100/70 dark:bg-[#20170A] p-2 rounded-md border border-amber-300/70 dark:border-amber-900/60 text-xs">
+                      <div className={`mt-2 p-2 rounded-md border text-xs ${boxBg}`}>
                         <div className="flex items-start justify-between gap-1.5">
                           <div
                             onClick={hasDetails ? () => toggleTaskExpand(taskKey) : undefined}
-                            className={`font-medium text-amber-950 dark:text-amber-200 leading-snug break-words flex-1 ${
-                              hasDetails ? 'cursor-pointer hover:text-amber-800 dark:hover:text-amber-100 transition-colors' : ''
+                            className={`font-medium leading-snug break-words flex-1 ${
+                              hasDetails ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''
                             }`}
                           >
-                            <strong className="font-bold text-amber-900 dark:text-amber-300">Tugas:</strong> {title}
+                            <strong className={`font-bold mr-1 ${labelColor}`}>{labelText}</strong>
+                            <span className={isSumatif ? 'font-bold text-stone-900 dark:text-stone-100' : 'text-stone-800 dark:text-stone-200'}>
+                              {title}
+                            </span>
                           </div>
                           {hasDetails && (
                             <button
@@ -413,7 +446,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                               onClick={() => toggleTaskExpand(taskKey)}
                               aria-expanded={isExpanded}
                               aria-label={isExpanded ? 'Tutup detail penugasan' : 'Lihat detail penugasan'}
-                              className="flex items-center gap-0.5 text-[11px] font-bold text-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded bg-white/90 dark:bg-[#150F07] border border-amber-300/70 dark:border-amber-900/70 transition cursor-pointer flex-shrink-0"
+                              className="flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded bg-white/90 dark:bg-[#150F07] border border-stone-200 dark:border-stone-800 transition cursor-pointer flex-shrink-0"
                             >
                               <span>{isExpanded ? 'Tutup' : 'Detail'}</span>
                               <ChevronDown
@@ -426,8 +459,22 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                         </div>
 
                         {hasDetails && isExpanded && (
-                          <div className="mt-1.5 pt-1.5 border-t border-amber-300/60 dark:border-amber-900/60 text-xs text-stone-900 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/90 dark:bg-[#120C05] p-2 rounded border border-amber-200 dark:border-amber-900/40 animate-fade-in font-normal">
+                          <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10 text-xs text-stone-900 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/90 dark:bg-[#120C05] p-2 rounded border border-stone-200 dark:border-stone-800 animate-fade-in font-normal">
                             {details}
+                          </div>
+                        )}
+
+                        {/* Attachment Pill Button */}
+                        {p.attachment && (
+                          <div className="mt-2 pt-1.5 border-t border-black/10 dark:border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => onOpenAttachment?.(p.attachment!, p.cleanName)}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#222429] text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
+                            >
+                              <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Lampiran: {p.attachment.filename || 'Lihat Gambar'}</span>
+                            </button>
                           </div>
                         )}
                       </div>

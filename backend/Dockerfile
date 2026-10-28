@@ -10,5 +10,7 @@ RUN npm install
 
 COPY backend/ .
 
+RUN mkdir -p /app/data/uploads
+
 EXPOSE 3003
 CMD ["npm", "start"]

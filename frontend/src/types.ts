@@ -32,28 +32,40 @@ export interface IceBreakingSchedule {
   petugas: string[];
 }
 
+export type TaskType = 'sumatif' | 'pr' | 'agenda';
+
+export interface TaskAttachment {
+  filename?: string;
+  url: string;
+  mimeType?: string;
+}
+
 export interface PeriodItem {
   time: string;
   cleanName: string;
   summary?: string;
   rawSummary?: string;
   hasTask?: boolean;
+  taskType?: TaskType;
   taskText?: string;
   taskTitle?: string;
   taskDetails?: string;
   hasDetails?: boolean;
   location?: string;
+  attachment?: TaskAttachment;
 }
 
 export interface TaskItem {
   id?: string;
   subject: string;
+  taskType?: TaskType;
   taskText: string;
   taskTitle?: string;
   taskDetails?: string;
   hasDetails?: boolean;
   time?: string;
   dueDate?: string;
+  attachment?: TaskAttachment;
 }
 
 export interface KasWeekColumn {

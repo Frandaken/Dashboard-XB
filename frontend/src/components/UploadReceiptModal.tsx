@@ -101,9 +101,19 @@ export const UploadReceiptModal: React.FC<UploadReceiptModalProps> = ({
         body: JSON.stringify(payload)
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error || 'Gagal menyimpan bukti');
+      const text = await res.text();
+      let json: any = null;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        if (res.status === 413) {
+          throw new Error('Ukuran berkas terlalu besar untuk diunggah (melebihi batas Nginx/server). Silakan gunakan berkas < 20MB.');
+        }
+        throw new Error(`Server mengembalikan respon tidak terduga (${res.status})`);
+      }
+
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || 'Gagal menyimpan bukti');
       }
 
       onSuccess(target.id, json.url);

@@ -37,6 +37,29 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
+// Explicit fallback handler for upload paths so missing files never fall through to SPA HTML
+app.get(['/api/uploads/:filename', '/uploads/:filename'], (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const candidatePaths = [
+    path.join(UPLOADS_DIR, filename),
+    path.join(dataDir, 'uploads', filename),
+    path.join(process.cwd(), 'data', 'uploads', filename),
+    path.join(process.cwd(), 'backend', 'uploads', filename)
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return res.sendFile(candidate);
+    }
+  }
+
+  return res.status(404).json({
+    error: 'File not found',
+    filename,
+    message: `Bukti kas "${filename}" tidak ditemukan di server.`
+  });
+});
+
 // Upstream Google Calendar feeds (Notice: penugasan calendar link is completely removed as requested)
 const CALENDAR_FEEDS: Record<string, string> = {
   pelajaran: "https://calendar.google.com/calendar/ical/a4fd56ccb6ac7cde9478e4d863191dd53cd12c6110fe380d6bf279da0e44dc8e%40group.calendar.google.com/private-f67cd9352a27790460116ba8a612434c/basic.ics",
@@ -245,6 +268,9 @@ function getBuktiMapping(): Record<string, string> {
 
 function saveBuktiMapping(mapping: Record<string, string>) {
   try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
     fs.writeFileSync(BUKTI_MAPPING_FILE, JSON.stringify(mapping, null, 2), 'utf8');
   } catch (e) {
     console.error('Failed to save bukti-mapping.json:', e);
@@ -273,6 +299,9 @@ app.post('/api/kas/upload-bukti', (req, res) => {
       const baseClean = path.basename(filename || 'nota', ext).replace(/[^a-zA-Z0-9_-]/g, '_');
       savedFilename = `nota_${Date.now()}_${baseClean}${ext}`;
 
+      if (!fs.existsSync(UPLOADS_DIR)) {
+        fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+      }
       const filePath = path.join(UPLOADS_DIR, savedFilename);
       fs.writeFileSync(filePath, buffer);
       resultUrl = `/api/uploads/${savedFilename}`;

@@ -57,8 +57,16 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [selectedStudent, setSelectedStudent] = useState<KasStudentEntry | null>(null);
 
-  // Bukti nota states
-  const [buktiMapping, setBuktiMapping] = useState<Record<string, string>>({});
+  // Bukti nota states with persistent localStorage fallback
+  const LOCAL_STORAGE_BUKTI_KEY = 'kas_bukti_mapping_v1';
+  const [buktiMapping, setBuktiMapping] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_BUKTI_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [activeReceipt, setActiveReceipt] = useState<ReceiptLightboxData | null>(null);
   const [uploadTarget, setUploadTarget] = useState<{ id: string; title: string; currentUrl?: string } | null>(null);
 
@@ -68,14 +76,26 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
       .then(res => res.json())
       .then(data => {
         if (data && data.ok && data.mapping) {
-          setBuktiMapping(data.mapping);
+          setBuktiMapping(prev => {
+            const merged = { ...prev, ...data.mapping };
+            try {
+              localStorage.setItem(LOCAL_STORAGE_BUKTI_KEY, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
         }
       })
       .catch(err => console.warn('Failed to load bukti mapping:', err));
   }, [isOpen]);
 
   const handleUploadSuccess = (id: string, newUrl: string) => {
-    setBuktiMapping(prev => ({ ...prev, [id]: newUrl }));
+    setBuktiMapping(prev => {
+      const next = { ...prev, [id]: newUrl };
+      try {
+        localStorage.setItem(LOCAL_STORAGE_BUKTI_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   if (!isOpen) return null;
@@ -580,13 +600,6 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 bg-stone-50 dark:bg-[#141518]/90 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-400">
-                <Receipt className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 text-[11px] leading-relaxed">
-                  <span className="font-semibold text-stone-800 dark:text-stone-200">Bukti Nota & Kwitansi:</span> Foto struk dapat dimasukkan lewat link Google Drive di kolom <span className="font-semibold text-emerald-700 dark:text-emerald-400">Bukti (Kolom G)</span> spreadsheet, atau diunggah langsung lewat tombol di setiap kartu pengeluaran. File tersimpan otomatis di host Docker volume (<code className="bg-stone-200 dark:bg-stone-800 px-1 py-0.5 rounded text-[10px]">./data/uploads</code>).
-                </div>
-              </div>
-
               {pengeluaranList.length === 0 ? (
                 <div className="py-12 text-center text-xs text-stone-500 bg-stone-50/50 dark:bg-[#141518]/60 rounded-xl border border-stone-200/80 dark:border-stone-800/80">
                   Belum ada catatan transaksi pengeluaran di lembar Google Sheets.
@@ -633,6 +646,7 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                                 type="button"
                                 onClick={() =>
                                   setActiveReceipt({
+                                    id: item.id,
                                     title: item.barang,
                                     subtitle: `${item.tanggal} • ${formatRupiah(item.hargaTotal)}`,
                                     url: receiptUrl,
@@ -745,6 +759,7 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                                 type="button"
                                 onClick={() =>
                                   setActiveReceipt({
+                                    id: item.id,
                                     title: item.keterangan,
                                     subtitle: `${item.tanggal} • ${formatRupiah(item.jumlah)}`,
                                     url: receiptUrl,
@@ -1003,6 +1018,14 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
         isOpen={!!activeReceipt}
         onClose={() => setActiveReceipt(null)}
         data={activeReceipt}
+        darkMode={darkMode}
+        onReupload={(rcData) => {
+          setUploadTarget({
+            id: rcData.id || '',
+            title: rcData.title,
+            currentUrl: rcData.url
+          });
+        }}
       />
 
       {/* UPLOAD / LINK RECEIPT MODAL */}

@@ -121,7 +121,7 @@ export const MONTHLY_SONG_SCHEDULE: Record<number, Record<number, string>> = {
     2: 'Satu Nusa Satu Bangsa',
     3: 'Garuda Pancasila',
     4: 'Maju Tak Gentar',
-    5: ''
+    5: 'Bangun Pemudi Pemuda'
   },
   // November
   10: {
@@ -265,6 +265,23 @@ export const SONG_LYRICS_DB: Record<string, SongDetail> = {
       'Menyerang menyerang',
       'Majulah majulah menang'
     ]
+  },
+  'Bangun Pemudi Pemuda': {
+    title: 'Bangun Pemudi Pemuda',
+    composer: 'Alfred Simanjuntak',
+    lyrics: [
+      'Bangun pemudi pemuda Indonesia',
+      'Lengan bajumu singsingkan untuk negara',
+      'Masa yang akan datang kewajibanmulah',
+      'Menjadi tanggunganmu terhadap nusa',
+      'Menjadi tanggunganmu terhadap nusa',
+      '',
+      'Sudi tetap berusaha jujur dan ikhlas',
+      'Tak usah banyak bicara trus kerja keras',
+      'Hati teguh dan lurus pikir tetap jernih',
+      'Bertingkah laku halus hai putra negeri',
+      'Bertingkah laku halus hai putra negeri'
+    ]
   }
 };
 
@@ -275,5 +292,7 @@ export const ALL_SONGS_LIST: string[] = [
   'Dari Sabang Sampai Merauke',
   'Bagimu Negeri',
   'Hari Merdeka',
-  'Maju Tak Gentar'
+  'Maju Tak Gentar',
+  'Bangun Pemudi Pemuda'
 ];
+

@@ -1,10 +1,78 @@
 import ICAL from 'ical.js';
-import { PeriodItem, TaskItem } from '../types';
+import { PeriodItem, TaskItem, TaskType, TaskAttachment } from '../types';
 
 export interface ParsedTask {
   title: string;
   details?: string;
   hasDetails: boolean;
+}
+
+/**
+ * Classifies task text into 3 types:
+ * 1. sumatif: Keyword sumatif, ulangan, asesmen, uh, ph (highest priority)
+ * 2. pr: Keyword PR, pekerjaan rumah, tugas
+ * 3. agenda: No keyword (e.g. Melanjutkan Miniatur)
+ */
+export function classifyTaskType(text: string): TaskType {
+  if (!text) return 'agenda';
+  const lower = text.toLowerCase();
+
+  // 1. Prioritas tertinggi: jika ada keyword sumatif
+  if (
+    lower.includes('sumatif') ||
+    lower.includes('ulangan') ||
+    lower.includes('asesmen') ||
+    /\buh\b/i.test(text) ||
+    /\bph\b/i.test(text)
+  ) {
+    return 'sumatif';
+  }
+
+  // 2. Jika ada keyword PR
+  if (
+    /\bpr\b/i.test(text) ||
+    lower.includes('pekerjaan rumah') ||
+    lower.includes('tugas')
+  ) {
+    return 'pr';
+  }
+
+  // 3. Jika tidak ada keyword apa-apa -> agenda
+  return 'agenda';
+}
+
+/**
+ * Extracts attachment from iCal component (ATTACH property) or fallback URL in description.
+ */
+export function extractAttachment(comp?: any, desc?: string): TaskAttachment | undefined {
+  if (comp) {
+    const attachProp = comp.getFirstProperty ? comp.getFirstProperty('attach') : null;
+    if (attachProp) {
+      const rawUrl = attachProp.getFirstValue();
+      if (rawUrl && typeof rawUrl === 'string') {
+        const cleanUrl = rawUrl.replace(/\s+/g, '');
+        const filename = attachProp.getParameter('filename') || undefined;
+        const mimeType = attachProp.getParameter('fmttype') || undefined;
+        return {
+          filename,
+          url: cleanUrl,
+          mimeType
+        };
+      }
+    }
+  }
+
+  if (desc) {
+    const urlMatch = desc.match(/https?:\/\/(?:drive\.google\.com\/[^\s<>"']+|[^\s<>"']+\.(?:png|jpe?g|webp|gif|pdf))/i);
+    if (urlMatch) {
+      return {
+        url: urlMatch[0].trim(),
+        filename: 'Lampiran'
+      };
+    }
+  }
+
+  return undefined;
 }
 
 export function parseTaskDescription(rawDesc: string): ParsedTask {
@@ -118,6 +186,8 @@ export function parsePelajaranICS(
 
       const parsedTask = desc ? parseTaskDescription(desc) : null;
       const fullTaskText = parsedTask ? (parsedTask.details ? `${parsedTask.title}\n${parsedTask.details}` : parsedTask.title) : '';
+      const taskType = desc ? classifyTaskType(fullTaskText) : undefined;
+      const attachment = extractAttachment(ev.component, desc);
 
       const period: PeriodItem = {
         time: startTime,
@@ -125,11 +195,13 @@ export function parsePelajaranICS(
         summary: sessionLabel ? `${cleanName} (${sessionLabel})` : summary,
         rawSummary: summary,
         hasTask: !!desc,
+        taskType,
         taskText: fullTaskText,
         taskTitle: parsedTask?.title,
         taskDetails: parsedTask?.details,
         hasDetails: parsedTask?.hasDetails || false,
-        location: ev.location || ''
+        location: ev.location || '',
+        attachment
       };
 
       if (!pelajaranByDate[dateKey]) {
@@ -149,11 +221,13 @@ export function parsePelajaranICS(
           tasksByDate[dateKey].push({
             id: `${ev.uid || 'task'}_${dateKey}_${startTime}`,
             subject: cleanName,
+            taskType,
             taskText: fullTaskText,
             taskTitle: parsedTask.title,
             taskDetails: parsedTask.details,
             hasDetails: parsedTask.hasDetails,
-            time: startTime
+            time: startTime,
+            attachment
           });
         }
       }
