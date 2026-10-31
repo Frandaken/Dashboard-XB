@@ -1,4 +1,4 @@
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, ClassDataStore } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, ClassDataStore, CalendarEventNotice } from '../types';
 import { MONTH_ID } from '../data/demoData';
 import { parseISODateParts, stepISODate } from './dateUtils';
 import { getSongForDate, SONG_LYRICS_DB } from '../data/songSchedule';
@@ -18,6 +18,7 @@ export interface DailySummaryParams {
   doa?: DoaSchedule;
   pelajaran?: PeriodItem[];
   tasks?: TaskItem[];
+  eventNotices?: CalendarEventNotice[];
   piket?: PiketSchedule;
   mbg?: MbgSchedule;
   iceBreaking?: IceBreakingSchedule;
@@ -66,6 +67,7 @@ export function formatDailySummary(params: DailySummaryParams): string {
     doa,
     pelajaran = [],
     tasks = [],
+    eventNotices = [],
     piket,
     mbg,
     iceBreaking,
@@ -91,6 +93,18 @@ export function formatDailySummary(params: DailySummaryParams): string {
   if (songData.song && songData.song !== '-' && songData.song.toLowerCase() !== 'blank') {
     lines.push('> 🎵 *Lagu Wajib Pekan Ini:*');
     lines.push(`> ${songData.song}${songComposer ? ` (${songComposer})` : ''}`);
+    lines.push('');
+  }
+
+  // Notice / All-day or Multi-day events
+  if (eventNotices && eventNotices.length > 0) {
+    lines.push('📢 *PENGUMUMAN / KEGIATAN KHUSUS*');
+    eventNotices.forEach(n => {
+      const dayLabel = n.isMultiDay ? ` (Hari ke-${n.dayIndex} dari ${n.totalDays})` : ' (Sepanjang Hari)';
+      const loc = n.location ? `\n  📍 Lokasi: ${n.location}` : '';
+      const desc = n.description ? `\n  ℹ️ ${n.description}` : '';
+      lines.push(`• *${n.title}*${dayLabel}${loc}${desc}`);
+    });
     lines.push('');
   }
 
@@ -337,6 +351,17 @@ export function formatCustomRangeSummary(
     const monthUpper = MONTH_ID[dayParts.month].toUpperCase();
 
     lines.push(`*${dayNameUpper}, ${dayParts.day} ${monthUpper} ${dayParts.year}*`);
+
+    // Notices / Events for this day
+    const dayNotices = store.eventNoticesByDate ? (store.eventNoticesByDate[dayIso] || []) : [];
+    if (dayNotices.length > 0) {
+      const noticeStr = dayNotices.map(n => {
+        const dayLabel = n.isMultiDay ? ` (Hari ke-${n.dayIndex}/${n.totalDays})` : '';
+        const loc = n.location ? ` @ ${n.location}` : '';
+        return `📢 *${n.title}*${dayLabel}${loc}`;
+      }).join('; ');
+      lines.push(`• *Kegiatan:* ${noticeStr}`);
+    }
 
     // Lessons
     if (includeLessons) {

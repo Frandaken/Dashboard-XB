@@ -19,6 +19,9 @@ const GroupGeneratorModal = React.lazy(() => import('./components/GroupGenerator
 const IceBreakingScheduleModal = React.lazy(() => import('./components/IceBreakingScheduleModal').then(m => ({ default: m.IceBreakingScheduleModal })));
 const KasMuridModal = React.lazy(() => import('./components/KasMuridModal').then(m => ({ default: m.KasMuridModal })));
 const WeeklyExportModal = React.lazy(() => import('./components/WeeklyExportModal').then(m => ({ default: m.WeeklyExportModal })));
+const SiswaListModal = React.lazy(() => import('./components/SiswaListModal').then(m => ({ default: m.SiswaListModal })));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+import { EventNoticeBanner } from './components/EventNoticeBanner';
 import { ReceiptLightboxModal, ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NotificationModal } from './components/NotificationModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
@@ -89,6 +92,7 @@ export default function App() {
         iceBreakingByDate,
         pelajaranByDate: {},
         tasksByDate: {},
+        eventNoticesByDate: {},
         birthdayByMonthDay: {},
         kasData
       };
@@ -100,6 +104,7 @@ export default function App() {
         iceBreakingByDate: {},
         pelajaranByDate: {},
         tasksByDate: {},
+        eventNoticesByDate: {},
         birthdayByMonthDay: {}
       };
     }
@@ -210,6 +215,8 @@ export default function App() {
   const [isGroupGeneratorOpen, setIsGroupGeneratorOpen] = useState<boolean>(false);
   const [isKasModalOpen, setIsKasModalOpen] = useState<boolean>(false);
   const [isWeeklyExportOpen, setIsWeeklyExportOpen] = useState<boolean>(false);
+  const [isSiswaModalOpen, setIsSiswaModalOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [previewAttachment, setPreviewAttachment] = useState<ReceiptLightboxData | null>(null);
 
   const handleOpenAttachment = useCallback((attachment: TaskAttachment, subjectTitle?: string) => {
@@ -262,7 +269,8 @@ export default function App() {
       store.doaByDate[iso] ||
       store.mbgByDate[iso] ||
       store.iceBreakingByDate[iso] ||
-      (store.pelajaranByDate[iso] && store.pelajaranByDate[iso].length > 0)
+      (store.pelajaranByDate[iso] && store.pelajaranByDate[iso].length > 0) ||
+      (store.eventNoticesByDate && store.eventNoticesByDate[iso] && store.eventNoticesByDate[iso].length > 0)
     );
   }, []);
 
@@ -276,6 +284,9 @@ export default function App() {
     Object.keys(store.iceBreakingByDate || {}).forEach(d => availableDates.add(d));
     Object.keys(store.pelajaranByDate).forEach(d => {
       if (store.pelajaranByDate[d]?.length) availableDates.add(d);
+    });
+    Object.keys(store.eventNoticesByDate || {}).forEach(d => {
+      if (store.eventNoticesByDate[d]?.length) availableDates.add(d);
     });
 
     const sortedDates = Array.from(availableDates).sort();
@@ -379,7 +390,7 @@ export default function App() {
       const iceBreakingByDate = parseIceBreakingRows(iceBreakingRows);
 
       // Parse pelajaran iCal (keeping subjects on different schedules strictly separated)
-      const { pelajaranByDate, tasksByDate } = parsePelajaranICS(pelajaranRes.text, rangeStart, rangeEnd);
+      const { pelajaranByDate, tasksByDate, eventNoticesByDate } = parsePelajaranICS(pelajaranRes.text, rangeStart, rangeEnd);
 
       // Parse birthday iCal
       const birthdayByMonthDay = parseBirthdayICS(birthdayRes.text, rangeStart, rangeEnd);
@@ -403,6 +414,7 @@ export default function App() {
         iceBreakingByDate,
         pelajaranByDate,
         tasksByDate,
+        eventNoticesByDate,
         birthdayByMonthDay,
         kasData
       };
@@ -437,6 +449,7 @@ export default function App() {
         iceBreakingByDate: parseIceBreakingRows(parseCSV(DEMO_CSV.icebreaking)),
         pelajaranByDate: {},
         tasksByDate: {},
+        eventNoticesByDate: {},
         birthdayByMonthDay: {}
       };
       setDataStore(fallbackStore);
@@ -471,6 +484,9 @@ export default function App() {
   const activeTasks = useMemo(() => {
     return (dataStore.tasksByDate[activeISO] || []).filter(t => t.taskType !== 'agenda');
   }, [dataStore.tasksByDate, activeISO]);
+  const activeEventNotices = useMemo(() => {
+    return dataStore.eventNoticesByDate?.[activeISO] || [];
+  }, [dataStore.eventNoticesByDate, activeISO]);
 
   const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
@@ -478,6 +494,10 @@ export default function App() {
   // Helper check for calendar dots
   const hasTasksForISO = (iso: string): boolean => {
     return (dataStore.tasksByDate[iso] || []).some(t => t.taskType !== 'agenda');
+  };
+
+  const hasEventNoticeForISO = (iso: string): boolean => {
+    return Boolean(dataStore.eventNoticesByDate?.[iso]?.length);
   };
 
   const hasDataForISO = (iso: string): boolean => {
@@ -489,6 +509,7 @@ export default function App() {
       !!dataStore.iceBreakingByDate[iso] ||
       !!dataStore.piketByDow[info.dowName] ||
       (dataStore.pelajaranByDate[iso] && dataStore.pelajaranByDate[iso].length > 0) ||
+      hasEventNoticeForISO(iso) ||
       hasTasksForISO(iso) ||
       (dataStore.birthdayByMonthDay[md] && dataStore.birthdayByMonthDay[md].length > 0)
     );
@@ -515,6 +536,7 @@ export default function App() {
       iceBreaking: dataStore.iceBreakingByDate[selectedISO],
       pelajaran: dataStore.pelajaranByDate[selectedISO] || [],
       tasks: dataStore.tasksByDate[selectedISO] || [],
+      eventNotices: dataStore.eventNoticesByDate?.[selectedISO] || [],
       birthdays: dataStore.birthdayByMonthDay[md] || []
     };
   }, [selectedISO, dataStore]);
@@ -564,6 +586,7 @@ export default function App() {
       doa: activeDoa,
       pelajaran: activePelajaran,
       tasks: dataStore.tasksByDate[activeISO] || [],
+      eventNotices: activeEventNotices,
       piket: activePiket,
       mbg: activeMbg,
       iceBreaking: activeIceBreaking,
@@ -575,7 +598,7 @@ export default function App() {
       setTimeout(() => setDailyCopied(false), 2000);
     }
     return ok;
-  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
+  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activeEventNotices, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
 
   const handleCopyWeeklySummary = useCallback(async () => {
     const text = formatWeeklySummary({
@@ -620,6 +643,8 @@ export default function App() {
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
           onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
+          onOpenSiswa={() => setIsSiswaModalOpen(true)}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
         />
 
         {isWeeklyExportOpen && (
@@ -680,6 +705,35 @@ export default function App() {
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
         />
+
+        <SiswaListModal
+          isOpen={isSiswaModalOpen}
+          onClose={() => setIsSiswaModalOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          onOpenWeeklyExport={() => {
+            setIsSettingsModalOpen(false);
+            setIsWeeklyExportOpen(true);
+          }}
+          onOpenNotifications={() => {
+            setIsSettingsModalOpen(false);
+            setIsNotificationModalOpen(true);
+          }}
+          onBackToMenu={() => {
+            setIsSettingsModalOpen(false);
+            setIsMenuOpen(true);
+          }}
+          hasNotificationActive={isNotificationActive}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          onRefreshData={() => fetchData(true)}
+          isRefreshing={isLoading}
+        />
       </>
     );
   }
@@ -702,6 +756,8 @@ export default function App() {
           onOpenNotifications={() => setIsNotificationModalOpen(true)}
           hasNotificationActive={isNotificationActive}
           onOpenKasMurid={() => setIsKasModalOpen(true)}
+          onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+          onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
         />
 
         {/* Status Notification (Only show on error) */}
@@ -740,7 +796,7 @@ export default function App() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-stone-100 dark:bg-[#1B1D22] text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
                         {(todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6) && activeISO === defaultSchoolISO
-                          ? `Jadwal ${activeInfo.dowName} Depan`
+                          ? `Agenda ${activeInfo.dowName} Depan`
                           : 'Sedang Ditampilkan'}
                       </span>
                       <button
@@ -749,8 +805,8 @@ export default function App() {
                           setIsManualDate(true);
                         }}
                         className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-emerald-50 dark:bg-[#122A1E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] transition cursor-pointer"
-                        title={`Lihat Jadwal Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
-                        aria-label="Kembali ke jadwal hari ini"
+                        title={`Lihat Agenda Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
+                        aria-label="Kembali ke agenda hari ini"
                       >
                         Lihat Hari Ini ({todayWIB.dowName})
                       </button>
@@ -758,34 +814,28 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Prev / Next Day Steppers with accessible touch targets & Salin Agenda */}
+                {/* Prev / Next Day Steppers with accessible touch targets & Salin Agenda (Icon Only) */}
                 <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
                   <button
                     onClick={handleCopyDailySummary}
-                    aria-label={dailyCopied ? 'Jadwal hari ini tersalin' : 'Salin Agenda & Jadwal Harian'}
-                    title={dailyCopied ? 'Tersalin ke clipboard!' : 'Salin Agenda & Jadwal Hari Ini ke WhatsApp'}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-semibold transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+                    aria-label={dailyCopied ? 'Agenda hari ini tersalin ke clipboard' : 'Salin Agenda Harian'}
+                    title={dailyCopied ? 'Tersalin ke clipboard!' : 'Salin Agenda Hari Ini ke WhatsApp'}
+                    className={`w-9 h-9 rounded-lg border flex items-center justify-center transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 ${
                       dailyCopied
-                        ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40'
+                        ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40 shadow-xs'
                         : 'border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-stone-800 dark:text-stone-200'
                     }`}
                   >
                     {dailyCopied ? (
-                      <>
-                        <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span className="inline">Tersalin!</span>
-                      </>
+                      <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     ) : (
-                      <>
-                        <Copy className="w-4 h-4 text-stone-600 dark:text-stone-300" />
-                        <span className="hidden sm:inline">Salin Agenda</span>
-                      </>
+                      <Copy className="w-4 h-4 text-stone-600 dark:text-stone-300" />
                     )}
                   </button>
 
                   <button
                     onClick={() => handleStepDay(-1)}
-                    aria-label="Jadwal Hari Sebelumnya"
+                    aria-label="Agenda Hari Sebelumnya"
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
                     title="Hari Sebelumnya"
                   >
@@ -794,7 +844,7 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => handleStepDay(1)}
-                    aria-label="Jadwal Hari Berikutnya"
+                    aria-label="Agenda Hari Berikutnya"
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
                     title="Hari Berikutnya"
                   >
@@ -816,11 +866,19 @@ export default function App() {
                       <CalendarIcon className="w-4 h-4 text-emerald-800 dark:text-emerald-400 flex-shrink-0" />
                       <span className="font-normal">
                         {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
-                          ? `Hari ini hari libur sekolah (${todayWIB.formattedDate}). Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`
-                          : `Menampilkan jadwal hari efektif sekolah terdekat: ${activeInfo.formattedDate}`}
+                          ? `Hari ini hari libur sekolah (${todayWIB.formattedDate}). Menampilkan agenda hari efektif sekolah terdekat: ${activeInfo.formattedDate}`
+                          : `Menampilkan agenda hari efektif sekolah terdekat: ${activeInfo.formattedDate}`}
                       </span>
                     </div>
                   </div>
+                )}
+
+                {/* Event Notice Banner (All-day / Multi-day events like Camping, PJJ, Masuk Sekolah) */}
+                {activeEventNotices.length > 0 && (
+                  <EventNoticeBanner
+                    notices={activeEventNotices}
+                    onOpenAttachment={handleOpenAttachment}
+                  />
                 )}
 
                 {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
@@ -862,6 +920,7 @@ export default function App() {
                 }}
                 hasDataFn={hasDataForISO}
                 hasTaskFn={hasTasksForISO}
+                hasEventNoticeFn={hasEventNoticeForISO}
                 hasBirthdayFn={getBirthdaysForISO}
                 birthdaysToday={activeBirthdays}
               />
@@ -896,6 +955,8 @@ export default function App() {
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
         onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
+        onOpenSiswa={() => setIsSiswaModalOpen(true)}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 
       {/* Lazy-Loaded Modals wrapped in Suspense for optimal bundle splitting */}
@@ -972,6 +1033,7 @@ export default function App() {
             iceBreaking={selectedDetails.iceBreaking}
             pelajaran={selectedDetails.pelajaran}
             tasks={selectedDetails.tasks}
+            eventNotices={selectedDetails.eventNotices}
             birthdays={selectedDetails.birthdays}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
@@ -999,6 +1061,41 @@ export default function App() {
             baseIso={activeISO || todayWIB.iso}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Daftar Siswa Kelas XB Modal */}
+        {isSiswaModalOpen && (
+          <SiswaListModal
+            isOpen={isSiswaModalOpen}
+            onClose={() => setIsSiswaModalOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Settings Modal (Pengaturan & Ekspor) */}
+        {isSettingsModalOpen && (
+          <SettingsModal
+            isOpen={isSettingsModalOpen}
+            onClose={() => setIsSettingsModalOpen(false)}
+            onOpenWeeklyExport={() => {
+              setIsSettingsModalOpen(false);
+              setIsWeeklyExportOpen(true);
+            }}
+            onOpenNotifications={() => {
+              setIsSettingsModalOpen(false);
+              setIsNotificationModalOpen(true);
+            }}
+            onBackToMenu={() => {
+              setIsSettingsModalOpen(false);
+              setIsMenuOpen(true);
+            }}
+            hasNotificationActive={isNotificationActive}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            onRefreshData={() => fetchData(true)}
+            isRefreshing={isLoading}
           />
         )}
       </React.Suspense>

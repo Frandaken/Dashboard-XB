@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import webpush from 'web-push';
 import { createServer as createViteServer } from 'vite';
+import { RoutineNotificationManager, buildTomorrowNotification } from './serverNotificationService';
 
 const app = express();
 const PORT = process.env.NODE_ENV === 'production' && process.env.PORT
@@ -378,7 +379,10 @@ interface StoredSubscription {
     auth: string;
   };
   preferences?: {
+    jadwalHarian?: boolean;
     pelajaran?: boolean;
+    sumatif?: boolean;
+    tugasPr?: boolean;
     piketMbg?: boolean;
     iceBreaking?: boolean;
   };
@@ -408,6 +412,15 @@ function saveSubscriptions(subs: StoredSubscription[]) {
   }
 }
 
+// 3. Initialize Routine Notification Scheduler (Target: 19:00 WIB daily)
+const routineManager = new RoutineNotificationManager(
+  dataDir,
+  fetchWithRetry,
+  CALENDAR_FEEDS,
+  SHEET_FEEDS
+);
+routineManager.startScheduler();
+
 // Push API: Get Public VAPID Key
 app.get('/api/push/vapid-public-key', (req, res) => {
   res.json({ publicKey: vapidKeys.publicKey });
@@ -416,11 +429,35 @@ app.get('/api/push/vapid-public-key', (req, res) => {
 // Push API: Status & Count
 app.get('/api/push/status', (req, res) => {
   const subs = loadSubscriptions();
+  const schedulerStatus = routineManager.getStatus();
   res.json({
     enabled: Boolean(vapidKeys.publicKey),
     subscriberCount: subs.length,
-    vapidPublicKey: vapidKeys.publicKey
+    vapidPublicKey: vapidKeys.publicKey,
+    scheduler: schedulerStatus
   });
+});
+
+// Push API: Preview tomorrow's 19:00 WIB notification (including sumatif and PR details)
+app.get('/api/push/routine-preview', async (req, res) => {
+  try {
+    const targetDate = req.query.date as string | undefined;
+    const data = await buildTomorrowNotification(targetDate, fetchWithRetry, CALENDAR_FEEDS, SHEET_FEEDS);
+    return res.json({ ok: true, data });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Push API: Send or test tomorrow's 19:00 WIB routine notification
+app.post('/api/push/send-routine', async (req, res) => {
+  try {
+    const { targetDate, force } = req.body || {};
+    const result = await routineManager.sendRoutineNotification(targetDate, force ?? true);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // Push API: Subscribe client
@@ -433,11 +470,18 @@ app.post('/api/push/subscribe', (req, res) => {
 
     const subs = loadSubscriptions();
     const existingIndex = subs.findIndex(s => s.endpoint === subscription.endpoint);
+    const defaultPrefs = {
+      jadwalHarian: true,
+      sumatif: true,
+      tugasPr: true,
+      piketMbg: true,
+      iceBreaking: true
+    };
     const record: StoredSubscription = {
       endpoint: subscription.endpoint,
       expirationTime: subscription.expirationTime,
       keys: subscription.keys,
-      preferences: preferences || { piketMbg: true, iceBreaking: true },
+      preferences: { ...defaultPrefs, ...(preferences || {}) },
       subscribedAt: existingIndex >= 0 ? subs[existingIndex].subscribedAt : new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -566,7 +610,9 @@ app.post('/api/push/broadcast', async (req, res) => {
 
     for (const sub of subs) {
       // Check topic preference if applicable
-      if (topic === 'pelajaran' && sub.preferences && sub.preferences.pelajaran === false) continue;
+      if ((topic === 'pelajaran' || topic === 'jadwalHarian') && sub.preferences && (sub.preferences.jadwalHarian === false || sub.preferences.pelajaran === false)) continue;
+      if (topic === 'sumatif' && sub.preferences && sub.preferences.sumatif === false) continue;
+      if (topic === 'tugasPr' && sub.preferences && sub.preferences.tugasPr === false) continue;
       if (topic === 'piketMbg' && sub.preferences && sub.preferences.piketMbg === false) continue;
       if (topic === 'iceBreaking' && sub.preferences && sub.preferences.iceBreaking === false) continue;
 

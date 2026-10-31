@@ -12,9 +12,12 @@ import {
   PartyPopper,
   Info,
   Loader2,
-  RefreshCw,
   Sun,
-  Moon
+  Moon,
+  Clock,
+  AlertTriangle,
+  FileText,
+  Calendar
 } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
@@ -43,10 +46,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     subscribe,
     unsubscribe,
     sendTestNotification,
+    sendRoutineTestNotification,
     updatePreferences
   } = usePushNotifications();
 
   const [testSent, setTestSent] = useState<boolean>(false);
+  const [routineTestSent, setRoutineTestSent] = useState<boolean>(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -73,6 +78,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     if (ok) {
       setTestSent(true);
       setTimeout(() => setTestSent(false), 4000);
+    }
+  };
+
+  const handleSendRoutineTest = async () => {
+    const res = await sendRoutineTestNotification();
+    if (res.ok) {
+      setRoutineTestSent(true);
+      setTimeout(() => setRoutineTestSent(false), 4000);
     }
   };
 
@@ -104,7 +117,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 Push Notifikasi Kelas XB
               </h2>
               <p className="text-xs text-stone-500 font-medium">
-                SMA Putra Nirmala • Pengingat piket, MBG, & ice breaking
+                SMA Putra Nirmala • Pengingat Rutin H-1 Pukul 19.00 WIB
               </p>
             </div>
           </div>
@@ -163,14 +176,25 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               </div>
               <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                 {isNotificationActive
-                  ? 'Perangkat ini siap menerima pengingat otomatis dari dashboard Kelas XB SMA Putra Nirmala.'
+                  ? 'Perangkat ini siap menerima pengingat harian otomatis setiap malam pukul 19.00 WIB (H-1 sebelum hari sekolah).'
                   : isDenied
                   ? 'Izin notifikasi diblokir oleh browser. Buka setelan izin situs browser untuk mengizinkan.'
                   : isGranted && !isEnabled
                   ? 'Notifikasi sedang dinonaktifkan. Anda dapat mengaktifkannya kembali kapan saja.'
-                  : 'Aktifkan untuk menerima pemberitahuan tepat waktu saat giliran tugas piket dan ice breaking.'}
+                  : 'Aktifkan untuk menerima notifikasi persiapan jadwal, pengingat sumatif, PR, serta tugas piket.'}
               </p>
             </div>
+          </div>
+
+          {/* Routine Schedule Info Card */}
+          <div className="p-3.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs text-emerald-950 dark:text-emerald-200 space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-2 font-bold text-emerald-900 dark:text-emerald-300">
+              <Clock className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+              <span>Jadwal Rutin: H-1 Pukul 19.00 WIB</span>
+            </div>
+            <p className="text-[11px] text-emerald-900/80 dark:text-emerald-300/80 leading-relaxed">
+              Notifikasi otomatis dikirim rutin setiap malam pada pukul <strong>19.00 WIB</strong> (satu hari sebelum hari masuk sekolah), memuat ringkasan mata pelajaran, peringatan khusus <strong>Sumatif &amp; PR</strong>, serta petugas piket &amp; MBG.
+            </p>
           </div>
 
           {/* Error Message if any */}
@@ -203,25 +227,37 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 )}
               </button>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleSendTest}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-900 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 text-xs font-bold shadow-2xs transition cursor-pointer disabled:opacity-60"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {testSent ? 'Notifikasi Terkirim! ✨' : 'Uji Coba Notifikasi'}
-                </button>
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSendRoutineTest}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 active:scale-[0.99] text-white text-xs font-bold shadow-2xs transition cursor-pointer disabled:opacity-60"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    {routineTestSent ? 'Pengingat H-1 Terkirim! 🔔' : 'Uji Notifikasi H-1 (19:00)'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSendTest}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-900 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 text-xs font-bold shadow-2xs transition cursor-pointer disabled:opacity-60"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {testSent ? 'Notifikasi Cepat Terkirim! ✨' : 'Uji Notifikasi Cepat'}
+                  </button>
+                </div>
 
                 <button
                   type="button"
                   onClick={handleToggleSubscribe}
                   disabled={loading}
-                  className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#141518] hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-700 dark:hover:text-rose-300 hover:border-rose-300 text-stone-700 dark:text-stone-300 text-xs font-semibold transition cursor-pointer disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#141518] hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-700 dark:hover:text-rose-300 hover:border-rose-300 text-stone-600 dark:text-stone-400 text-xs font-medium transition cursor-pointer disabled:opacity-60"
                 >
                   <BellOff className="w-3.5 h-3.5" />
-                  Nonaktifkan Notifikasi
+                  Nonaktifkan Pengingat
                 </button>
               </div>
             )}
@@ -229,12 +265,75 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
           {/* Preferences Checklist */}
           <div className="p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-stone-50/30 dark:bg-[#141518]/30 space-y-3 shadow-xs">
-            <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
-              Pilihan Pengingat
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
+                Pilihan Pengingat
+              </h3>
+              <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-300/60 dark:border-emerald-800/60 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Rutin 19.00 WIB
+              </span>
+            </div>
 
-            <div className="space-y-2.5">
-              {/* Option 1: Piket & MBG */}
+            <div className="space-y-2">
+              {/* Option 1: Jadwal Harian H-1 */}
+              <label className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#141518] border border-transparent hover:border-stone-200/80 dark:hover:border-stone-800/80 cursor-pointer transition">
+                <input
+                  type="checkbox"
+                  checked={preferences.jadwalHarian}
+                  onChange={e => updatePreferences({ jadwalHarian: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded text-emerald-800 border-stone-300 focus:ring-emerald-700"
+                />
+                <div className="text-xs min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-200">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    Agenda Harian Esok Hari (H-1 Pukul 19.00 WIB)
+                  </div>
+                  <p className="text-stone-500 text-[11px] mt-0.5 leading-relaxed">
+                    Ringkasan mata pelajaran & persiapan tas buku yang dikirim otomatis setiap malam pukul 19.00 WIB.
+                  </p>
+                </div>
+              </label>
+
+              {/* Option 2: Pengingat Sumatif & Ulangan */}
+              <label className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#141518] border border-transparent hover:border-stone-200/80 dark:hover:border-stone-800/80 cursor-pointer transition">
+                <input
+                  type="checkbox"
+                  checked={preferences.sumatif}
+                  onChange={e => updatePreferences({ sumatif: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded text-emerald-800 border-stone-300 focus:ring-emerald-700"
+                />
+                <div className="text-xs min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                    Pengingat Sumatif &amp; Ulangan (Prioritas Utama)
+                  </div>
+                  <p className="text-stone-500 text-[11px] mt-0.5 leading-relaxed">
+                    Pemberitahuan khusus dengan getar &amp; tanda darurat bila besok terdapat agenda Asesmen Sumatif, Ulangan Harian, atau Penilaian.
+                  </p>
+                </div>
+              </label>
+
+              {/* Option 3: Pengingat Tugas & PR */}
+              <label className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#141518] border border-transparent hover:border-stone-200/80 dark:hover:border-stone-800/80 cursor-pointer transition">
+                <input
+                  type="checkbox"
+                  checked={preferences.tugasPr}
+                  onChange={e => updatePreferences({ tugasPr: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded text-emerald-800 border-stone-300 focus:ring-emerald-700"
+                />
+                <div className="text-xs min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400">
+                    <FileText className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    Pengingat Tugas &amp; Pekerjaan Rumah (PR)
+                  </div>
+                  <p className="text-stone-500 text-[11px] mt-0.5 leading-relaxed">
+                    Pemberitahuan pekerjaan rumah atau tugas yang harus dikumpulkan pada hari esok.
+                  </p>
+                </div>
+              </label>
+
+              {/* Option 4: Piket & MBG */}
               <label className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#141518] border border-transparent hover:border-stone-200/80 dark:hover:border-stone-800/80 cursor-pointer transition">
                 <input
                   type="checkbox"
@@ -245,15 +344,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 <div className="text-xs min-w-0">
                   <div className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-200">
                     <UtensilsCrossed className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                    Petugas Piket & MBG Hari Ini
+                    Petugas Piket &amp; MBG Esok Hari
                   </div>
-                  <p className="text-stone-500 text-[11px] mt-0.5">
+                  <p className="text-stone-500 text-[11px] mt-0.5 leading-relaxed">
                     Pemberitahuan giliran piket kebersihan kelas dan pembagian Makan Bergizi Gratis harian.
                   </p>
                 </div>
               </label>
 
-              {/* Option 2: Ice Breaking */}
+              {/* Option 5: Ice Breaking */}
               <label className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#141518] border border-transparent hover:border-stone-200/80 dark:hover:border-stone-800/80 cursor-pointer transition">
                 <input
                   type="checkbox"
@@ -266,8 +365,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     <PartyPopper className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     Petugas Ice Breaking
                   </div>
-                  <p className="text-stone-500 text-[11px] mt-0.5">
-                    Notifikasi saat giliran tugas ice breaking pada jam pertama mata pelajaran Sosiologi & Geografi.
+                  <p className="text-stone-500 text-[11px] mt-0.5 leading-relaxed">
+                    Notifikasi saat giliran tugas ice breaking pada jam pertama mata pelajaran Sosiologi &amp; Geografi.
                   </p>
                 </div>
               </label>
@@ -283,10 +382,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               </div>
               <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
                 <li>
-                  <strong>Android / Chrome / Windows / Mac:</strong> Notifikasi langsung tampil setelah tombol di atas diklik & diizinkan.
+                  <strong>Android / Chrome / Windows / Mac:</strong> Notifikasi langsung tampil setelah tombol di atas diklik &amp; diizinkan.
                 </li>
                 <li>
-                  <strong>iPhone & iPad (iOS 16.4+):</strong> Buka di Safari, ketuk tombol <strong>Bagikan (Share)</strong> lalu pilih <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>. Buka aplikasi dari layar utama untuk mengaktifkan notifikasi.
+                  <strong>iPhone &amp; iPad (iOS 16.4+):</strong> Buka di Safari, ketuk tombol <strong>Bagikan (Share)</strong> lalu pilih <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>. Buka aplikasi dari layar utama untuk mengaktifkan notifikasi.
                 </li>
               </ul>
             </div>

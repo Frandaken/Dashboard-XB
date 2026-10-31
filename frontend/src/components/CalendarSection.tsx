@@ -15,6 +15,7 @@ interface CalendarSectionProps {
   onSelectDate: (iso: string) => void;
   hasDataFn: (iso: string) => boolean;
   hasTaskFn: (iso: string) => boolean;
+  hasEventNoticeFn?: (iso: string) => boolean;
   hasBirthdayFn: (iso: string) => string[];
   birthdaysToday: string[];
 }
@@ -30,6 +31,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
   onSelectDate,
   hasDataFn,
   hasTaskFn,
+  hasEventNoticeFn,
   hasBirthdayFn,
   birthdaysToday
 }) => {
@@ -48,11 +50,11 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
       <div>
         {/* Calendar Header */}
         <div className="flex items-center justify-between gap-2 mb-2.5 pb-2.5 border-b border-stone-100 dark:border-stone-800/60">
-          <h2 className="font-editorial font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 tracking-tight">
+          <h2 className="hidden sm:block font-editorial font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100 tracking-tight">
             Kalender
           </h2>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
             <button
               id="cal-btn-prev"
               onClick={onPrevMonth}
@@ -62,8 +64,9 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="font-editorial font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100 px-2 min-w-[115px] text-center">
-              {MONTH_ID[viewMonth]} {viewYear}
+            <span className="font-editorial font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100 px-1 sm:px-2 min-w-[76px] sm:min-w-[115px] text-center">
+              <span className="inline sm:hidden">{MONTH_ID[viewMonth].slice(0, 3)} {viewYear}</span>
+              <span className="hidden sm:inline">{MONTH_ID[viewMonth]} {viewYear}</span>
             </span>
 
             <button
@@ -113,6 +116,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             const isPreview = iso === previewISO;
             const hasData = hasDataFn(iso);
             const hasTask = hasTaskFn(iso);
+            const hasNotice = hasEventNoticeFn ? hasEventNoticeFn(iso) : false;
             const birthdays = hasBirthdayFn(iso);
             const hasBday = birthdays.length > 0;
 
@@ -130,8 +134,8 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             else if (isPreview) {
               cellClass += 'bg-stone-200 dark:bg-stone-700/80 text-stone-900 dark:text-stone-100 font-semibold ring-1 ring-stone-400 dark:ring-stone-500 z-10';
             }
-            // Condition 4: Has data (school schedule, doa, mbg, piket)
-            else if (hasData) {
+            // Condition 4: Has data (school schedule, notice, doa, mbg, piket)
+            else if (hasData || hasNotice) {
               cellClass += 'bg-stone-50/80 dark:bg-[#141518] text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-[#1D1E22] font-medium';
             }
             // Condition 5: Normal empty day
@@ -155,12 +159,21 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
                 onClick={() => onSelectDate(iso)}
                 className={cellClass}
                 aria-label={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel}`}
-                title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}
+                title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasNotice ? ' (Ada Acara/Kegiatan)' : ''}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}
               >
                 <span className="leading-none text-xs tabular-nums">{day}</span>
 
                 {/* Status indicator dots */}
                 <div className="flex items-center gap-0.5 mt-0.5 h-1">
+                  {/* Event Notice dot */}
+                  {hasNotice && (
+                    <span
+                      className={`w-1 h-1 rounded-full ${
+                        isToday && isPreview ? 'bg-sky-200' : 'bg-sky-500 dark:bg-sky-400'
+                      }`}
+                      title="Ada Acara/Kegiatan"
+                    />
+                  )}
                   {/* Task indicator dot */}
                   {hasTask && (
                     <span
@@ -193,13 +206,18 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400" />
+            <span>Kegiatan</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400" />
-            <span>Ada Tugas</span>
+            <span>Tugas</span>
           </div>
 
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-rose-500 dark:bg-rose-400" />
-            <span>Ulang Tahun</span>
+            <span>Ultah</span>
           </div>
         </div>
       </div>

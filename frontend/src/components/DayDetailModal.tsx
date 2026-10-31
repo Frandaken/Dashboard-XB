@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon, Copy, Check } from 'lucide-react';
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment, CalendarEventNotice } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
 import { parseISODateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../data/songSchedule';
 import { getFirstLessonSession } from '../utils/iceBreakingUtils';
 import { formatDailySummary, copyTextToClipboard } from '../utils/summaryFormatter';
 import { TaskBanner } from './TaskBanner';
+import { EventNoticeBanner } from './EventNoticeBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
 import { SongLyricsModal } from './SongLyricsModal';
 import { AllSongsModal } from './AllSongsModal';
@@ -20,6 +21,7 @@ interface DayDetailModalProps {
   iceBreaking?: IceBreakingSchedule;
   pelajaran?: PeriodItem[];
   tasks?: TaskItem[];
+  eventNotices?: CalendarEventNotice[];
   birthdays?: string[];
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -36,6 +38,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   iceBreaking,
   pelajaran = [],
   tasks = [],
+  eventNotices = [],
   birthdays = [],
   darkMode,
   onToggleDarkMode,
@@ -53,6 +56,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       doa,
       pelajaran,
       tasks,
+      eventNotices,
       piket,
       mbg,
       iceBreaking,
@@ -63,7 +67,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [isoDate, doa, pelajaran, tasks, piket, mbg, iceBreaking, birthdays]);
+  }, [isoDate, doa, pelajaran, tasks, eventNotices, piket, mbg, iceBreaking, birthdays]);
 
   // Real-time tracking of app theme (Light mode / OLED black)
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -150,28 +154,22 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Tombol Salin Ringkasan Hari Ini */}
+            {/* Tombol Salin Ringkasan Hari Ini (Icon Only) */}
             <button
               type="button"
               onClick={handleCopyDailySummary}
-              aria-label={copied ? 'Tersalin ke clipboard' : 'Salin Ringkasan Hari Ini'}
-              title={copied ? 'Tersalin ke clipboard!' : 'Salin Ringkasan Hari Ini'}
-              className={`h-8 px-2.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+              aria-label={copied ? 'Tersalin ke clipboard' : 'Salin Agenda Harian'}
+              title={copied ? 'Tersalin ke clipboard!' : 'Salin Agenda Hari Ini ke WhatsApp'}
+              className={`w-8 h-8 rounded-lg border flex items-center justify-center transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 ${
                 copied
-                  ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40'
+                  ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40 shadow-xs'
                   : 'bg-white dark:bg-[#1E1F23] text-stone-700 dark:text-stone-300 border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-100 dark:hover:bg-[#25272C]'
               }`}
             >
               {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-[11px] font-bold">Tersalin!</span>
-                </>
+                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-stone-600 dark:text-stone-300" />
-                  <span className="hidden sm:inline text-xs">Salin Jadwal</span>
-                </>
+                <Copy className="w-3.5 h-3.5 text-stone-600 dark:text-stone-300" />
               )}
             </button>
 
@@ -204,6 +202,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
         {/* Modal Content with smooth touch scrolling */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 min-h-0">
+          {/* Event Notice Banner for full-day / multi-day events */}
+          {eventNotices && eventNotices.length > 0 && (
+            <EventNoticeBanner notices={eventNotices} onOpenAttachment={onOpenAttachment} />
+          )}
+
           {/* Lagu Nasional Minggu Ini */}
           {hasSong ? (
             <div

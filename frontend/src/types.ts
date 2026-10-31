@@ -138,6 +138,20 @@ export interface KasDataStore {
   lastUpdated?: string;
 }
 
+export interface CalendarEventNotice {
+  id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  startDate: string; // ISO YYYY-MM-DD
+  endDate: string; // inclusive last ISO date YYYY-MM-DD
+  isAllDay: boolean;
+  isMultiDay: boolean;
+  totalDays: number;
+  dayIndex: number; // 1-based index (e.g. 1 for Hari ke-1 dari 3)
+  attachment?: TaskAttachment;
+}
+
 export interface ClassDataStore {
   doaByDate: Record<string, DoaSchedule>;
   mbgByDate: Record<string, MbgSchedule>;
@@ -145,6 +159,7 @@ export interface ClassDataStore {
   iceBreakingByDate: Record<string, IceBreakingSchedule>;
   pelajaranByDate: Record<string, PeriodItem[]>;
   tasksByDate: Record<string, TaskItem[]>;
+  eventNoticesByDate: Record<string, CalendarEventNotice[]>;
   birthdayByMonthDay: Record<string, string[]>;
   kasData?: KasDataStore;
 }

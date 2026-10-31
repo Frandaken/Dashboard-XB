@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check, Settings } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -15,6 +15,8 @@ interface HamburgerMenuModalProps {
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
   onOpenWeeklyExport?: () => void;
+  onOpenSiswa?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
@@ -29,7 +31,9 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onOpenKasMurid,
   darkMode,
   onToggleDarkMode,
-  onOpenWeeklyExport
+  onOpenWeeklyExport,
+  onOpenSiswa,
+  onOpenSettings
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -94,13 +98,29 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
               </button>
             )}
 
-            {/* Tombol kecil notifikasi di atas jika notifikasi sudah aktif */}
-            {hasNotificationActive && onOpenNotifications && (
+            {onOpenSettings && (
               <button
                 type="button"
                 onClick={() => {
                   onClose();
-                  onOpenNotifications();
+                  onOpenSettings();
+                }}
+                aria-label="Pengaturan Aplikasi"
+                title="Buka Pengaturan & Ekspor"
+                className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              >
+                <Settings className="w-4 h-4 text-stone-700 dark:text-stone-300" />
+              </button>
+            )}
+
+            {/* Tombol kecil notifikasi di atas jika notifikasi sudah aktif */}
+            {hasNotificationActive && (onOpenSettings || onOpenNotifications) && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onOpenSettings) onOpenSettings();
+                  else if (onOpenNotifications) onOpenNotifications();
                 }}
                 aria-label="Pengaturan Push Notifikasi (Aktif)"
                 title="Pengaturan Push Notifikasi (Aktif)"
@@ -155,35 +175,35 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             </button>
           )}
 
-          {/* Action: Agenda Mingguan & Ekspor Interaktif */}
-          {onOpenWeeklyExport && (
+          {/* Action: Daftar Siswa Kelas XB */}
+          {onOpenSiswa && (
             <button
               type="button"
               onClick={() => {
                 onClose();
-                onOpenWeeklyExport();
+                onOpenSiswa();
               }}
-              className="w-full text-left p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600"
+              className="w-full text-left p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-teal-600/40 dark:hover:border-teal-500/40 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-teal-600"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-[#13281E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20 dark:border-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <ClipboardList className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-[#0D2420] text-teal-800 dark:text-teal-300 border border-teal-600/20 dark:border-teal-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Users className="w-5 h-5 text-teal-700 dark:text-teal-400" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
-                      Agenda Mingguan &amp; Ekspor
+                      Daftar Siswa (Siswa)
                     </span>
-                    <span className="text-[11px] font-semibold text-emerald-900 dark:text-emerald-300 bg-emerald-50 dark:bg-[#13281E] px-2 py-0.5 rounded-md border border-emerald-600/20 dark:border-emerald-500/20">
-                      Pilih Rentang
+                    <span className="text-[11px] font-semibold text-teal-900 dark:text-teal-300 bg-teal-50 dark:bg-[#0D2420] px-2 py-0.5 rounded-md border border-teal-600/20 dark:border-teal-500/20">
+                      33 Siswa
                     </span>
                   </div>
                   <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
-                    Pilih rentang tanggal, minggu ke berapa, dan kustomisasi konten untuk dibagikan ke WhatsApp.
+                    Daftar lengkap 33 siswa Kelas XB, nomor absen, panggilan, dan jadwal piket.
                   </p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
             </button>
           )}
 
@@ -307,38 +327,6 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
           </button>
 
-          {/* Action 5: Push Notifikasi & Pengingat (Hanya tampil sebagai menu besar jika notifikasi belum aktif) */}
-          {!hasNotificationActive && onOpenNotifications && (
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenNotifications();
-              }}
-              className="w-full text-left p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-[#13281E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20 dark:border-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Bell className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
-                      Push Notifikasi &amp; Pengingat
-                    </span>
-                    <span className="text-[11px] font-medium text-emerald-900 dark:text-emerald-300 bg-emerald-50 dark:bg-[#13281E] px-2 py-0.5 rounded-md border border-emerald-600/20 dark:border-emerald-500/20">
-                      Aktifkan
-                    </span>
-                  </div>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
-                    Pengingat otomatis jam pelajaran, piket, MBG, &amp; tugas ice breaking langsung ke perangkat Anda.
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
-            </button>
-          )}
-
           {/* Action 6: Sinkronisasi Otomatis (Klik untuk Refresh Halaman & Data) */}
           <div
             role="button"
@@ -384,21 +372,6 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             SMA Putra Nirmala • Kelas XB
           </div>
           <div className="flex items-center gap-2">
-            {/* Tombol kecil notifikasi di bawah jika notifikasi sudah aktif */}
-            {hasNotificationActive && onOpenNotifications && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenNotifications();
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-emerald-600/20 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-[#13281E] hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] text-emerald-800 dark:text-emerald-300 transition cursor-pointer font-medium text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
-                title="Pengaturan Push Notifikasi (Aktif)"
-              >
-                <Bell className="w-3.5 h-3.5 text-emerald-700 dark:text-[#34D399]" />
-                <span className="inline">Notifikasi</span>
-              </button>
-            )}
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-lg bg-stone-100 dark:bg-[#141518] hover:bg-stone-200 dark:hover:bg-[#202227] text-stone-700 dark:text-stone-300 text-xs font-medium transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"

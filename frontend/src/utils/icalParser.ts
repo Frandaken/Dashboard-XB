@@ -1,10 +1,120 @@
 import ICAL from 'ical.js';
-import { PeriodItem, TaskItem, TaskType, TaskAttachment } from '../types';
+import { PeriodItem, TaskItem, TaskType, TaskAttachment, CalendarEventNotice } from '../types';
 
 export interface ParsedTask {
   title: string;
   details?: string;
   hasDetails: boolean;
+}
+
+export interface InclusiveEventRange {
+  isAllDay: boolean;
+  isMultiDay: boolean;
+  totalDays: number;
+  dates: string[];
+  startDateStr: string;
+  endDateStr: string;
+}
+
+/**
+ * Checks if an iCal event is an all-day (full-day) or multi-day event.
+ * If so, returns the inclusive list of ISO dates and metadata.
+ * RFC 5545 specifies that DTEND for DATE values (all-day events) is non-inclusive.
+ */
+export function extractInclusiveDateRange(ev: ICAL.Event): InclusiveEventRange | null {
+  const st = ev.startDate;
+  if (!st) return null;
+
+  const isAllDay = Boolean(st.isDate);
+  const et = ev.endDate;
+  const startDateStr = `${st.year}-${String(st.month).padStart(2, '0')}-${String(st.day).padStart(2, '0')}`;
+  const dates: string[] = [];
+
+  if (isAllDay) {
+    if (et && et.isDate) {
+      // RFC 5545: DTEND with VALUE=DATE is non-inclusive (the day following the event's end)
+      const startUtc = Date.UTC(st.year, st.month - 1, st.day, 12, 0, 0);
+      const endUtc = Date.UTC(et.year, et.month - 1, et.day, 12, 0, 0);
+      const diffDays = Math.round((endUtc - startUtc) / (24 * 60 * 60 * 1000));
+
+      if (diffDays > 1) {
+        for (let i = 0; i < diffDays; i++) {
+          const cur = new Date(startUtc + i * 24 * 60 * 60 * 1000);
+          const y = cur.getUTCFullYear();
+          const m = String(cur.getUTCMonth() + 1).padStart(2, '0');
+          const d = String(cur.getUTCDate()).padStart(2, '0');
+          dates.push(`${y}-${m}-${d}`);
+        }
+        return {
+          isAllDay: true,
+          isMultiDay: true,
+          totalDays: dates.length,
+          dates,
+          startDateStr,
+          endDateStr: dates[dates.length - 1]
+        };
+      } else {
+        // 1-day all-day event
+        dates.push(startDateStr);
+        return {
+          isAllDay: true,
+          isMultiDay: false,
+          totalDays: 1,
+          dates,
+          startDateStr,
+          endDateStr: startDateStr
+        };
+      }
+    } else {
+      // All-day event without DTEND
+      dates.push(startDateStr);
+      return {
+        isAllDay: true,
+        isMultiDay: false,
+        totalDays: 1,
+        dates,
+        startDateStr,
+        endDateStr: startDateStr
+      };
+    }
+  }
+
+  // Check timed event spanning across multiple days or duration >= 24h
+  if (et) {
+    const startUtc = Date.UTC(st.year, st.month - 1, st.day, st.hour || 0, st.minute || 0, 0);
+    const endUtc = Date.UTC(et.year, et.month - 1, et.day, et.hour || 0, et.minute || 0, 0);
+    const durSec = (endUtc - startUtc) / 1000;
+
+    const endsAtMidnight = et.hour === 0 && et.minute === 0 && et.second === 0;
+    const effectiveEndUtc = endsAtMidnight ? endUtc - 1000 : endUtc;
+    const effEndDate = new Date(effectiveEndUtc);
+    const effEndDKey = `${effEndDate.getUTCFullYear()}-${String(effEndDate.getUTCMonth() + 1).padStart(2, '0')}-${String(effEndDate.getUTCDate()).padStart(2, '0')}`;
+
+    if (durSec >= 86400 || startDateStr !== effEndDKey) {
+      let curUtc = Date.UTC(st.year, st.month - 1, st.day, 12, 0, 0);
+      const limitUtc = Date.UTC(effEndDate.getUTCFullYear(), effEndDate.getUTCMonth(), effEndDate.getUTCDate(), 12, 0, 0);
+
+      while (curUtc <= limitUtc && dates.length < 365) {
+        const curDate = new Date(curUtc);
+        const y = curDate.getUTCFullYear();
+        const m = String(curDate.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(curDate.getUTCDate()).padStart(2, '0');
+        dates.push(`${y}-${m}-${d}`);
+        curUtc += 24 * 60 * 60 * 1000;
+      }
+
+      return {
+        isAllDay: false,
+        isMultiDay: dates.length > 1,
+        totalDays: dates.length,
+        dates,
+        startDateStr,
+        endDateStr: dates[dates.length - 1]
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -120,19 +230,21 @@ export function parsePelajaranICS(
 ): {
   pelajaranByDate: Record<string, PeriodItem[]>;
   tasksByDate: Record<string, TaskItem[]>;
+  eventNoticesByDate: Record<string, CalendarEventNotice[]>;
 } {
   const pelajaranByDate: Record<string, PeriodItem[]> = {};
   const tasksByDate: Record<string, TaskItem[]> = {};
+  const eventNoticesByDate: Record<string, CalendarEventNotice[]> = {};
 
   if (!icsText || typeof icsText !== 'string' || !icsText.trim()) {
-    return { pelajaranByDate, tasksByDate };
+    return { pelajaranByDate, tasksByDate, eventNoticesByDate };
   }
 
   // Guard against HTML error pages or non-iCal payloads (e.g. <!doctype html> from network or proxy fallback)
   const trimmed = icsText.trim();
   if (trimmed.startsWith('<') || !trimmed.includes('BEGIN:VCALENDAR')) {
     console.warn('parsePelajaranICS: Received non-iCal payload (likely HTML or network error), skipping parsing');
-    return { pelajaranByDate, tasksByDate };
+    return { pelajaranByDate, tasksByDate, eventNoticesByDate };
   }
 
   try {
@@ -172,6 +284,38 @@ export function parsePelajaranICS(
         }
       }
       return startStr;
+    };
+
+    const addEventNotice = (ev: ICAL.Event, range: InclusiveEventRange) => {
+      const summary = (ev.summary || '').trim() || 'Kegiatan';
+      const desc = ev.description ? ev.description.trim() : '';
+      const parsedDesc = desc ? parseTaskDescription(desc) : undefined;
+      const attachment = extractAttachment(ev.component, desc);
+
+      range.dates.forEach((dateKey, idx) => {
+        if (!eventNoticesByDate[dateKey]) {
+          eventNoticesByDate[dateKey] = [];
+        }
+
+        const exists = eventNoticesByDate[dateKey].some(
+          n => n.title.toLowerCase() === summary.toLowerCase() && n.startDate === range.startDateStr
+        );
+        if (!exists) {
+          eventNoticesByDate[dateKey].push({
+            id: `${ev.uid || 'notice'}_${dateKey}_${idx + 1}`,
+            title: summary,
+            description: parsedDesc?.details || (parsedDesc?.title && parsedDesc.title !== summary ? parsedDesc.title : desc) || undefined,
+            location: ev.location ? ev.location.trim() : undefined,
+            startDate: range.startDateStr,
+            endDate: range.endDateStr,
+            isAllDay: range.isAllDay,
+            isMultiDay: range.isMultiDay,
+            totalDays: range.totalDays,
+            dayIndex: idx + 1,
+            attachment
+          });
+        }
+      });
     };
 
     const addPeriod = (dateKey: string, ev: ICAL.Event, startTime: string) => {
@@ -243,6 +387,18 @@ export function parsePelajaranICS(
     const consumedOverrides = new Set<string>();
 
     for (const event of baseEvents) {
+      // Check first if event is a full-day or multi-day event (e.g. Camping PPTA, PJJ, Masuk Sekolah)
+      const noticeRange = extractInclusiveDateRange(event);
+      if (noticeRange) {
+        const evStart = ICAL.Time.fromJSDate(new Date(noticeRange.startDateStr + 'T00:00:00Z'));
+        const evEnd = ICAL.Time.fromJSDate(new Date(noticeRange.endDateStr + 'T23:59:59Z'));
+        if (evEnd.compare(rStart) >= 0 && evStart.compare(rEnd) <= 0) {
+          addEventNotice(event, noticeRange);
+        }
+        // Do not add full-day or multi-day notices into the daily lesson period schedule
+        continue;
+      }
+
       if (event.isRecurring()) {
         try {
           const it = event.iterator();
@@ -258,11 +414,16 @@ export function parsePelajaranICS(
 
               if (overrideEv) {
                 consumedOverrides.add(overrideKey);
-                // When an instance has a recurrence override in Google Calendar,
-                // use the override event's modified start time rather than the original recurring start time
-                const timeToUse = overrideEv.startDate || next;
-                const timeStr = formatPeriodTime(overrideEv, timeToUse);
-                addPeriod(dKey, overrideEv, timeStr);
+                const overRange = extractInclusiveDateRange(overrideEv);
+                if (overRange) {
+                  addEventNotice(overrideEv, overRange);
+                } else {
+                  // When an instance has a recurrence override in Google Calendar,
+                  // use the override event's modified start time rather than the original recurring start time
+                  const timeToUse = overrideEv.startDate || next;
+                  const timeStr = formatPeriodTime(overrideEv, timeToUse);
+                  addPeriod(dKey, overrideEv, timeStr);
+                }
               } else {
                 const timeStr = formatPeriodTime(event, next);
                 addPeriod(dKey, event, timeStr);
@@ -285,6 +446,11 @@ export function parsePelajaranICS(
     // Include any standalone overrides whose base recurring events were not expanded in the loop
     overrides.forEach((ev, key) => {
       if (!consumedOverrides.has(key)) {
+        const overRange = extractInclusiveDateRange(ev);
+        if (overRange) {
+          addEventNotice(ev, overRange);
+          return;
+        }
         const parts = key.split('_');
         const dKey = parts[parts.length - 1];
         const st = ev.startDate;
@@ -320,7 +486,7 @@ export function parsePelajaranICS(
     console.error('Failed to parse pelajaran ICS:', err);
   }
 
-  return { pelajaranByDate, tasksByDate };
+  return { pelajaranByDate, tasksByDate, eventNoticesByDate };
 }
 
 export function parseBirthdayICS(

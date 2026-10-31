@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export interface NotificationPreferences {
+  jadwalHarian: boolean;
+  sumatif: boolean;
+  tugasPr: boolean;
   piketMbg: boolean;
   iceBreaking: boolean;
 }
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
+  jadwalHarian: true,
+  sumatif: true,
+  tugasPr: true,
   piketMbg: true,
   iceBreaking: true
 };
@@ -43,7 +49,7 @@ export function usePushNotifications() {
     if (typeof window === 'undefined') return DEFAULT_PREFERENCES;
     try {
       const saved = localStorage.getItem(PREFS_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_PREFERENCES;
+      return saved ? { ...DEFAULT_PREFERENCES, ...JSON.parse(saved) } : DEFAULT_PREFERENCES;
     } catch {
       return DEFAULT_PREFERENCES;
     }
@@ -328,6 +334,28 @@ export function usePushNotifications() {
     }
   }, []);
 
+  // Send Immediate Simulation of 19:00 WIB H-1 Routine Notification
+  const sendRoutineTestNotification = useCallback(async (targetDate?: string): Promise<{ ok: boolean; message?: string }> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/push/send-routine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetDate, force: true })
+      });
+      const data = await res.json();
+      setLoading(false);
+      return { ok: data.ok ?? true, message: data.message };
+    } catch (err: any) {
+      console.error('Failed to trigger routine H-1 notification test:', err);
+      setError(err.message || 'Gagal mengirim simulasi notifikasi H-1.');
+      setLoading(false);
+      return { ok: false, message: err.message };
+    }
+  }, []);
+
   return {
     isSupported,
     permission,
@@ -340,6 +368,8 @@ export function usePushNotifications() {
     subscribe,
     unsubscribe,
     sendTestNotification,
+    sendRoutineTestNotification,
     updatePreferences
   };
 }
+

@@ -133,7 +133,7 @@ export const NotFoundUI: React.FC<NotFoundUIProps> = ({
                     Jadwal Pelajaran
                   </div>
                   <div className="text-[11px] text-stone-500 dark:text-stone-400">
-                    Jadwal harian, JP, & tugas
+                    Agenda harian, JP, &amp; tugas
                   </div>
                 </div>
               </button>

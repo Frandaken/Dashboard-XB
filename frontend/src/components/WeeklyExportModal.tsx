@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   X,
   Share2,
   Calendar,
   ClipboardList,
   Check,
+  CheckCheck,
+  MessageCircle,
   Copy,
   Download,
   Filter,
@@ -12,8 +14,7 @@ import {
   Sliders,
   ChevronRight,
   Sun,
-  Moon,
-  Sparkles
+  Moon
 } from 'lucide-react';
 import { ClassDataStore } from '../types';
 import {
@@ -36,6 +37,127 @@ interface WeeklyExportModalProps {
 
 type ExportMode = 'week' | 'range';
 type WeekPreset = 'current' | 'next' | 'prev' | 'picker';
+type PreviewTab = 'visual' | 'raw';
+
+/**
+ * Parses inline WhatsApp formatting tokens (*bold*, _italic_, ~strike~, `code`)
+ * into styled React nodes for live visual preview.
+ */
+function parseWhatsAppInline(text: string): React.ReactNode[] {
+  if (!text) return [];
+
+  // Match WhatsApp inline tokens: *bold*, _italic_, ~strike~, `code`
+  const tokenRegex = /(\*[^*\n\r]+\*|_[^_\n\r]+_|~[^~\n\r]+~|`[^`\n\r]+`)/g;
+  const parts = text.split(tokenRegex);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+
+    if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+      const content = part.slice(1, -1);
+      return (
+        <strong key={index} className="font-bold text-[#111b21] dark:text-white">
+          {content}
+        </strong>
+      );
+    }
+
+    if (part.startsWith('_') && part.endsWith('_') && part.length >= 2) {
+      const content = part.slice(1, -1);
+      return (
+        <em key={index} className="italic text-[#3b4a54] dark:text-[#c4ccd3]">
+          {content}
+        </em>
+      );
+    }
+
+    if (part.startsWith('~') && part.endsWith('~') && part.length >= 2) {
+      const content = part.slice(1, -1);
+      return (
+        <span key={index} className="line-through text-[#667781] dark:text-[#8696a0]">
+          {content}
+        </span>
+      );
+    }
+
+    if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+      const content = part.slice(1, -1);
+      return (
+        <code key={index} className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[11px]">
+          {content}
+        </code>
+      );
+    }
+
+    return <span key={index}>{part}</span>;
+  });
+}
+
+/**
+ * Formats WhatsApp text into multi-line chat message blocks including quotes (>),
+ * separators (=== / ---), and bullet points.
+ */
+function renderWhatsAppBlocks(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+
+  let quoteBuffer: string[] = [];
+
+  const flushQuotes = (key: number) => {
+    if (quoteBuffer.length > 0) {
+      elements.push(
+        <div
+          key={`quote-${key}`}
+          className="border-l-[3.5px] border-[#00a884] bg-[#00000008] dark:bg-[#ffffff12] pl-2.5 py-1 my-1.5 rounded-r-md text-[12px] italic text-[#111b21] dark:text-[#e9edef]"
+        >
+          {quoteBuffer.map((ql, qIdx) => (
+            <div key={qIdx} className={qIdx > 0 ? 'mt-0.5' : ''}>
+              {parseWhatsAppInline(ql)}
+            </div>
+          ))}
+        </div>
+      );
+      quoteBuffer = [];
+    }
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+
+    // Blockquote handling (lines starting with >)
+    if (line.startsWith('> ') || line.startsWith('>')) {
+      quoteBuffer.push(line.startsWith('> ') ? line.slice(2) : line.slice(1));
+      return;
+    } else {
+      flushQuotes(idx);
+    }
+
+    // Horizontal separators (e.g. === or ---)
+    if (/^[=\-─_]{3,}$/.test(trimmed)) {
+      elements.push(
+        <div key={`hr-${idx}`} className="my-2 border-t border-black/10 dark:border-white/15" />
+      );
+      return;
+    }
+
+    // Empty lines
+    if (trimmed === '') {
+      elements.push(<div key={`empty-${idx}`} className="h-2.5" />);
+      return;
+    }
+
+    // Regular line
+    elements.push(
+      <div key={`line-${idx}`} className="leading-[1.55]">
+        {parseWhatsAppInline(line)}
+      </div>
+    );
+  });
+
+  flushQuotes(lines.length);
+
+  return elements;
+}
 
 export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
   isOpen,
@@ -45,19 +167,54 @@ export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
   darkMode,
   onToggleDarkMode
 }) => {
-  const baseParts = useMemo(() => parseISODateParts(baseIso), [baseIso]);
+  const initialAnchorParts = useMemo(() => {
+    const schoolDays = getSchoolWeekISODates(baseIso);
+    const anchorIso = schoolDays[2] || schoolDays[0] || baseIso;
+    return parseISODateParts(anchorIso);
+  }, [baseIso]);
 
   // Mode: Preset Pekan / Minggu vs Rentang Tanggal Kustom
   const [exportMode, setExportMode] = useState<ExportMode>('week');
   const [weekPreset, setWeekPreset] = useState<WeekPreset>('current');
 
   // Month & Week selector state
-  const [selectedYear, setSelectedYear] = useState<number>(() => baseParts.year);
-  const [selectedMonth, setSelectedMonth] = useState<number>(() => baseParts.month);
+  const [selectedYear, setSelectedYear] = useState<number>(() => initialAnchorParts.year);
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => initialAnchorParts.month);
   const [selectedWeekNum, setSelectedWeekNum] = useState<number>(() => {
-    const d = baseParts.day;
-    return Math.min(5, Math.max(1, Math.ceil(d / 7)));
+    return Math.min(5, Math.max(1, Math.ceil(initialAnchorParts.day / 7)));
   });
+
+  // Handler to apply preset and synchronously update Month & Week selector
+  const applyWeekPreset = useCallback((preset: 'prev' | 'current' | 'next') => {
+    setWeekPreset(preset);
+
+    let targetIso = baseIso;
+    if (preset === 'prev') {
+      targetIso = stepISODate(baseIso, -7);
+    } else if (preset === 'next') {
+      targetIso = stepISODate(baseIso, 7);
+    }
+
+    const schoolDays = getSchoolWeekISODates(targetIso);
+    const anchorIso = schoolDays[2] || schoolDays[0] || targetIso;
+    const parts = parseISODateParts(anchorIso);
+
+    setSelectedYear(parts.year);
+    setSelectedMonth(parts.month);
+    setSelectedWeekNum(Math.min(5, Math.max(1, Math.ceil(parts.day / 7))));
+  }, [baseIso]);
+
+  // Synchronize month and week selection with current baseIso when modal opens
+  useEffect(() => {
+    if (isOpen && weekPreset === 'current') {
+      const schoolDays = getSchoolWeekISODates(baseIso);
+      const anchorIso = schoolDays[2] || schoolDays[0] || baseIso;
+      const parts = parseISODateParts(anchorIso);
+      setSelectedYear(parts.year);
+      setSelectedMonth(parts.month);
+      setSelectedWeekNum(Math.min(5, Math.max(1, Math.ceil(parts.day / 7))));
+    }
+  }, [isOpen, baseIso]);
 
   // Custom date range state
   const defaultRange = useMemo(() => {
@@ -87,6 +244,16 @@ export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
   // UI States
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [previewTab, setPreviewTab] = useState<PreviewTab>('visual');
+  const currentTimeStr = useMemo(() => getWIBDateParts().timeStr.slice(0, 5), []);
+
+  const handleCopyFromContainer = (e: React.ClipboardEvent) => {
+    // Ensure that copying inside the preview container puts authentic raw WhatsApp format into clipboard
+    e.clipboardData.setData('text/plain', generatedText);
+    e.preventDefault();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   // Calculate target dates
   const targetDateIsos = useMemo(() => {
@@ -211,7 +378,7 @@ export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
             </div>
             <div className="min-w-0">
               <h2 id="export-modal-title" className="text-base sm:text-lg font-bold text-stone-900 dark:text-stone-100 leading-tight">
-                Ekspor Agenda &amp; Jadwal Mingguan
+                Ekspor Agenda Mingguan
               </h2>
               <p className="text-xs text-stone-500 dark:text-stone-400 font-normal truncate mt-0.5">
                 Kustomisasi rentang tanggal, minggu, dan konten untuk dibagikan ke WhatsApp
@@ -288,7 +455,7 @@ export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
                   <div className="grid grid-cols-3 gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setWeekPreset('prev')}
+                      onClick={() => applyWeekPreset('prev')}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                         weekPreset === 'prev'
                           ? 'bg-emerald-50 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 border-emerald-600/40'
@@ -299,7 +466,7 @@ export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setWeekPreset('current')}
+                      onClick={() => applyWeekPreset('current')}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                         weekPreset === 'current'
                           ? 'bg-emerald-50 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 border-emerald-600/40'
@@ -310,7 +477,7 @@ export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setWeekPreset('next')}
+                      onClick={() => applyWeekPreset('next')}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                         weekPreset === 'next'
                           ? 'bg-emerald-50 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 border-emerald-600/40'
@@ -542,34 +709,127 @@ export const WeeklyExportModal: React.FC<WeeklyExportModalProps> = ({
           </div>
 
           {/* RIGHT PANEL: LIVE WHATSAPP PREVIEW (Col span 7) */}
-          <div className="lg:col-span-7 flex flex-col p-4 sm:p-5 overflow-hidden bg-white dark:bg-[#151619]">
-            <div className="flex items-center justify-between gap-2 mb-2.5 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                  Pratinjau Teks WhatsApp (Live)
-                </span>
+          <div className="lg:col-span-7 flex flex-col overflow-hidden bg-white dark:bg-[#151619] border-t lg:border-t-0">
+            {/* WhatsApp Chat Navigation Bar */}
+            <div className="px-3.5 sm:px-4 py-2 bg-[#008069] dark:bg-[#1f2c34] text-white flex items-center justify-between gap-2 flex-shrink-0 shadow-xs z-10">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-emerald-800 dark:bg-emerald-900/60 border border-white/20 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs shadow-xs">
+                  <MessageCircle className="w-4 h-4 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-semibold truncate leading-tight text-white flex items-center gap-1.5">
+                    <span>Grup WhatsApp Kelas XB</span>
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                    <p className="text-[10px] sm:text-[11px] text-emerald-100/90 dark:text-stone-300 truncate font-normal">
+                      online • Pratinjau Tampilan WhatsApp Live
+                    </p>
+                  </div>
+                </div>
               </div>
-              <span className="text-[11px] text-stone-500 dark:text-stone-400 font-mono">
-                {generatedText.split('\n').length} baris • {generatedText.length} karakter
-              </span>
+
+              {/* View Switcher: Live Visual vs Teks Mentah */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center bg-black/20 dark:bg-black/30 rounded-lg p-0.5 text-[11px] font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab('visual')}
+                    className={`px-2 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                      previewTab === 'visual'
+                        ? 'bg-white text-emerald-950 font-bold shadow-xs'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span>Visual</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab('raw')}
+                    className={`px-2 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                      previewTab === 'raw'
+                        ? 'bg-white text-emerald-950 font-bold shadow-xs'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    <span>Mentah</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCopyText}
+                  title="Salin format WhatsApp mentah ke clipboard"
+                  className={`px-2 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 text-[11px] font-semibold border ${
+                    copied
+                      ? 'bg-white text-emerald-800 border-white shadow-xs'
+                      : 'bg-white/15 hover:bg-white/25 text-white border-white/20'
+                  }`}
+                >
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span className="hidden sm:inline">{copied ? 'Tersalin!' : 'Salin'}</span>
+                </button>
+              </div>
             </div>
 
-            {/* Monospace WhatsApp Preview Container */}
-            <div className="flex-1 min-h-0 relative rounded-xl border border-stone-200/90 dark:border-stone-800 bg-stone-50/70 dark:bg-[#0D0E11] p-3.5 overflow-auto shadow-inner text-xs font-mono leading-relaxed text-stone-800 dark:text-stone-200 whitespace-pre-wrap select-text">
-              {generatedText}
+            {/* Chat Body Wallpaper Area */}
+            <div
+              onCopy={handleCopyFromContainer}
+              className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 transition-colors relative"
+              style={{
+                backgroundColor: darkMode ? '#0b141a' : '#efeae2',
+                backgroundImage: darkMode
+                  ? 'radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)'
+                  : 'radial-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px)',
+                backgroundSize: '16px 16px'
+              }}
+            >
+              {previewTab === 'visual' ? (
+                <div className="max-w-2xl mx-auto flex flex-col items-center">
+                  {/* WhatsApp Center Date Badge */}
+                  <div className="mb-2.5 px-3 py-0.5 rounded-lg text-[10.5px] font-semibold uppercase tracking-wider shadow-2xs border bg-[#ffffffd9] dark:bg-[#182229e6] text-[#54656f] dark:text-[#8696a0] border-black/5 dark:border-white/5 backdrop-blur-xs">
+                    {firstDateFormatted ? `${firstDateFormatted} – ${lastDateFormatted}` : 'AGENDA KELAS XB'}
+                  </div>
+
+                  {/* WhatsApp Outgoing Message Speech Bubble */}
+                  <div
+                    className="w-full rounded-2xl rounded-tr-xs p-3.5 sm:p-4 text-[12px] sm:text-[13px] shadow-sm border leading-relaxed select-text transition-colors relative"
+                    style={{
+                      backgroundColor: darkMode ? '#005c4b' : '#d9fdd3',
+                      borderColor: darkMode ? '#006c57' : '#d0f4ca',
+                      color: darkMode ? '#e9edef' : '#111b21'
+                    }}
+                  >
+                    {/* Rendered Live WhatsApp Content with bold, italic, quotes, separators */}
+                    <div className="space-y-0.5 break-words font-sans">
+                      {renderWhatsAppBlocks(generatedText)}
+                    </div>
+
+                    {/* WhatsApp Message Metadata Footer: Time & Sky Blue Double Checkmarks */}
+                    <div className="mt-2.5 pt-1.5 border-t border-black/5 dark:border-white/10 flex items-center justify-end text-[11px]">
+                      <div className="flex items-center gap-1.5 text-stone-500 dark:text-stone-300 flex-shrink-0">
+                        <span className="text-[11px] font-sans opacity-75">
+                          {currentTimeStr}
+                        </span>
+                        <CheckCheck className="w-4 h-4 text-[#53bdeb] flex-shrink-0" title="Dibaca (Read)" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Raw Monospace Text View */
+                <div className="rounded-xl border border-stone-200/90 dark:border-stone-800 bg-white/95 dark:bg-[#0D0E11]/95 p-3.5 shadow-inner text-xs font-mono leading-relaxed text-stone-800 dark:text-stone-200 whitespace-pre-wrap select-text">
+                  {generatedText}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div className="px-4 sm:px-6 py-3 bg-stone-50/90 dark:bg-[#18191C] border-t border-stone-200/80 dark:border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 flex-shrink-0">
-          <div className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-            <span>Format otomatis mendukung tebal (*teks*) dan miring (_teks_) untuk WhatsApp</span>
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="px-4 sm:px-6 py-3 bg-stone-50/90 dark:bg-[#18191C] border-t border-stone-200/80 dark:border-stone-800 flex items-center justify-end flex-shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={handleDownloadTxt}
