@@ -223,6 +223,74 @@ export function parseTaskDescription(rawDesc: string): ParsedTask {
   };
 }
 
+/**
+ * Safely converts an ICAL.Time or Date into a WIB (Asia/Jakarta, UTC+7) time string and date key.
+ * Properly converts UTC times exported by Google Calendar (ending in Z), floating times, and TZID times.
+ */
+export function getWIBDateTime(t: any, ev?: ICAL.Event): { dateKey: string; timeStr: string } {
+  if (!t) return { dateKey: '2026-01-01', timeStr: '00:00' };
+
+  if (t.isDate) {
+    const yStr = String(t.year);
+    const mStr = String(t.month).padStart(2, '0');
+    const dStr = String(t.day).padStart(2, '0');
+    return {
+      dateKey: `${yStr}-${mStr}-${dStr}`,
+      timeStr: '00:00'
+    };
+  }
+
+  // If t is an ICAL.Time object with floating timezone (no timezone specified):
+  if (t.zone && t.zone.tzid === 'floating') {
+    const yStr = String(t.year);
+    const mStr = String(t.month).padStart(2, '0');
+    const dStr = String(t.day).padStart(2, '0');
+    const hStr = String(t.hour).padStart(2, '0');
+    const minStr = String(t.minute).padStart(2, '0');
+    return {
+      dateKey: `${yStr}-${mStr}-${dStr}`,
+      timeStr: `${hStr}:${minStr}`
+    };
+  }
+
+  // For UTC or TZID times, convert to standard JS Date and format explicitly in Asia/Jakarta (WIB)
+  try {
+    const jsDate = t instanceof Date ? t : t.toJSDate();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const parts = formatter.formatToParts(jsDate);
+    let y = '2026', m = '01', d = '01', h = '00', min = '00';
+    for (const p of parts) {
+      if (p.type === 'year') y = p.value;
+      else if (p.type === 'month') m = p.value;
+      else if (p.type === 'day') d = p.value;
+      else if (p.type === 'hour') h = p.value;
+      else if (p.type === 'minute') min = p.value;
+    }
+    return {
+      dateKey: `${y}-${m}-${d}`,
+      timeStr: `${h}:${min}`
+    };
+  } catch {
+    const yStr = String(t.year || 2026);
+    const mStr = String(t.month || 1).padStart(2, '0');
+    const dStr = String(t.day || 1).padStart(2, '0');
+    const hStr = String(t.hour || 0).padStart(2, '0');
+    const minStr = String(t.minute || 0).padStart(2, '0');
+    return {
+      dateKey: `${yStr}-${mStr}-${dStr}`,
+      timeStr: `${hStr}:${minStr}`
+    };
+  }
+}
+
 export function parsePelajaranICS(
   icsText: string,
   rangeStart?: Date,
@@ -260,30 +328,47 @@ export function parsePelajaranICS(
       const recurProp = vevent.getFirstPropertyValue('recurrence-id');
       if (recurProp) {
         const recTime = recurProp as any;
-        const dKey = `${recTime.year}-${String(recTime.month).padStart(2, '0')}-${String(recTime.day).padStart(2, '0')}`;
+        const wibRec = getWIBDateTime(recTime);
+        const dKey = wibRec.dateKey;
         overrides.set(`${event.uid}_${dKey}`, event);
       } else {
         baseEvents.push(event);
       }
     }
 
-    const formatTime = (t: any) => `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+    const formatPeriodTime = (ev: ICAL.Event, instanceStart: any): { dateKey: string; timeStr: string } => {
+      const startWib = getWIBDateTime(instanceStart, ev);
+      const startStr = startWib.timeStr;
+      const dateKey = startWib.dateKey;
 
-    const formatPeriodTime = (ev: ICAL.Event, instanceStart: any) => {
-      const startStr = formatTime(instanceStart);
+      let durSec = 0;
       if (ev.duration) {
         try {
-          const durSec = ev.duration.toSeconds();
-          const startMin = instanceStart.hour * 60 + instanceStart.minute;
-          const endMin = startMin + Math.round(durSec / 60);
-          const endH = Math.floor(endMin / 60) % 24;
-          const endM = endMin % 60;
-          return `${startStr} - ${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-        } catch {
-          return startStr;
-        }
+          durSec = ev.duration.toSeconds();
+        } catch {}
       }
-      return startStr;
+      if (!durSec && ev.endDate && ev.startDate && !ev.endDate.isDate && !ev.startDate.isDate) {
+        try {
+          durSec = (ev.endDate.toJSDate().getTime() - ev.startDate.toJSDate().getTime()) / 1000;
+        } catch {}
+      }
+
+      if (durSec > 0 && !instanceStart.isDate) {
+        try {
+          const startJs = instanceStart.toJSDate();
+          const endJs = new Date(startJs.getTime() + durSec * 1000);
+          const endWib = getWIBDateTime(endJs, ev);
+          return {
+            dateKey,
+            timeStr: `${startStr} - ${endWib.timeStr}`
+          };
+        } catch {}
+      }
+
+      return {
+        dateKey,
+        timeStr: startStr
+      };
     };
 
     const addEventNotice = (ev: ICAL.Event, range: InclusiveEventRange) => {
@@ -408,7 +493,8 @@ export function parsePelajaranICS(
             count++;
             if (next.compare(rEnd) > 0) break;
             if (next.compare(rStart) >= 0) {
-              const dKey = `${next.year}-${String(next.month).padStart(2, '0')}-${String(next.day).padStart(2, '0')}`;
+              const res = formatPeriodTime(event, next);
+              const dKey = res.dateKey;
               const overrideKey = `${event.uid}_${dKey}`;
               const overrideEv = overrides.get(overrideKey);
 
@@ -421,12 +507,11 @@ export function parsePelajaranICS(
                   // When an instance has a recurrence override in Google Calendar,
                   // use the override event's modified start time rather than the original recurring start time
                   const timeToUse = overrideEv.startDate || next;
-                  const timeStr = formatPeriodTime(overrideEv, timeToUse);
-                  addPeriod(dKey, overrideEv, timeStr);
+                  const overrideRes = formatPeriodTime(overrideEv, timeToUse);
+                  addPeriod(overrideRes.dateKey, overrideEv, overrideRes.timeStr);
                 }
               } else {
-                const timeStr = formatPeriodTime(event, next);
-                addPeriod(dKey, event, timeStr);
+                addPeriod(dKey, event, res.timeStr);
               }
             }
           }
@@ -436,9 +521,8 @@ export function parsePelajaranICS(
       } else {
         const st = event.startDate;
         if (st && st.compare(rStart) >= 0 && st.compare(rEnd) <= 0) {
-          const dKey = `${st.year}-${String(st.month).padStart(2, '0')}-${String(st.day).padStart(2, '0')}`;
-          const timeStr = formatPeriodTime(event, st);
-          addPeriod(dKey, event, timeStr);
+          const res = formatPeriodTime(event, st);
+          addPeriod(res.dateKey, event, res.timeStr);
         }
       }
     }
@@ -452,11 +536,11 @@ export function parsePelajaranICS(
           return;
         }
         const parts = key.split('_');
-        const dKey = parts[parts.length - 1];
+        const fallbackDKey = parts[parts.length - 1];
         const st = ev.startDate;
         if (st && st.compare(rStart) >= 0 && st.compare(rEnd) <= 0) {
-          const timeStr = formatPeriodTime(ev, st);
-          addPeriod(dKey, ev, timeStr);
+          const res = formatPeriodTime(ev, st);
+          addPeriod(res.dateKey || fallbackDKey, ev, res.timeStr);
         }
       }
     });

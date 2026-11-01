@@ -319,10 +319,12 @@ export default function App() {
     return sortedDates[sortedDates.length - 1];
   }, [hasSchoolData]);
 
-  // Fetch real data with fallback
-  const fetchData = useCallback(async (forceFresh: boolean = false) => {
-    setIsLoading(true);
-    setStatus({ type: 'loading', message: 'Memperbarui data kelas...' });
+  // Fetch real data with fallback (isSilent prevents skeleton flashing during periodic 5-minute background sync)
+  const fetchData = useCallback(async (forceFresh: boolean = false, isSilent: boolean = false) => {
+    if (!isSilent) {
+      setIsLoading(true);
+      setStatus({ type: 'loading', message: 'Memperbarui data kelas...' });
+    }
 
     if (forceFresh) {
       try {
@@ -438,36 +440,23 @@ export default function App() {
       setIsLoading(false);
     } catch (err: any) {
       console.error('Error in fetchData:', err);
-      setStatus({
-        type: 'error',
-        message: 'Gagal memuat sebagian data. Silakan muat ulang halaman.'
-      });
-      const fallbackStore: ClassDataStore = {
-        doaByDate: parseDoaRows(parseCSV(DEMO_CSV.doa)),
-        mbgByDate: parseMbgRows(parseCSV(DEMO_CSV.mbg)),
-        piketByDow: parsePiketRows(parseCSV(DEMO_CSV.piket)),
-        iceBreakingByDate: parseIceBreakingRows(parseCSV(DEMO_CSV.icebreaking)),
-        pelajaranByDate: {},
-        tasksByDate: {},
-        eventNoticesByDate: {},
-        birthdayByMonthDay: {}
-      };
-      setDataStore(fallbackStore);
-      setActiveISO(prev => {
-        if (isManualDate) return prev;
-        if (hasSchoolData(prev, fallbackStore)) return prev;
-        if (hasSchoolData(defaultSchoolISO, fallbackStore)) return defaultSchoolISO;
-        return findBestActiveDate(defaultSchoolISO, fallbackStore);
-      });
+      if (!isSilent) {
+        setStatus({
+          type: 'error',
+          message: 'Gagal memuat sebagian data. Silakan muat ulang halaman.'
+        });
+      }
       setIsLoading(false);
     }
   }, [defaultSchoolISO, findBestActiveDate, hasSchoolData, isManualDate]);
 
   useEffect(() => {
-    fetchData();
+    // Initial load: show loader
+    fetchData(false, false);
 
+    // Periodic 5-minute background sync: runs silently without screen refresh or skeleton unmounting
     const interval = setInterval(() => {
-      fetchData();
+      fetchData(false, true);
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
@@ -808,7 +797,7 @@ export default function App() {
                         title={`Lihat Agenda Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
                         aria-label="Kembali ke agenda hari ini"
                       >
-                        Lihat Hari Ini ({todayWIB.dowName})
+                        Lihat Hari Ini
                       </button>
                     </div>
                   )}
@@ -898,6 +887,8 @@ export default function App() {
                   dowName={activeDow}
                   iceBreaking={activeIceBreaking}
                   onOpenAttachment={handleOpenAttachment}
+                  isoDate={activeISO}
+                  isToday={activeISO === todayWIB.iso}
                 />
               </div>
             </section>

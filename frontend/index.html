@@ -183,6 +183,9 @@
               };
               setTimeout(function() {
                 target.dispatchEvent(new Event('open'));
+                target.dispatchEvent(new MessageEvent('message', {
+                  data: JSON.stringify({ type: 'connected' })
+                }));
               }, 0);
               return target;
             }

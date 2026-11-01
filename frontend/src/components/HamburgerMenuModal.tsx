@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check, Settings } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check, Settings, FerrisWheel } from 'lucide-react';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -218,7 +218,7 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-[#20170A] text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-800/40 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                <Sparkles className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+                <FerrisWheel className="w-5 h-5 text-amber-700 dark:text-amber-400" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

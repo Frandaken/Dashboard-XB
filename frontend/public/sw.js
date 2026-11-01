@@ -1,10 +1,10 @@
-// Fallback service worker for direct registration and Push Notifications
+// Service worker for Push Notifications and background sync
 importScripts('/push-worker.js');
 
 self.addEventListener('install', function (event) {
-  self.skipWaiting();
+  // Graceful install without abrupt client claiming
 });
 
 self.addEventListener('activate', function (event) {
-  event.waitUntil(self.clients.claim());
+  // Graceful activation without interrupting running clients
 });

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon, Copy, Check } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment, CalendarEventNotice } from '../types';
 import { DOW_ID, MONTH_ID } from '../data/demoData';
-import { parseISODateParts } from '../utils/dateUtils';
+import { parseISODateParts, getWIBDateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../data/songSchedule';
 import { getFirstLessonSession } from '../utils/iceBreakingUtils';
 import { formatDailySummary, copyTextToClipboard } from '../utils/summaryFormatter';
@@ -336,6 +336,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             dowName={dow}
             compact={true}
             onOpenAttachment={onOpenAttachment}
+            isoDate={isoDate || undefined}
+            isToday={isoDate ? isoDate === getWIBDateParts().iso : false}
           />
         </div>
       </div>

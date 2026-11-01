@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, PartyPopper, Image as ImageIcon } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, IceBreakingSchedule, TaskAttachment } from '../types';
+import { getWIBDateParts } from '../utils/dateUtils';
 
 interface ScheduleBlocksProps {
   mbg?: MbgSchedule;
@@ -11,6 +12,8 @@ interface ScheduleBlocksProps {
   iceBreaking?: IceBreakingSchedule;
   compact?: boolean;
   onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
+  isoDate?: string;
+  isToday?: boolean;
 }
 
 export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
@@ -21,9 +24,77 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   dowName,
   iceBreaking,
   compact = false,
-  onOpenAttachment
+  onOpenAttachment,
+  isoDate,
+  isToday
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+
+  // Live timer for smooth real-time progress & countdown
+  const [nowWIB, setNowWIB] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowWIB(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const wibInfo = getWIBDateParts(nowWIB);
+  const [nowH, nowM, nowS] = wibInfo.timeStr.split(':').map(Number);
+  const nowTotalMinutes = nowH * 60 + nowM + (nowS || 0) / 60;
+
+  const effectiveIsToday = isToday !== undefined
+    ? isToday
+    : (isoDate ? isoDate === wibInfo.iso : dowName.toLowerCase() === wibInfo.dowName.toLowerCase());
+
+  interface PeriodTimeInfo {
+    startMinutes: number;
+    endMinutes: number;
+    durationMinutes: number;
+    startStr: string;
+    endStr: string;
+  }
+
+  const parsePeriodTime = (timeStr?: string): PeriodTimeInfo | null => {
+    if (!timeStr) return null;
+    const rangeMatch = timeStr.match(/(\d{1,2})[:.](\d{2})\s*(?:[-–—]|s\/d|\bto\b)\s*(\d{1,2})[:.](\d{2})/i);
+    if (rangeMatch) {
+      const h1 = parseInt(rangeMatch[1], 10);
+      const m1 = parseInt(rangeMatch[2], 10);
+      const h2 = parseInt(rangeMatch[3], 10);
+      const m2 = parseInt(rangeMatch[4], 10);
+      const startMinutes = h1 * 60 + m1;
+      let endMinutes = h2 * 60 + m2;
+      if (endMinutes < startMinutes) endMinutes += 24 * 60;
+      const durationMinutes = Math.max(1, endMinutes - startMinutes);
+      return {
+        startMinutes,
+        endMinutes,
+        durationMinutes,
+        startStr: `${String(h1).padStart(2, '0')}:${String(m1).padStart(2, '0')}`,
+        endStr: `${String(h2).padStart(2, '0')}:${String(m2).padStart(2, '0')}`
+      };
+    }
+    const singleMatch = timeStr.match(/(\d{1,2})[:.](\d{2})/);
+    if (singleMatch) {
+      const h1 = parseInt(singleMatch[1], 10);
+      const m1 = parseInt(singleMatch[2], 10);
+      const startMinutes = h1 * 60 + m1;
+      const durationMinutes = 40;
+      const endMinutes = startMinutes + durationMinutes;
+      const h2 = Math.floor(endMinutes / 60) % 24;
+      const m2 = endMinutes % 60;
+      return {
+        startMinutes,
+        endMinutes,
+        durationMinutes,
+        startStr: `${String(h1).padStart(2, '0')}:${String(m1).padStart(2, '0')}`,
+        endStr: `${String(h2).padStart(2, '0')}:${String(m2).padStart(2, '0')}`
+      };
+    }
+    return null;
+  };
 
   const toggleTaskExpand = (key: string) => {
     setExpandedTasks(prev => ({
@@ -289,19 +360,21 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
           compact ? 'p-3' : 'p-3.5 sm:p-4'
         } flex-1 min-h-0 flex flex-col transition-colors overflow-hidden`}
       >
-        <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-stone-100 dark:border-stone-800/60 flex-shrink-0">
-          <h3
-            className={
-              compact
-                ? 'text-stone-900 dark:text-stone-100 font-semibold text-xs sm:text-sm tracking-tight'
-                : 'text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base tracking-tight'
-            }
-          >
-            Jadwal Pelajaran
-          </h3>
-          <span className="text-[11px] sm:text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800/70 px-2.5 py-0.5 rounded-md border border-stone-200/60 dark:border-stone-700/50">
-            {totalJamPelajaran} Sesi Pelajaran
-          </span>
+        <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-stone-100 dark:border-stone-800/60 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2">
+            <h3
+              className={
+                compact
+                  ? 'text-stone-900 dark:text-stone-100 font-semibold text-xs sm:text-sm tracking-tight'
+                  : 'text-stone-900 dark:text-stone-100 font-bold text-sm sm:text-base tracking-tight'
+              }
+            >
+              Jadwal Pelajaran
+            </h3>
+            <span className="text-[11px] sm:text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800/70 px-2.5 py-0.5 rounded-md border border-stone-200/60 dark:border-stone-700/50">
+              {totalJamPelajaran} Sesi Pelajaran
+            </span>
+          </div>
         </div>
 
         {pelajaran && pelajaran.length > 0 ? (
@@ -324,164 +397,230 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                 }
               }
 
+              const timeInfo = parsePeriodTime(p.time);
+              let status: 'active' | 'upcoming' | 'completed' | 'not-today' = 'not-today';
+              let progressPercent = 0;
+
+              if (timeInfo) {
+                if (!effectiveIsToday) {
+                  status = 'not-today';
+                } else if (nowTotalMinutes >= timeInfo.startMinutes && nowTotalMinutes < timeInfo.endMinutes) {
+                  status = 'active';
+                  const elapsedMin = nowTotalMinutes - timeInfo.startMinutes;
+                  progressPercent = Math.min(100, Math.max(0, (elapsedMin / timeInfo.durationMinutes) * 100));
+                } else if (nowTotalMinutes < timeInfo.startMinutes) {
+                  status = 'upcoming';
+                  progressPercent = 0;
+                } else {
+                  status = 'completed';
+                  progressPercent = 100;
+                }
+              }
+
+              const activeConicGradient = progressPercent <= 0
+                ? 'conic-gradient(from 225deg at 50% 50%, #10b981 0%, rgba(16, 185, 129, 0.15) 0% 100%)'
+                : `conic-gradient(from 225deg at 50% 50%, #059669 0%, #10b981 ${Math.max(0, progressPercent - 3)}%, #34d399 ${progressPercent}%, rgba(16, 185, 129, 0.15) ${progressPercent}%, rgba(16, 185, 129, 0.15) 100%)`;
+
               return (
                 <div
                   key={`${p.cleanName}-${p.time}-${idx}`}
-                  className={`${compact ? 'p-2.5 rounded-lg' : 'p-3.5 rounded-xl'} border flex flex-col justify-between transition-colors ${
-                    p.hasTask
-                      ? p.taskType === 'sumatif'
-                        ? 'bg-rose-50/60 dark:bg-[#1E1113] border-rose-300/80 dark:border-rose-900/70 shadow-xs'
-                        : p.taskType === 'pr'
-                        ? 'bg-amber-50/60 dark:bg-[#1A1409] border-amber-300/80 dark:border-amber-900/70'
-                        : 'bg-blue-50/50 dark:bg-[#0D1520] border-blue-200/80 dark:border-blue-900/60'
-                      : isNonAcademicFriday
-                      ? 'bg-emerald-50/50 dark:bg-[#0E2018] border-emerald-200 dark:border-emerald-900/50'
-                      : 'bg-stone-50/80 dark:bg-[#141518] border-stone-200/80 dark:border-stone-800/80 hover:border-stone-400 dark:hover:border-stone-600'
+                  className={`relative rounded-xl transition-all duration-300 flex flex-col ${
+                    status === 'active'
+                      ? 'p-[2.5px] shadow-lg shadow-emerald-500/20'
+                      : `border ${
+                          p.hasTask
+                            ? p.taskType === 'sumatif'
+                              ? 'border-rose-300/80 dark:border-rose-900/70 shadow-xs'
+                              : p.taskType === 'pr'
+                              ? 'border-amber-300/80 dark:border-amber-900/70'
+                              : 'border-blue-200/80 dark:border-blue-900/60'
+                            : isNonAcademicFriday
+                            ? 'border-emerald-200 dark:border-emerald-900/50'
+                            : 'border-stone-200/80 dark:border-stone-800/80 hover:border-stone-400 dark:hover:border-stone-600'
+                        }`
                   }`}
-                >
-                  {/* Header: Sesi index badge & Time Badge */}
-                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`${
-                          compact
-                            ? 'w-5 h-5 rounded text-[11px] font-mono font-semibold'
-                            : 'w-6 h-6 sm:w-7 sm:h-7 rounded-md text-xs sm:text-sm font-mono font-bold'
-                        } flex items-center justify-center flex-shrink-0 ${
-                          isNonAcademicFriday
-                            ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                            : 'bg-stone-200/90 dark:bg-stone-800 text-stone-800 dark:text-stone-200'
-                        }`}
-                        title={isNonAcademicFriday ? 'Kegiatan Pembiasaan (Jam ke-0)' : `Jam Pelajaran ke-${sessionNumber}`}
-                      >
-                        {sessionNumber}
-                      </span>
-                      <span
-                        className={
-                          compact
-                            ? 'font-mono text-xs font-semibold text-stone-700 dark:text-stone-300 tabular-nums'
-                            : 'font-mono text-xs sm:text-sm md:text-base font-bold text-stone-700 dark:text-stone-300 tabular-nums'
+                  style={
+                    status === 'active'
+                      ? {
+                          background: activeConicGradient
                         }
-                      >
-                        {p.time}
-                      </span>
-                    </div>
-
-                    {p.hasTask && (
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                          p.taskType === 'sumatif'
-                            ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
-                            : p.taskType === 'pr'
-                            ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300/70 dark:border-amber-800/70'
-                            : 'bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 border border-blue-300/70 dark:border-blue-800/70'
-                        }`}
-                      >
-                        {p.taskType === 'sumatif' ? 'Sumatif' : p.taskType === 'pr' ? 'PR' : 'Agenda'}
-                      </span>
-                    )}
-
-                    {isNonAcademicFriday && !p.hasTask && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800/60">
-                        Pembiasaan
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Subject Title */}
+                      : undefined
+                  }
+                >
                   <div
-                    className={
-                      compact
-                        ? 'font-semibold text-xs sm:text-sm text-stone-900 dark:text-stone-100 leading-snug line-clamp-2 my-0.5'
-                        : 'font-bold text-base sm:text-lg md:text-xl text-stone-900 dark:text-stone-100 leading-snug line-clamp-2 my-1'
-                    }
-                    title={p.summary || p.cleanName}
+                    className={`w-full h-full flex flex-col justify-start transition-all duration-200 ${
+                      compact ? 'p-2.5 rounded-[9px]' : 'p-3.5 rounded-[10px]'
+                    } ${
+                      status === 'active'
+                        ? 'bg-emerald-50 dark:bg-[#0c261a]'
+                        : p.hasTask
+                        ? p.taskType === 'sumatif'
+                          ? 'bg-rose-50/60 dark:bg-[#1E1113]'
+                          : p.taskType === 'pr'
+                          ? 'bg-amber-50/60 dark:bg-[#1A1409]'
+                          : 'bg-blue-50/50 dark:bg-[#0D1520]'
+                        : isNonAcademicFriday
+                        ? 'bg-emerald-50/50 dark:bg-[#0E2018]'
+                        : 'bg-stone-50/80 dark:bg-[#141518]'
+                    }`}
                   >
-                    {p.cleanName}
-                  </div>
-
-                  {/* Task Notice if present */}
-                  {p.hasTask && (p.taskTitle || p.taskText) ? (() => {
-                    const taskKey = `${p.cleanName}_${p.time}_${idx}`;
-                    const isExpanded = !!expandedTasks[taskKey];
-                    const title = p.taskTitle || (p.taskText ? p.taskText.split('\n')[0] : '');
-                    const details = p.taskDetails || (p.taskText && p.taskText.includes('\n')
-                      ? p.taskText.split('\n').slice(1).join('\n').trim()
-                      : '');
-                    const hasDetails = p.hasDetails !== undefined ? p.hasDetails : !!details;
-                    const isSumatif = p.taskType === 'sumatif';
-                    const isPr = p.taskType === 'pr';
-
-                    const boxBg = isSumatif
-                      ? 'bg-rose-100/70 dark:bg-[#250F13] border-rose-300/70 dark:border-rose-900/60'
-                      : isPr
-                      ? 'bg-amber-100/70 dark:bg-[#20170A] border-amber-300/70 dark:border-amber-900/60'
-                      : 'bg-blue-50/70 dark:bg-[#0D1520] border-blue-200 dark:border-blue-900/50';
-
-                    const labelColor = isSumatif
-                      ? 'text-rose-900 dark:text-rose-300'
-                      : isPr
-                      ? 'text-amber-900 dark:text-amber-300'
-                      : 'text-blue-900 dark:text-blue-300';
-
-                    const labelText = isSumatif ? 'Sumatif:' : isPr ? 'PR:' : 'Agenda:';
-
-                    return (
-                      <div className={`mt-2 p-2 rounded-md border text-xs ${boxBg}`}>
-                        <div className="flex items-start justify-between gap-1.5">
-                          <div
-                            onClick={hasDetails ? () => toggleTaskExpand(taskKey) : undefined}
-                            className={`font-medium leading-snug break-words flex-1 ${
-                              hasDetails ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''
+                    {/* Header: Sesi index badge & Time Badge */}
+                    <div className="flex items-center justify-between gap-1.5 mb-1.5 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`${
+                              compact
+                                ? 'w-5 h-5 rounded text-[11px] font-mono font-semibold'
+                                : 'w-6 h-6 sm:w-7 sm:h-7 rounded-md text-xs sm:text-sm font-mono font-bold'
+                            } flex items-center justify-center flex-shrink-0 ${
+                              status === 'active'
+                                ? 'bg-emerald-600 text-white font-bold'
+                                : isNonAcademicFriday
+                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
+                                : 'bg-stone-200/90 dark:bg-stone-800 text-stone-800 dark:text-stone-200'
                             }`}
+                            title={isNonAcademicFriday ? 'Kegiatan Pembiasaan (Jam ke-0)' : `Jam Pelajaran ke-${sessionNumber}`}
                           >
-                            <strong className={`font-bold mr-1 ${labelColor}`}>{labelText}</strong>
-                            <span className={isSumatif ? 'font-bold text-stone-900 dark:text-stone-100' : 'text-stone-800 dark:text-stone-200'}>
-                              {title}
+                            {sessionNumber}
+                          </span>
+                          <span
+                            className={
+                              compact
+                                ? 'font-mono text-xs font-semibold tabular-nums'
+                                : 'font-mono text-xs sm:text-sm md:text-base font-bold tabular-nums'
+                            }
+                          >
+                            <span className={status === 'active' ? 'text-emerald-900 dark:text-emerald-200' : 'text-stone-700 dark:text-stone-300'}>
+                              {p.time}
                             </span>
-                          </div>
-                          {hasDetails && (
-                            <button
-                              type="button"
-                              onClick={() => toggleTaskExpand(taskKey)}
-                              aria-expanded={isExpanded}
-                              aria-label={isExpanded ? 'Tutup detail penugasan' : 'Lihat detail penugasan'}
-                              className="flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded bg-white/90 dark:bg-[#150F07] border border-stone-200 dark:border-stone-800 transition cursor-pointer flex-shrink-0"
-                            >
-                              <span>{isExpanded ? 'Tutup' : 'Detail'}</span>
-                              <ChevronDown
-                                className={`w-3 h-3 transition-transform duration-200 ${
-                                  isExpanded ? 'rotate-180' : ''
-                                }`}
-                              />
-                            </button>
-                          )}
+                          </span>
                         </div>
 
-                        {hasDetails && isExpanded && (
-                          <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10 text-xs text-stone-900 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/90 dark:bg-[#120C05] p-2 rounded border border-stone-200 dark:border-stone-800 animate-fade-in font-normal">
-                            {details}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {status === 'active' && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white flex items-center gap-1.5 shadow-2xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                              Berlangsung
+                            </span>
+                          )}
 
-                        {/* Attachment Pill Button */}
-                        {p.attachment && (
-                          <div className="mt-2 pt-1.5 border-t border-black/10 dark:border-white/10">
-                            <button
-                              type="button"
-                              onClick={() => onOpenAttachment?.(p.attachment!, p.cleanName)}
-                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#222429] text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
+                          {p.hasTask && (
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                p.taskType === 'sumatif'
+                                  ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
+                                  : p.taskType === 'pr'
+                                  ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300/70 dark:border-amber-800/70'
+                                  : 'bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 border border-blue-300/70 dark:border-blue-800/70'
+                              }`}
                             >
-                              <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>Lampiran: {p.attachment.filename || 'Lihat Gambar'}</span>
-                            </button>
-                          </div>
-                        )}
+                              {p.taskType === 'sumatif' ? 'Sumatif' : p.taskType === 'pr' ? 'PR' : 'Agenda'}
+                            </span>
+                          )}
+
+                          {isNonAcademicFriday && !p.hasTask && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800/60">
+                              Pembiasaan
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    );
-                  })() : (
-                    <div className="h-1" />
-                  )}
+
+                      {/* Subject Title */}
+                      <div
+                        className={
+                          compact
+                            ? 'font-semibold text-xs sm:text-sm leading-snug line-clamp-2 my-0.5'
+                            : 'font-bold text-base sm:text-lg md:text-xl leading-snug line-clamp-2 my-1'
+                        }
+                        title={p.summary || p.cleanName}
+                      >
+                        <span className={status === 'active' ? 'text-emerald-950 dark:text-emerald-100' : 'text-stone-900 dark:text-stone-100'}>
+                          {p.cleanName}
+                        </span>
+                      </div>
+
+                      {/* Task Notice if present */}
+                      {p.hasTask && (p.taskTitle || p.taskText) ? (() => {
+                        const taskKey = `${p.cleanName}_${p.time}_${idx}`;
+                        const isExpanded = !!expandedTasks[taskKey];
+                        const title = p.taskTitle || (p.taskText ? p.taskText.split('\n')[0] : '');
+                        const details = p.taskDetails || (p.taskText && p.taskText.includes('\n')
+                          ? p.taskText.split('\n').slice(1).join('\n').trim()
+                          : '');
+                        const hasDetails = p.hasDetails !== undefined ? p.hasDetails : !!details;
+                        const isSumatif = p.taskType === 'sumatif';
+                        const isPr = p.taskType === 'pr';
+
+                        const boxBg = isSumatif
+                          ? 'bg-rose-100/70 dark:bg-[#250F13] border-rose-300/70 dark:border-rose-900/60'
+                          : isPr
+                          ? 'bg-amber-100/70 dark:bg-[#20170A] border-amber-300/70 dark:border-amber-900/60'
+                          : 'bg-blue-50/70 dark:bg-[#0D1520] border-blue-200 dark:border-blue-900/50';
+
+                        const labelColor = isSumatif
+                          ? 'text-rose-900 dark:text-rose-300'
+                          : isPr
+                          ? 'text-amber-900 dark:text-amber-300'
+                          : 'text-blue-900 dark:text-blue-300';
+
+                        const labelText = isSumatif ? 'Sumatif:' : isPr ? 'PR:' : 'Agenda:';
+
+                        return (
+                          <div className={`mt-2 p-2 rounded-md border text-xs ${boxBg}`}>
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div
+                                onClick={hasDetails ? () => toggleTaskExpand(taskKey) : undefined}
+                                className={`font-medium leading-snug break-words flex-1 ${
+                                  hasDetails ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''
+                                }`}
+                              >
+                                <strong className={`font-bold mr-1 ${labelColor}`}>{labelText}</strong>
+                                <span className={isSumatif ? 'font-bold text-stone-900 dark:text-stone-100' : 'text-stone-800 dark:text-stone-200'}>
+                                  {title}
+                                </span>
+                              </div>
+                              {hasDetails && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTaskExpand(taskKey)}
+                                  aria-expanded={isExpanded}
+                                  aria-label={isExpanded ? 'Tutup detail penugasan' : 'Lihat detail penugasan'}
+                                  className="flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded bg-white/90 dark:bg-[#150F07] border border-stone-200 dark:border-stone-800 transition cursor-pointer flex-shrink-0"
+                                >
+                                  <span>{isExpanded ? 'Tutup' : 'Detail'}</span>
+                                  <ChevronDown
+                                    className={`w-3 h-3 transition-transform duration-200 ${
+                                      isExpanded ? 'rotate-180' : ''
+                                    }`}
+                                  />
+                                </button>
+                              )}
+                            </div>
+
+                            {hasDetails && isExpanded && (
+                              <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10 text-xs text-stone-900 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/90 dark:bg-[#120C05] p-2 rounded border border-stone-200 dark:border-stone-800 animate-fade-in font-normal">
+                                {details}
+                              </div>
+                            )}
+
+                            {/* Attachment Pill Button */}
+                            {p.attachment && (
+                              <div className="mt-2 pt-1.5 border-t border-black/10 dark:border-white/10">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenAttachment?.(p.attachment!, p.cleanName)}
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#222429] text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
+                                >
+                                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  <span>Lampiran: {p.attachment.filename || 'Lihat Gambar'}</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : null}
+                  </div>
                 </div>
               );
             })}

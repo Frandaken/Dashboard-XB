@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, ArrowLeft, Sun, Moon, Sparkles, Menu, Calendar, ShieldAlert } from 'lucide-react';
+import { Home, Compass, ArrowLeft, Sun, Moon, Sparkles, Menu, Calendar, ShieldAlert, FerrisWheel } from 'lucide-react';
 
 interface NotFoundUIProps {
   onGoHome: () => void;
@@ -147,7 +147,7 @@ export const NotFoundUI: React.FC<NotFoundUIProps> = ({
                 className="p-3 rounded-xl border border-[#D8D2C5] dark:border-[#222222] bg-[#FAF7F2] dark:bg-[#0D0D0D] hover:bg-stone-100 dark:hover:bg-[#161616] text-left transition cursor-pointer flex items-center gap-2.5 group"
               >
                 <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-[#2A1D05] text-amber-900 dark:text-amber-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Sparkles className="w-4 h-4" />
+                  <FerrisWheel className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-stone-900 dark:text-stone-100">

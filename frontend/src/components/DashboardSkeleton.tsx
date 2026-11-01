@@ -92,7 +92,7 @@ export const DashboardSkeleton: React.FC = () => {
               {[1, 2, 3, 4, 5, 6].map(idx => (
                 <div
                   key={idx}
-                  className="p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-stone-50/80 dark:bg-[#141518] flex flex-col justify-between gap-2.5 h-[108px]"
+                  className="p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-stone-50/80 dark:bg-[#141518] flex flex-col justify-between gap-2.5 h-[135px]"
                 >
                   {/* Sesi badge + Time */}
                   <div className="flex items-center justify-between gap-1.5">
@@ -105,6 +105,10 @@ export const DashboardSkeleton: React.FC = () => {
                   <div className="space-y-1.5">
                     <div className="h-5 w-4/5 bg-stone-200/90 dark:bg-stone-700/80 rounded" />
                     <div className="h-3.5 w-1/2 bg-stone-200/70 dark:bg-stone-800 rounded" />
+                  </div>
+                  {/* Progress bar skeleton */}
+                  <div className="pt-2 border-t border-stone-200/40 dark:border-stone-800/40">
+                    <div className="h-1.5 w-full bg-stone-200/80 dark:bg-stone-800 rounded-full" />
                   </div>
                 </div>
               ))}

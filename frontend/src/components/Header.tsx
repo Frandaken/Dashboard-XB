@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Sun, Moon, Bell, Wallet, Users, Sparkles, ChevronDown } from 'lucide-react';
+import { Menu, Sun, Moon, Bell, Wallet, Users, FerrisWheel, ChevronDown } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 import { getWIBDateParts, WIBDateInfo } from '../utils/dateUtils';
 
@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full text-left p-2.5 rounded-lg hover:bg-amber-50/70 dark:hover:bg-[#20180B] transition flex items-center gap-2.5 group cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500"
                   >
                     <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-[#20170A] text-amber-700 dark:text-amber-400 border border-amber-300/40 dark:border-amber-800/40 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                      <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <FerrisWheel className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
