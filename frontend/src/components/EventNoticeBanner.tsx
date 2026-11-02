@@ -14,11 +14,13 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { MONTH_ID } from '../data/demoData';
+import { getWIBDateParts } from '../utils/dateUtils';
 
 interface EventNoticeBannerProps {
   notices: CalendarEventNotice[];
   onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
   compact?: boolean;
+  todayISO?: string;
 }
 
 function formatNoticeDateSpan(startDateStr: string, endDateStr: string): string {
@@ -102,15 +104,25 @@ function getEventTheme(title: string) {
 export const EventNoticeBanner: React.FC<EventNoticeBannerProps> = ({
   notices,
   onOpenAttachment,
-  compact = false
+  compact = false,
+  todayISO
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  if (!notices || notices.length === 0) return null;
+  const currentToday = todayISO || getWIBDateParts().iso;
+  // 1. jika acara sudah selesai, tidak usah tampilkan
+  const activeNotices = (notices || []).filter(n => {
+    if (n.endDate && n.endDate < currentToday) {
+      return false;
+    }
+    return true;
+  });
+
+  if (!activeNotices || activeNotices.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2 w-full flex-shrink-0 animate-fade-in" id="event-notice-banner-container">
-      {notices.map(notice => {
+      {activeNotices.map(notice => {
         const IconComponent = getEventIcon(notice.title);
         const theme = getEventTheme(notice.title);
         const isExpanded = expandedId === notice.id;

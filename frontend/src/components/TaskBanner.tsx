@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, AlertCircle, AlertTriangle, ChevronDown, Image as ImageIcon } from 'lucide-react';
+import { Clock, AlertCircle, AlertTriangle, ChevronDown, FileImage } from 'lucide-react';
 import { TaskItem, TaskAttachment } from '../types';
 
 interface TaskBannerProps {
@@ -138,7 +138,7 @@ export const TaskBanner: React.FC<TaskBannerProps> = ({ tasks, onOpenAttachment 
                       onClick={() => onOpenAttachment?.(task.attachment!, task.subject)}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-[#122A1E] dark:text-emerald-300 border border-emerald-600/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition cursor-pointer"
                     >
-                      <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <FileImage className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>Lampiran: {task.attachment.filename || 'Lihat Gambar'}</span>
                     </button>
                   </div>

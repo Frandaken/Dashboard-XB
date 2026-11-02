@@ -6,7 +6,7 @@ import {
   RotateCw,
   ExternalLink,
   Download,
-  Receipt,
+  FileImage,
   FileText,
   AlertCircle,
   Upload,
@@ -113,7 +113,7 @@ export const ReceiptLightboxModal: React.FC<ReceiptLightboxModalProps> = ({
         <div className="px-4 py-3 bg-stone-50/90 dark:bg-[#18191C] border-b border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-3 flex-shrink-0 z-20">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-600/25 dark:border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-              <Receipt className="w-4 h-4" />
+              <FileImage className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <h3 id="receipt-modal-title" className="text-sm font-bold text-stone-900 dark:text-white truncate">

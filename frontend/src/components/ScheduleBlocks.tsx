@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, PartyPopper, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, PartyPopper, FileImage } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, IceBreakingSchedule, TaskAttachment } from '../types';
 import { getWIBDateParts } from '../utils/dateUtils';
 
@@ -612,7 +612,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                                   onClick={() => onOpenAttachment?.(p.attachment!, p.cleanName)}
                                   className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#222429] text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
                                 >
-                                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  <FileImage className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                   <span>Lampiran: {p.attachment.filename || 'Lihat Gambar'}</span>
                                 </button>
                               </div>

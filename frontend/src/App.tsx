@@ -25,6 +25,7 @@ import { EventNoticeBanner } from './components/EventNoticeBanner';
 import { ReceiptLightboxModal, ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NotificationModal } from './components/NotificationModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
+import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { ClassDataStore, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
@@ -67,6 +68,27 @@ export default function App() {
   const { isNotificationActive } = usePushNotifications();
   // 5-minute pre-lesson in-app toast popup
   const [nextLessonNotice, setNextLessonNotice] = useState<NextLessonInfo | null>(null);
+  // Global search modal state
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+
+  // Global keyboard shortcut: Cmd+K / Ctrl+K / '/' to open search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+      } else if (e.key === '/' && !isSearchOpen) {
+        const target = e.target as HTMLElement | null;
+        const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+        if (!isInput) {
+          e.preventDefault();
+          setIsSearchOpen(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
 
   const [dataStore, setDataStore] = useState<ClassDataStore>(() => {
     try {
@@ -474,8 +496,12 @@ export default function App() {
     return (dataStore.tasksByDate[activeISO] || []).filter(t => t.taskType !== 'agenda');
   }, [dataStore.tasksByDate, activeISO]);
   const activeEventNotices = useMemo(() => {
-    return dataStore.eventNoticesByDate?.[activeISO] || [];
-  }, [dataStore.eventNoticesByDate, activeISO]);
+    return (dataStore.eventNoticesByDate?.[activeISO] || []).filter(n => {
+      // 1. jika acara sudah selesai, tidak usah tampilkan
+      if (n.endDate && n.endDate < todayWIB.iso) return false;
+      return true;
+    });
+  }, [dataStore.eventNoticesByDate, activeISO, todayWIB.iso]);
 
   const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
@@ -747,6 +773,7 @@ export default function App() {
           onOpenKasMurid={() => setIsKasModalOpen(true)}
           onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
           onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+          onOpenSearch={() => setIsSearchOpen(true)}
         />
 
         {/* Status Notification (Only show on error) */}
@@ -867,6 +894,7 @@ export default function App() {
                   <EventNoticeBanner
                     notices={activeEventNotices}
                     onOpenAttachment={handleOpenAttachment}
+                    todayISO={todayWIB.iso}
                   />
                 )}
 
@@ -1097,6 +1125,21 @@ export default function App() {
         onClose={() => setPreviewAttachment(null)}
         data={previewAttachment}
         darkMode={darkMode}
+      />
+
+      {/* Global Search Bar Modal (Subjects, Tasks, Event Notices, Students) */}
+      <GlobalSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        dataStore={dataStore}
+        onSelectDate={iso => {
+          setActiveISO(iso);
+          setIsManualDate(true);
+          setSelectedISO(null);
+        }}
+        onOpenAttachment={handleOpenAttachment}
+        darkMode={darkMode}
+        todayISO={todayWIB.iso}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Sun, Moon, Bell, Wallet, Users, FerrisWheel, ChevronDown } from 'lucide-react';
+import { Menu, Sun, Moon, Bell, Wallet, Users, FerrisWheel, ChevronDown, Search } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 import { getWIBDateParts, WIBDateInfo } from '../utils/dateUtils';
+import { MONTH_ID } from '../data/demoData';
 
 interface HeaderProps {
   darkMode: boolean;
@@ -12,6 +13,7 @@ interface HeaderProps {
   onOpenKasMurid?: () => void;
   onOpenRandomPicker?: () => void;
   onOpenGroupGenerator?: () => void;
+  onOpenSearch?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,7 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
   hasNotificationActive,
   onOpenKasMurid,
   onOpenRandomPicker,
-  onOpenGroupGenerator
+  onOpenGroupGenerator,
+  onOpenSearch
 }) => {
   const [wibInfo, setWibInfo] = useState<WIBDateInfo>(() => getWIBDateParts());
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
@@ -83,22 +86,45 @@ export const Header: React.FC<HeaderProps> = ({
           <img
             src="/icon.png"
             alt="Logo SMA Putra Nirmala Kelas XB"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover flex-shrink-0 border border-stone-200/80 dark:border-stone-800/80"
+            className="hidden sm:block w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover flex-shrink-0 border border-stone-200/80 dark:border-stone-800/80"
           />
-          <div>
+          <div className="flex-shrink-0">
             <div className="flex items-center gap-2 leading-none">
-              <h1 className="font-editorial text-xl sm:text-2xl lg:text-3xl text-stone-900 dark:text-stone-100 font-bold tracking-tight leading-none">
+              <h1 className="font-editorial text-sm xs:text-base sm:text-lg md:text-base lg:text-xl xl:text-2xl text-stone-900 dark:text-stone-100 font-bold tracking-tight leading-none whitespace-nowrap">
                 Dashboard Kelas XB
               </h1>
             </div>
-            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1 leading-none">
-              <span className="font-medium text-stone-600 dark:text-stone-300">
+            <p className="mt-0.5 sm:mt-1 leading-none text-stone-500 dark:text-stone-400">
+              <span className="font-medium text-stone-600 dark:text-stone-300 text-[10px] sm:text-xs md:text-[11px] lg:text-xs whitespace-nowrap block">
                 SMA Putra Nirmala
               </span>
             </p>
           </div>
         </div>
       </div>
+
+      {/* Center Global Search Bar (Desktop / Tablet) */}
+      {onOpenSearch && (
+        <div className="hidden md:flex flex-1 min-w-0 max-w-[200px] lg:max-w-sm xl:max-w-md mx-2 lg:mx-3">
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            aria-label="Cari mata pelajaran, tugas, atau acara"
+            title="Cari mata pelajaran, tugas, atau acara (Tekan ⌘K / Ctrl+K)"
+            className="w-full h-9 flex items-center justify-between px-3 rounded-lg border border-stone-200/90 dark:border-stone-800 bg-stone-50/90 dark:bg-[#18191C] hover:bg-white dark:hover:bg-[#202227] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 text-stone-500 dark:text-stone-400 text-xs sm:text-[13px] transition cursor-pointer shadow-2xs group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Search className="w-4 h-4 text-stone-400 dark:text-stone-500 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors flex-shrink-0" />
+              <span className="truncate text-stone-500 dark:text-stone-400 font-normal">
+                Cari pelajaran, tugas, acara...
+              </span>
+            </div>
+            <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-stone-500 dark:text-stone-400 bg-white dark:bg-[#222429] border border-stone-200/80 dark:border-stone-700/80 rounded shadow-2xs flex-shrink-0">
+              Ctrl K
+            </kbd>
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Shortcut Dropdown: Pembagian Kelompok & Spin Wheel */}
@@ -111,14 +137,14 @@ export const Header: React.FC<HeaderProps> = ({
               aria-haspopup="true"
               aria-label="Menu Pembagian Kelompok & Roda Putar Siswa"
               title="Shortcut Pembagian Kelompok & Spin Wheel"
-              className={`h-9 px-2.5 sm:px-3 rounded-lg border flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold transition cursor-pointer shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+              className={`h-9 px-2 sm:px-2.5 lg:px-3 rounded-lg border flex items-center gap-1 sm:gap-1.5 lg:gap-2 text-xs sm:text-sm font-semibold transition cursor-pointer shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600 ${
                 isDropdownOpen
                   ? 'bg-emerald-50 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 border-emerald-600/40 dark:border-emerald-500/40'
                   : 'bg-white dark:bg-[#191A1E] text-stone-800 dark:text-stone-200 border-stone-200/80 dark:border-stone-800/80 hover:bg-stone-50 dark:hover:bg-[#222429]'
               }`}
             >
               <Users className="w-4 h-4 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
-              <span className="hidden min-[480px]:inline whitespace-nowrap">
+              <span className="hidden lg:inline whitespace-nowrap">
                 Pembagian Kelompok
               </span>
               <ChevronDown
@@ -198,6 +224,19 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
+        {/* Mobile Search Button (< md) */}
+        {onOpenSearch && (
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            aria-label="Cari mata pelajaran, tugas, atau acara"
+            title="Cari mata pelajaran, tugas, atau acara"
+            className="md:hidden w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+          >
+            <Search className="w-4 h-4 text-stone-600 dark:text-stone-400" />
+          </button>
+        )}
+
         {/* Kas Murid Quick-Access Button (Icon Only) */}
         {onOpenKasMurid && (
           <button
@@ -239,12 +278,20 @@ export const Header: React.FC<HeaderProps> = ({
         <PWAInstallButton />
 
         {/* Live Clock strictly synchronized to WIB with Date above it */}
-        <div className="text-right pl-1 flex flex-col items-end justify-center">
+        <div className="text-right pl-1 flex flex-col items-end justify-center flex-shrink-0 min-w-0">
           <span className="text-[10px] sm:text-xs font-medium text-stone-500 dark:text-stone-400 leading-tight block mb-0.5 whitespace-nowrap">
-            {wibInfo.formattedDate}
+            <span className="xl:hidden inline">
+              {wibInfo.dowName}, {wibInfo.day} {MONTH_ID[wibInfo.month]?.slice(0, 3)} {wibInfo.year}
+            </span>
+            <span className="hidden xl:inline">
+              {wibInfo.formattedDate}
+            </span>
           </span>
-          <div className="font-mono text-base sm:text-2xl lg:text-3xl font-bold text-stone-900 dark:text-stone-100 tabular-nums leading-none tracking-tight">
-            {wibInfo.timeStr} <span className="text-[10px] sm:text-xs md:text-sm font-sans font-medium text-stone-500 dark:text-stone-400">WIB</span>
+          <div
+            className="font-mono text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-stone-900 dark:text-stone-100 tabular-nums leading-none tracking-tight whitespace-nowrap"
+            style={{ fontVariantNumeric: 'tabular-nums' }}
+          >
+            {wibInfo.timeStr} <span className="text-[9px] xs:text-[10px] sm:text-xs font-sans font-medium text-stone-500 dark:text-stone-400">WIB</span>
           </div>
         </div>
       </div>

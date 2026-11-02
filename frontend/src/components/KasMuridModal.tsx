@@ -405,7 +405,10 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                   />
                 </div>
 
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <div
+                  className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto min-w-0 max-w-full touch-pan-x overscroll-x-contain pb-0.5"
+                  style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                >
                   <span className="text-xs text-stone-500 font-medium hidden sm:inline flex-shrink-0">
                     Status:
                   </span>
@@ -458,7 +461,35 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 </div>
               </div>
 
-              {/* Responsive Table */}
+              {/* Legend & Responsive Table */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-stone-600 dark:text-stone-400">
+                <span className="font-semibold text-stone-800 dark:text-stone-200">
+                  Daftar Murid ({filteredStudents.length} siswa)
+                </span>
+                {/* Piktogram Legend */}
+                <div className="flex items-center gap-2.5 sm:gap-3 text-[11px] flex-wrap">
+                  <span className="text-[10px] uppercase font-bold text-stone-400 dark:text-stone-500">
+                    Piktogram:
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2.5 rounded-2xs bg-emerald-600 dark:bg-emerald-500 inline-block" />
+                    <span>Lunas</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2.5 rounded-2xs bg-amber-500 inline-block" />
+                    <span>Kurang</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2.5 rounded-2xs bg-rose-500 inline-block" />
+                    <span>Nunggak</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2.5 rounded-2xs bg-stone-300 dark:bg-stone-700 inline-block" />
+                    <span>Mendatang</span>
+                  </span>
+                </div>
+              </div>
+
               <div className="bg-white dark:bg-[#18191C] rounded-xl border border-stone-200/80 dark:border-stone-800/80 overflow-hidden shadow-2xs">
                 {/* Mobile scroll hint */}
                 <div className="flex items-center justify-between px-3 py-1.5 bg-stone-50/70 dark:bg-[#141518] border-b border-stone-200/80 dark:border-stone-800/80 text-[11px] text-stone-500 dark:text-stone-400 sm:hidden">
@@ -470,11 +501,18 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                     <thead className="bg-stone-50 dark:bg-[#141518] text-stone-700 dark:text-stone-300 sticky top-[43px] sm:top-0 z-10 border-b border-stone-200/80 dark:border-stone-800/80">
                       <tr>
                         <th className="py-2.5 px-3 font-semibold w-12 text-center">No</th>
-                        <th className="py-2.5 px-3 font-semibold min-w-[200px]">Nama Siswa</th>
+                        <th className="py-2.5 px-3 font-semibold min-w-[190px]">Nama Siswa</th>
                         <th className="py-2.5 px-3 font-semibold text-center">Status</th>
                         <th className="py-2.5 px-3 font-semibold text-right">Terkumpul</th>
                         <th className="py-2.5 px-3 font-semibold text-right">Tunggakan</th>
-                        <th className="py-2.5 px-3 font-semibold text-center">Riwayat Minggu</th>
+                        <th className="py-2.5 px-3 font-semibold text-center min-w-[150px]">
+                          <div className="flex flex-col items-center">
+                            <span>Riwayat Minggu</span>
+                            <span className="text-[10px] font-normal text-stone-400 dark:text-stone-500">
+                              {weeks.length} Minggu ({weeks.filter(w => w.isElapsed).length} Berjalan)
+                            </span>
+                          </div>
+                        </th>
                         <th className="py-2.5 px-3 font-semibold text-center">Aksi</th>
                       </tr>
                     </thead>
@@ -486,92 +524,124 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                           </td>
                         </tr>
                       ) : (
-                        filteredStudents.map(student => (
-                          <tr
-                            key={student.absen}
-                            onClick={() => setSelectedStudent(student)}
-                            className="hover:bg-stone-50/70 dark:hover:bg-[#1F2024] transition cursor-pointer group"
-                          >
-                            <td className="py-2.5 px-3 text-center font-semibold text-stone-500 dark:text-stone-400">
-                              {student.absen}
-                            </td>
-                            <td className="py-2.5 px-3 font-medium text-stone-900 dark:text-stone-100">
-                              <div className="flex items-center gap-2">
-                                <span>{student.nama}</span>
-                                {student.status === 'nunggak' && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 animate-pulse" />
+                        filteredStudents.map(student => {
+                          const elapsedWeeks = weeks.filter(w => w.isElapsed);
+                          const paidWeeksCount = weeks.filter(w => (student.payments[w.colIndex] || 0) >= 3000).length;
+
+                          return (
+                            <tr
+                              key={student.absen}
+                              onClick={() => setSelectedStudent(student)}
+                              className="hover:bg-stone-50/70 dark:hover:bg-[#1F2024] transition cursor-pointer group"
+                            >
+                              <td className="py-2.5 px-3 text-center font-semibold text-stone-500 dark:text-stone-400 font-mono">
+                                {student.absen}
+                              </td>
+                              <td className="py-2.5 px-3 font-medium text-stone-900 dark:text-stone-100">
+                                <div className="flex items-center gap-2">
+                                  <span>{student.nama}</span>
+                                  {student.status === 'nunggak' && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0 animate-pulse" />
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                {student.status === 'lunas' && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-[#122A1E] dark:text-emerald-300 border border-emerald-600/25">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    Lunas
+                                  </span>
                                 )}
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              {student.status === 'lunas' && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-[#122A1E] dark:text-emerald-300 border border-emerald-600/25">
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  Lunas
-                                </span>
-                              )}
-                              {student.status === 'nunggak' && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300/80 dark:border-amber-900/60">
-                                  <AlertCircle className="w-3 h-3" />
-                                  Nunggak
-                                </span>
-                              )}
-                              {student.status === 'lebih' && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40">
-                                  Lebih
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-semibold text-emerald-800 dark:text-emerald-400 tabular-nums">
-                              {formatRupiah(student.totalBayar)}
-                            </td>
-                            <td className="py-2.5 px-3 text-right tabular-nums">
-                              {student.tunggakan > 0 ? (
-                                <span className="font-semibold text-amber-700 dark:text-amber-400">
-                                  {formatRupiah(student.tunggakan)}
-                                </span>
-                              ) : (
-                                <span className="text-stone-400 dark:text-stone-600 font-normal">
-                                  Rp 0
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              {/* Miniature progress bar of paid weeks */}
-                              <div className="flex items-center justify-center gap-0.5 max-w-[120px] mx-auto">
-                                {weeks.slice(0, 12).map((w, i) => {
-                                  const paid = (student.payments[w.colIndex] || 0) >= 3000;
-                                  const partial = (student.payments[w.colIndex] || 0) > 0 && (student.payments[w.colIndex] || 0) < 3000;
-                                  return (
-                                    <span
-                                      key={i}
-                                      title={`${w.label}: ${formatRupiah(student.payments[w.colIndex] || 0)}`}
-                                      className={`w-1.5 h-3.5 rounded-2xs ${
-                                        paid
-                                          ? 'bg-emerald-600 dark:bg-emerald-500'
-                                          : partial
-                                          ? 'bg-amber-400'
-                                          : 'bg-stone-200 dark:bg-stone-800'
-                                      }`}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <button
-                                type="button"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setSelectedStudent(student);
-                                }}
-                                className="px-2 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-[#1E1F23] border border-stone-200/80 dark:border-stone-800/80 text-stone-700 dark:text-stone-300 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-[#122A1E] dark:hover:text-emerald-300 transition"
-                              >
-                                Detail
-                              </button>
-                            </td>
-                          </tr>
-                        ))
+                                {student.status === 'nunggak' && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-300/80 dark:border-rose-900/60">
+                                    <AlertCircle className="w-3 h-3" />
+                                    Nunggak
+                                  </span>
+                                )}
+                                {student.status === 'lebih' && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40">
+                                    Lebih
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-semibold text-emerald-800 dark:text-emerald-400 tabular-nums">
+                                {formatRupiah(student.totalBayar)}
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums">
+                                {student.tunggakan > 0 ? (
+                                  <span className="font-semibold text-rose-700 dark:text-rose-400">
+                                    {formatRupiah(student.tunggakan)}
+                                  </span>
+                                ) : (
+                                  <span className="text-stone-400 dark:text-stone-600 font-normal">
+                                    Rp 0
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                {/* Complete weekly pictogram covering all weeks with month separations */}
+                                <div className="flex flex-col items-center gap-1 min-w-[130px] max-w-[180px] mx-auto">
+                                  <div className="flex items-center justify-center gap-[2px]">
+                                    {weeks.map((w, i) => {
+                                      const amt = student.payments[w.colIndex] || 0;
+                                      const isPaid = amt >= 3000;
+                                      const isPartial = amt > 0 && amt < 3000;
+                                      const isUnpaidPast = amt === 0 && w.isElapsed;
+
+                                      // Check if new month begins
+                                      const prevW = weeks[i - 1];
+                                      const isNewMonth = prevW && prevW.monthName !== w.monthName;
+
+                                      let statusText = 'Lunas';
+                                      let barClass = 'bg-emerald-600 dark:bg-emerald-500';
+
+                                      if (isPaid) {
+                                        statusText = `Lunas (${formatRupiah(amt)})`;
+                                        barClass = 'bg-emerald-600 dark:bg-emerald-500';
+                                      } else if (isPartial) {
+                                        statusText = `Kurang (${formatRupiah(amt)} / Rp 3.000)`;
+                                        barClass = 'bg-amber-500 dark:bg-amber-400';
+                                      } else if (isUnpaidPast) {
+                                        statusText = 'Menunggak (Rp 0)';
+                                        barClass = 'bg-rose-500 dark:bg-rose-500';
+                                      } else {
+                                        statusText = 'Belum Jatuh Tempo';
+                                        barClass = 'bg-stone-200 dark:bg-stone-800';
+                                      }
+
+                                      return (
+                                        <span
+                                          key={w.colIndex}
+                                          title={`Minggu ${i + 1} (${w.label}): ${statusText}`}
+                                          className={`w-1 sm:w-1.5 h-3.5 sm:h-4 rounded-2xs transition-all hover:scale-130 hover:z-10 cursor-pointer ${
+                                            isNewMonth ? 'ml-1' : ''
+                                          } ${barClass}`}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Week completion ratio text */}
+                                  <span className="text-[10px] font-mono font-medium text-stone-500 dark:text-stone-400 tabular-nums">
+                                    {paidWeeksCount}/{elapsedWeeks.length} mgg lunas
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setSelectedStudent(student);
+                                  }}
+                                  className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-[#1E1F23] border border-stone-200/80 dark:border-stone-800/80 text-stone-700 dark:text-stone-300 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-[#122A1E] dark:hover:text-emerald-300 transition"
+                                >
+                                  Detail
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -969,16 +1039,84 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
               </div>
             </div>
 
-            {/* Weekly grid */}
-            <div>
-              <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">
-                Catatan Pembayaran Per Minggu:
-              </h4>
+            {/* Weekly grid & Pictogram */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-stone-700 dark:text-stone-300">
+                  Piktogram &amp; Riwayat Pembayaran:
+                </h4>
+                <span className="text-[11px] font-mono font-medium text-stone-500 dark:text-stone-400 tabular-nums">
+                  {weeks.filter(w => (selectedStudent.payments[w.colIndex] || 0) >= 3000).length}/{weeks.filter(w => w.isElapsed).length} minggu lunas
+                </span>
+              </div>
+
+              {/* Full Pictogram Bar inside Modal */}
+              <div className="p-3 rounded-xl bg-stone-50 dark:bg-[#141518] border border-stone-200/80 dark:border-stone-800/80">
+                <div className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 mb-2 flex items-center justify-between">
+                  <span>Piktogram {weeks.length} Minggu Semester:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-2xs bg-emerald-600 inline-block" /> Lunas
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-2xs bg-amber-500 inline-block" /> Kurang
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-2xs bg-rose-500 inline-block" /> Nunggak
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-2xs bg-stone-300 dark:bg-stone-700 inline-block" /> Mendatang
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-end justify-between gap-1 py-1 overflow-x-auto no-scrollbar">
+                  {weeks.map((w, i) => {
+                    const amt = selectedStudent.payments[w.colIndex] || 0;
+                    const isPaid = amt >= 3000;
+                    const isPartial = amt > 0 && amt < 3000;
+                    const isUnpaidPast = amt === 0 && w.isElapsed;
+
+                    const barClass = isPaid
+                      ? 'bg-emerald-600 dark:bg-emerald-500'
+                      : isPartial
+                      ? 'bg-amber-500 dark:bg-amber-400'
+                      : isUnpaidPast
+                      ? 'bg-rose-500 dark:bg-rose-500'
+                      : 'bg-stone-200 dark:bg-stone-700';
+
+                    return (
+                      <div
+                        key={w.colIndex}
+                        title={`Minggu ${i + 1} (${w.label}): ${
+                          isPaid
+                            ? `Lunas (${formatRupiah(amt)})`
+                            : isPartial
+                            ? `Kurang (${formatRupiah(amt)})`
+                            : isUnpaidPast
+                            ? 'Menunggak (Rp 0)'
+                            : 'Belum Jatuh Tempo'
+                        }`}
+                        className="flex flex-col items-center gap-0.5 flex-1 min-w-[12px] group/bar cursor-pointer"
+                      >
+                        <span className={`w-full h-5 rounded-2xs transition-transform group-hover/bar:scale-110 ${barClass}`} />
+                        <span className="text-[9px] text-stone-400 dark:text-stone-500 font-mono scale-90">
+                          {w.dateStr}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Individual Week Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto p-1">
                 {weeks.map(w => {
                   const amt = selectedStudent.payments[w.colIndex] || 0;
                   const isPaid = amt >= 3000;
                   const isPartial = amt > 0 && amt < 3000;
+                  const isUnpaidPast = amt === 0 && w.isElapsed;
+
                   return (
                     <div
                       key={w.colIndex}
@@ -987,12 +1125,25 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                           ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300'
                           : isPartial
                           ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300'
+                          : isUnpaidPast
+                          ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-300'
                           : 'bg-stone-50 dark:bg-[#141518] border-stone-200/80 dark:border-stone-800/80 text-stone-500 dark:text-stone-500'
                       }`}
                     >
-                      <span className="font-medium">{w.label}</span>
-                      <span className="font-bold tabular-nums">
-                        {amt > 0 ? formatRupiah(amt) : '-'}
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold truncate">{w.label}</span>
+                        <span className="text-[10px] opacity-75">
+                          {isPaid
+                            ? 'Lunas'
+                            : isPartial
+                            ? 'Kurang Bayar'
+                            : isUnpaidPast
+                            ? 'Menunggak'
+                            : 'Mendatang'}
+                        </span>
+                      </div>
+                      <span className="font-bold tabular-nums ml-2 flex-shrink-0 font-mono">
+                        {amt > 0 ? formatRupiah(amt) : isUnpaidPast ? 'Rp 0' : '-'}
                       </span>
                     </div>
                   );

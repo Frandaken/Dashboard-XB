@@ -11,7 +11,7 @@ import {
   Sparkles,
   ArrowUpDown
 } from 'lucide-react';
-import { Student, STUDENTS_DATA } from '../data/studentsData';
+import { Student, STUDENTS_DATA, PIKET_SCHEDULE_MAP } from '../data/studentsData';
 import { copyTextToClipboard } from '../utils/summaryFormatter';
 
 interface SiswaListModalProps {
@@ -20,43 +20,6 @@ interface SiswaListModalProps {
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
 }
-
-// Map each student's absen to their piket day (from official class schedule)
-const PIKET_SCHEDULE_MAP: Record<number, string> = {
-  1: 'Senin',   // Alecha
-  2: 'Jumat',   // Xander
-  3: 'Jumat',   // Andre
-  4: 'Senin',   // Ashley
-  5: 'Selasa',  // Grace
-  6: 'Rabu',    // Kekey
-  7: 'Senin',   // Bintang
-  8: 'Senin',   // Claudya
-  9: 'Kamis',   // Devina
-  10: 'Rabu',   // Dimas
-  11: 'Kamis',  // Joel
-  12: 'Selasa', // Evan
-  13: 'Selasa', // Frans
-  14: 'Jumat',  // Dhimy
-  15: 'Senin',  // Hans
-  16: 'Kamis',  // Adi
-  17: 'Kamis',  // Adriano
-  18: 'Kamis',  // Joshua
-  19: 'Rabu',   // Lionel
-  20: 'Senin',  // Mahalia
-  21: 'Selasa', // Sandro
-  22: 'Selasa', // Asther
-  23: 'Rabu',   // Franda
-  24: 'Jumat',  // Fellix
-  25: 'Senin',  // Prita
-  26: 'Jumat',  // Retna
-  27: 'Kamis',  // Steven
-  28: 'Selasa', // Tere
-  29: 'Jumat',  // Valerie
-  30: 'Rabu',   // Vickey
-  31: 'Rabu',   // Virgi
-  32: 'Jumat',  // Felice / Vivian
-  33: 'Selasa'   // Kim
-};
 
 export const SiswaListModal: React.FC<SiswaListModalProps> = ({
   isOpen,
