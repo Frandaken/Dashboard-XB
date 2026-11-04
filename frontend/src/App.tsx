@@ -5,13 +5,12 @@ import { TaskBanner } from './components/TaskBanner';
 import { ScheduleBlocks } from './components/ScheduleBlocks';
 import { CalendarSection } from './components/CalendarSection';
 import { SongScheduleList } from './components/SongScheduleList';
-import { HamburgerMenuModal } from './components/HamburgerMenuModal';
 import { StatusBanner } from './components/StatusBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardSkeleton } from './components/DashboardSkeleton';
 import { NotFoundUI } from './components/NotFoundUI';
 
-// Code-split heavy modals to minimize main JS bundle
+// Code-split modals to minimize main JS bundle
 const DayDetailModal = React.lazy(() => import('./components/DayDetailModal').then(m => ({ default: m.DayDetailModal })));
 const AllSongsModal = React.lazy(() => import('./components/AllSongsModal').then(m => ({ default: m.AllSongsModal })));
 const WheelOfNamesModal = React.lazy(() => import('./components/WheelOfNamesModal').then(m => ({ default: m.WheelOfNamesModal })));
@@ -21,11 +20,13 @@ const KasMuridModal = React.lazy(() => import('./components/KasMuridModal').then
 const WeeklyExportModal = React.lazy(() => import('./components/WeeklyExportModal').then(m => ({ default: m.WeeklyExportModal })));
 const SiswaListModal = React.lazy(() => import('./components/SiswaListModal').then(m => ({ default: m.SiswaListModal })));
 const SettingsModal = React.lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+const HamburgerMenuModal = React.lazy(() => import('./components/HamburgerMenuModal').then(m => ({ default: m.HamburgerMenuModal })));
+const NotificationModal = React.lazy(() => import('./components/NotificationModal').then(m => ({ default: m.NotificationModal })));
+const ReceiptLightboxModal = React.lazy(() => import('./components/ReceiptLightboxModal').then(m => ({ default: m.ReceiptLightboxModal })));
+const GlobalSearchModal = React.lazy(() => import('./components/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })));
 import { EventNoticeBanner } from './components/EventNoticeBanner';
-import { ReceiptLightboxModal, ReceiptLightboxData } from './components/ReceiptLightboxModal';
-import { NotificationModal } from './components/NotificationModal';
+import type { ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
-import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { ClassDataStore, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
@@ -959,27 +960,28 @@ export default function App() {
       {/* Offline Status Toast */}
       <OfflineIndicator />
 
-      {/* Hamburger Navigation Modal (No placeholders) */}
-      <HamburgerMenuModal
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        onOpenSongLyrics={() => setIsAllSongsOpen(true)}
-        onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
-        onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
-        onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
-        onOpenNotifications={() => setIsNotificationModalOpen(true)}
-        hasNotificationActive={isNotificationActive}
-        onOpenKasMurid={() => setIsKasModalOpen(true)}
-        onJumpToToday={handleJumpToToday}
-        darkMode={darkMode}
-        onToggleDarkMode={toggleDarkMode}
-        onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
-        onOpenSiswa={() => setIsSiswaModalOpen(true)}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-      />
-
       {/* Lazy-Loaded Modals wrapped in Suspense for optimal bundle splitting */}
       <React.Suspense fallback={null}>
+        {/* Hamburger Navigation Modal (No placeholders) */}
+        {isMenuOpen && (
+          <HamburgerMenuModal
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            onOpenSongLyrics={() => setIsAllSongsOpen(true)}
+            onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+            onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+            onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
+            onOpenNotifications={() => setIsNotificationModalOpen(true)}
+            hasNotificationActive={isNotificationActive}
+            onOpenKasMurid={() => setIsKasModalOpen(true)}
+            onJumpToToday={handleJumpToToday}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
+            onOpenSiswa={() => setIsSiswaModalOpen(true)}
+            onOpenSettings={() => setIsSettingsModalOpen(true)}
+          />
+        )}
         {/* Random Name Picker (Wheel of Names) Modal */}
         {isRandomPickerOpen && (
           <WheelOfNamesModal
@@ -1117,30 +1119,34 @@ export default function App() {
             isRefreshing={isLoading}
           />
         )}
+
+        {/* Lightbox Modal for Task Attachment Previews (Photos, Documents, Drive Files) */}
+        {previewAttachment && (
+          <ReceiptLightboxModal
+            isOpen={!!previewAttachment}
+            onClose={() => setPreviewAttachment(null)}
+            data={previewAttachment}
+            darkMode={darkMode}
+          />
+        )}
+
+        {/* Global Search Bar Modal (Subjects, Tasks, Event Notices, Students) */}
+        {isSearchOpen && (
+          <GlobalSearchModal
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+            dataStore={dataStore}
+            onSelectDate={iso => {
+              setActiveISO(iso);
+              setIsManualDate(true);
+              setSelectedISO(null);
+            }}
+            onOpenAttachment={handleOpenAttachment}
+            darkMode={darkMode}
+            todayISO={todayWIB.iso}
+          />
+        )}
       </React.Suspense>
-
-      {/* Lightbox Modal for Task Attachment Previews (Photos, Documents, Drive Files) */}
-      <ReceiptLightboxModal
-        isOpen={!!previewAttachment}
-        onClose={() => setPreviewAttachment(null)}
-        data={previewAttachment}
-        darkMode={darkMode}
-      />
-
-      {/* Global Search Bar Modal (Subjects, Tasks, Event Notices, Students) */}
-      <GlobalSearchModal
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        dataStore={dataStore}
-        onSelectDate={iso => {
-          setActiveISO(iso);
-          setIsManualDate(true);
-          setSelectedISO(null);
-        }}
-        onOpenAttachment={handleOpenAttachment}
-        darkMode={darkMode}
-        todayISO={todayWIB.iso}
-      />
     </div>
   );
 }

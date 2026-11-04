@@ -96,6 +96,7 @@ export default defineConfig(() => {
       },
     },
     build: {
+      emptyOutDir: true,
       chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
@@ -104,14 +105,8 @@ export default defineConfig(() => {
               if (id.includes('ical.js')) {
                 return 'vendor-ical';
               }
-              if (id.includes('react-canvas-confetti') || id.includes('canvas-confetti')) {
-                return 'vendor-confetti';
-              }
               if (id.includes('lucide-react')) {
                 return 'vendor-lucide';
-              }
-              if (id.includes('papaparse')) {
-                return 'vendor-papaparse';
               }
               if (id.includes('react') || id.includes('react-dom')) {
                 return 'vendor-react';

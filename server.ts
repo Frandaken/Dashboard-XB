@@ -663,6 +663,8 @@ function injectAbsoluteMeta(html: string, req: express.Request): string {
   const baseUrl = getRequestBaseUrl(req);
   return html
     .replaceAll(DEFAULT_ORIGIN, baseUrl)
+    .replaceAll('content="/img/og.jpg"', `content="${baseUrl}/img/og.jpg"`)
+    .replaceAll('href="/img/og.jpg"', `href="${baseUrl}/img/og.jpg"`)
     .replaceAll('content="/og-image.png"', `content="${baseUrl}/og-image.png"`)
     .replaceAll('content="/"', `content="${baseUrl}/"`)
     .replaceAll('href="/og-image.png"', `href="${baseUrl}/og-image.png"`);
@@ -699,7 +701,12 @@ async function startServer() {
         let template = fs.readFileSync(indexPath, 'utf-8');
         template = await vite.transformIndexHtml(url, template);
         template = injectAbsoluteMeta(template, req);
-        res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).send(template);
+        res.status(200).set({
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }).send(template);
       } catch (e) {
         next(e);
       }
@@ -714,11 +721,19 @@ async function startServer() {
       app.use(express.static(distPath, { index: false }));
       app.get('*', (req, res, next) => {
         if (req.path.startsWith('/api')) return next();
+        if (path.extname(req.path)) {
+          return res.status(404).send('Not Found');
+        }
         const indexPath = path.join(distPath, 'index.html');
         if (fs.existsSync(indexPath)) {
           let template = fs.readFileSync(indexPath, 'utf-8');
           template = injectAbsoluteMeta(template, req);
-          res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).send(template);
+          res.status(200).set({
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }).send(template);
         } else {
           res.status(404).send('Not Found');
         }
