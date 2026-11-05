@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-const dataDir = path.join(process.cwd(), 'data');
+const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }

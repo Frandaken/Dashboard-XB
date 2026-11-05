@@ -80,6 +80,16 @@ export function usePushNotifications() {
       navigator.serviceWorker.ready.then(reg => {
         reg.pushManager.getSubscription().then(sub => {
           setIsSubscribed(Boolean(sub));
+          // Auto-sync existing subscription to server so backend always has it
+          if (sub && Notification.permission === 'granted') {
+            const savedPrefs = localStorage.getItem(PREFS_STORAGE_KEY);
+            const currentPrefs = savedPrefs ? JSON.parse(savedPrefs) : DEFAULT_PREFERENCES;
+            fetch('/api/push/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ subscription: sub, preferences: currentPrefs })
+            }).catch(() => {});
+          }
         }).catch(() => {});
       }).catch(() => {});
     }
@@ -168,27 +178,43 @@ export function usePushNotifications() {
           if (publicKey) {
             applicationServerKey = urlBase64ToUint8Array(publicKey);
           }
+        } else {
+          throw new Error(`Server VAPID endpoint returned HTTP ${vapidRes.status}`);
         }
-      } catch (e) {
-        console.warn('Could not fetch server VAPID key:', e);
+      } catch (e: any) {
+        throw new Error('Gagal menghubungi server untuk verifikasi kunci notifikasi: ' + (e.message || 'Server offline'));
       }
 
-      // 4. Subscribe to Push Manager
+      if (!applicationServerKey) {
+        throw new Error('Kunci VAPID publik tidak tersedia dari server.');
+      }
+
+      // 4. Clean up any stale subscription to guarantee fresh binding with server key
       let sub = await registration.pushManager.getSubscription();
-      if (!sub && applicationServerKey) {
-        sub = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: applicationServerKey as BufferSource
-        });
+      if (sub) {
+        try {
+          await sub.unsubscribe();
+        } catch (unsubErr) {
+          console.warn('Could not unsubscribe previous push subscription:', unsubErr);
+        }
       }
 
-      // 5. Send subscription to server if available
-      if (sub) {
-        await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subscription: sub, preferences })
-        }).catch(() => {});
+      // Subscribe fresh
+      sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey as BufferSource
+      });
+
+      // 5. Send subscription to server and verify response
+      const subRes = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub, preferences })
+      });
+
+      if (!subRes.ok) {
+        const errJson = await subRes.json().catch(() => ({}));
+        throw new Error(errJson.error || `Server menolak penyimpanan subscription (HTTP ${subRes.status})`);
       }
 
       setIsSubscribed(true);
@@ -300,9 +326,12 @@ export function usePushNotifications() {
 
         if (res.ok) {
           sentViaServer = true;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          console.warn('Server push test responded with error:', errData.error || res.statusText);
         }
-      } catch (e) {
-        // Continue to client-side fallback
+      } catch (e: any) {
+        console.warn('Failed to reach server for push test:', e.message);
       }
 
       // 2. Client-side fallback if server push failed or offline
