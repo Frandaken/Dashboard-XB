@@ -71,26 +71,26 @@ export const Header: React.FC<HeaderProps> = ({
       id="classroom-header"
       className="flex items-center justify-between border-b border-stone-200/80 dark:border-stone-800/80 pb-3 flex-shrink-0 transition-colors"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Hamburger Menu Button */}
         <button
           onClick={onOpenMenu}
           aria-label="Buka Menu Navigasi"
           title="Buka Menu Navigasi"
-          className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-800 dark:text-stone-200 transition cursor-pointer group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+          className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-800 dark:text-stone-200 transition cursor-pointer group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] flex-shrink-0"
         >
           <Menu className="w-4 h-4 text-stone-700 dark:text-stone-200 group-hover:scale-105 transition-transform" />
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <img
             src="/icon.png"
             alt="Logo SMA Putra Nirmala Kelas XB"
-            className="hidden sm:block w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover flex-shrink-0 border border-stone-200/80 dark:border-stone-800/80"
+            className="w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 rounded-xl object-cover flex-shrink-0 border border-stone-200/80 dark:border-stone-800/80"
           />
-          <div className="flex-shrink-0">
-            <div className="flex items-center gap-2 leading-none">
-              <h1 className="font-editorial text-sm xs:text-base sm:text-lg md:text-base lg:text-xl xl:text-2xl text-stone-900 dark:text-stone-100 font-bold tracking-tight leading-none whitespace-nowrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 leading-tight sm:leading-none">
+              <h1 className="font-editorial text-xs xs:text-sm sm:text-lg md:text-base lg:text-xl xl:text-2xl text-stone-900 dark:text-stone-100 font-bold tracking-tight whitespace-normal sm:whitespace-nowrap leading-tight sm:leading-none break-words">
                 Dashboard Kelas XB
               </h1>
             </div>
@@ -126,10 +126,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         {/* Shortcut Dropdown: Pembagian Kelompok & Spin Wheel */}
         {(onOpenRandomPicker || onOpenGroupGenerator) && (
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative hidden sm:block" ref={dropdownRef}>
             <button
               type="button"
               onClick={() => setIsDropdownOpen(prev => !prev)}
@@ -224,49 +224,49 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        {/* Mobile Search Button (< md) */}
+        {/* Mobile Search Button (sm to md only; on < sm accessible via Hamburger Menu) */}
         {onOpenSearch && (
           <button
             type="button"
             onClick={onOpenSearch}
             aria-label="Cari mata pelajaran, tugas, atau acara"
             title="Cari mata pelajaran, tugas, atau acara"
-            className="md:hidden w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+            className="hidden sm:flex md:hidden w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
           >
             <Search className="w-4 h-4 text-stone-600 dark:text-stone-400" />
           </button>
         )}
 
-        {/* Kas Murid Quick-Access Button (Icon Only) */}
+        {/* Kas Murid Quick-Access Button (Icon Only - hidden on narrow screens, accessible via Menu) */}
         {onOpenKasMurid && (
           <button
             onClick={onOpenKasMurid}
             aria-label="Buka Buku Kas Murid"
             title="Buku Kas & Penunggakan Murid Kelas XB"
-            className="w-9 h-9 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 bg-emerald-50/70 dark:bg-[#13281E] hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] flex items-center justify-center text-emerald-800 dark:text-emerald-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+            className="hidden sm:flex w-9 h-9 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 bg-emerald-50/70 dark:bg-[#13281E] hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] items-center justify-center text-emerald-800 dark:text-emerald-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
           >
             <Wallet className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
           </button>
         )}
 
-        {/* Push Notification Button (shown in header only if not yet active) */}
+        {/* Push Notification Button (hidden on narrow screens, accessible via Menu) */}
         {!hasNotificationActive && onOpenNotifications && (
           <button
             onClick={onOpenNotifications}
             aria-label="Pengaturan Push Notifikasi"
             title="Pengaturan Push Notifikasi & Pengingat"
-            className="relative w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+            className="hidden sm:flex relative w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
           >
             <Bell className="w-4 h-4 text-stone-700 dark:text-stone-300" />
           </button>
         )}
 
-        {/* Dark Mode Toggle Button */}
+        {/* Dark Mode Toggle Button (hidden on narrow screens, accessible via Menu) */}
         <button
           onClick={onToggleDarkMode}
           aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
           title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
-          className="w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+          className="hidden sm:flex w-9 h-9 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#191A1E] hover:bg-stone-100 dark:hover:bg-[#222429] items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
         >
           {darkMode ? (
             <Sun className="w-4 h-4 text-amber-300" />
@@ -275,7 +275,9 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </button>
 
-        <PWAInstallButton />
+        <div className="hidden sm:block">
+          <PWAInstallButton />
+        </div>
 
         {/* Live Clock strictly synchronized to WIB with Date above it */}
         <div className="text-right pl-1 flex flex-col items-end justify-center flex-shrink-0 min-w-0">

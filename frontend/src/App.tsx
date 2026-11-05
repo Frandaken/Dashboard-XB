@@ -24,6 +24,7 @@ const HamburgerMenuModal = React.lazy(() => import('./components/HamburgerMenuMo
 const NotificationModal = React.lazy(() => import('./components/NotificationModal').then(m => ({ default: m.NotificationModal })));
 const ReceiptLightboxModal = React.lazy(() => import('./components/ReceiptLightboxModal').then(m => ({ default: m.ReceiptLightboxModal })));
 const GlobalSearchModal = React.lazy(() => import('./components/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })));
+import { MobileQuickActions } from './components/MobileQuickActions';
 import { EventNoticeBanner } from './components/EventNoticeBanner';
 import type { ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
@@ -802,6 +803,18 @@ export default function App() {
               id="hero-today-section"
               className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden"
             >
+              {/* Shortcut Grid: HANYA BERLAKU BILA SPACE HORIZONTAL KECIL (sm:hidden) */}
+              <MobileQuickActions
+                onOpenSearch={() => setIsSearchOpen(true)}
+                onOpenKasMurid={() => setIsKasModalOpen(true)}
+                onOpenNotifications={() => setIsNotificationModalOpen(true)}
+                hasNotificationActive={isNotificationActive}
+                onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+                onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+                darkMode={darkMode}
+                onToggleDarkMode={toggleDarkMode}
+              />
+
               {/* Date Title with Navigation */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
