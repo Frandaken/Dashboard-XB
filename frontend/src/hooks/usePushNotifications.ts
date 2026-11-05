@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { syncSubscriptionToFirestore, removeSubscriptionFromFirestore } from '../services/firestorePushSync';
 
 export interface NotificationPreferences {
   jadwalHarian: boolean;
@@ -80,7 +81,7 @@ export function usePushNotifications() {
       navigator.serviceWorker.ready.then(reg => {
         reg.pushManager.getSubscription().then(sub => {
           setIsSubscribed(Boolean(sub));
-          // Auto-sync existing subscription to server so backend always has it
+          // Auto-sync existing subscription to server and Firestore
           if (sub && Notification.permission === 'granted') {
             const savedPrefs = localStorage.getItem(PREFS_STORAGE_KEY);
             const currentPrefs = savedPrefs ? JSON.parse(savedPrefs) : DEFAULT_PREFERENCES;
@@ -89,6 +90,7 @@ export function usePushNotifications() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ subscription: sub, preferences: currentPrefs })
             }).catch(() => {});
+            syncSubscriptionToFirestore(sub, currentPrefs).catch(() => {});
           }
         }).catch(() => {});
       }).catch(() => {});
@@ -119,7 +121,7 @@ export function usePushNotifications() {
         localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(updated));
       } catch {}
 
-      // If already subscribed, sync preferences to backend
+      // If already subscribed, sync preferences to backend & Firestore
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(reg => {
           reg.pushManager.getSubscription().then(sub => {
@@ -129,6 +131,7 @@ export function usePushNotifications() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ subscription: sub, preferences: updated })
               }).catch(() => {});
+              syncSubscriptionToFirestore(sub, updated).catch(() => {});
             }
           });
         });
@@ -217,6 +220,9 @@ export function usePushNotifications() {
         throw new Error(errJson.error || `Server menolak penyimpanan subscription (HTTP ${subRes.status})`);
       }
 
+      // Sync subscription to Cloud Firestore as resilient cloud backup
+      await syncSubscriptionToFirestore(sub, preferences).catch(() => {});
+
       setIsSubscribed(true);
       setIsEnabled(true);
       try {
@@ -270,6 +276,9 @@ export function usePushNotifications() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ endpoint })
             }).catch(() => {});
+
+            // Also clean up from Cloud Firestore
+            await removeSubscriptionFromFirestore(endpoint).catch(() => {});
           }
         } catch (swErr) {
           console.warn('SW unsubscribe notice:', swErr);

@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidEndpoint(endpoint) {
+      return endpoint is string && endpoint.size() >= 10 && endpoint.size() <= 2048 &&
+             (endpoint.matches('^https://.*'));
+    }
+
+    function isValidKeys(keys) {
+      return keys is map &&
+             keys.p256dh is string && keys.p256dh.size() > 0 && keys.p256dh.size() <= 256 &&
+             keys.auth is string && keys.auth.size() > 0 && keys.auth.size() <= 128;
+    }
+
+    match /push_subscriptions/{subscriptionId} {
+      // Anyone can register or update their browser push subscription
+      allow create: if request.resource.data.endpoint is string &&
+                       isValidEndpoint(request.resource.data.endpoint) &&
+                       isValidKeys(request.resource.data.keys);
+
+      allow update: if isValidEndpoint(request.resource.data.endpoint) &&
+                       isValidKeys(request.resource.data.keys);
+
+      allow delete: if true;
+
+      // Allow read so client hook can check if subscription exists
+      allow read: if true;
+    }
+
+    match /system_state/{stateDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

@@ -28,6 +28,7 @@ import { EventNoticeBanner } from './components/EventNoticeBanner';
 import type { ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { validateFirestoreConnection } from './firebase';
 import { ClassDataStore, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
@@ -55,6 +56,11 @@ export default function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
+
+  // Validate Cloud Firestore connection on initial mount
+  useEffect(() => {
+    validateFirestoreConnection().catch(() => {});
+  }, []);
 
   const toggleDarkMode = () => setDarkMode(prev => !prev);
 

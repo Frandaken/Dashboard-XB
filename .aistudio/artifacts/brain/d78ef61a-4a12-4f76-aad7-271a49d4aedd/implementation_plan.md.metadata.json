@@ -1,6 +1,6 @@
 {
-  "summary": "Rencana komprehensif untuk pembersihan dead code (IceBreakingPanel), penghapusan dependensi tak terpakai (motion), pembersihan cache dist build lama (5 MB), dan optimasi bundle JS melalui lazy loading seluruh modal serta vendor chunking presisi di Vite.",
-  "updatedAt": "2026-11-02T18:34:18.321452119Z",
+  "summary": "Revisi rencana arsitektur: Menjelaskan peran sinergis antara Google Sheets (sebagai CMS input harian guru/siswa yang tetap aktif) dan Firebase (sebagai infrastruktur teknis notifikasi, token perangkat, dan database realtime).",
+  "updatedAt": "2026-11-05T04:08:18.587201957Z",
   "requestFeedback": true,
   "userFacing": true
 }
