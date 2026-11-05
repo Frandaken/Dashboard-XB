@@ -61,6 +61,29 @@ app.get(['/api/uploads/:filename', '/uploads/:filename'], (req, res) => {
   });
 });
 
+// Explicit route for OpenGraph image (supporting /img/og, /img/og.jpg, /og-image, /og-image.jpg, /og-image.png)
+app.get(['/img/og', '/img/og.jpg', '/og-image', '/og-image.jpg', '/og-image.png'], (_req, res) => {
+  const candidatePaths = [
+    path.join(process.cwd(), 'frontend', 'public', 'img', 'og.jpg'),
+    path.join(process.cwd(), 'frontend', 'public', 'img', 'og'),
+    path.join(process.cwd(), 'dist', 'img', 'og.jpg'),
+    path.join(process.cwd(), 'dist', 'img', 'og'),
+    path.join(process.cwd(), 'frontend', 'public', 'og-image.png'),
+    path.join(process.cwd(), 'dist', 'og-image.png'),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      const isPng = candidate.endsWith('.png');
+      res.setHeader('Content-Type', isPng ? 'image/png' : 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=604800, no-transform');
+      return res.sendFile(candidate);
+    }
+  }
+
+  return res.status(404).send('OG Image not found');
+});
+
 // Upstream Google Calendar feeds (Notice: penugasan calendar link is completely removed as requested)
 const CALENDAR_FEEDS: Record<string, string> = {
   pelajaran: "https://calendar.google.com/calendar/ical/a4fd56ccb6ac7cde9478e4d863191dd53cd12c6110fe380d6bf279da0e44dc8e%40group.calendar.google.com/private-f67cd9352a27790460116ba8a612434c/basic.ics",
@@ -663,6 +686,8 @@ function injectAbsoluteMeta(html: string, req: express.Request): string {
   const baseUrl = getRequestBaseUrl(req);
   return html
     .replaceAll(DEFAULT_ORIGIN, baseUrl)
+    .replaceAll('content="/img/og"', `content="${baseUrl}/img/og"`)
+    .replaceAll('href="/img/og"', `href="${baseUrl}/img/og"`)
     .replaceAll('content="/img/og.jpg"', `content="${baseUrl}/img/og.jpg"`)
     .replaceAll('href="/img/og.jpg"', `href="${baseUrl}/img/og.jpg"`)
     .replaceAll('content="/og-image.png"', `content="${baseUrl}/og-image.png"`)
@@ -687,7 +712,7 @@ async function startServer() {
     app.use(async (req, res, next) => {
       const url = req.originalUrl || req.url;
       const cleanPath = url.split('?')[0];
-      if (req.method !== 'GET' || cleanPath.startsWith('/api') || cleanPath.startsWith('/@') || path.extname(cleanPath)) {
+      if (req.method !== 'GET' || cleanPath.startsWith('/api') || cleanPath.startsWith('/@') || cleanPath.startsWith('/img') || path.extname(cleanPath)) {
         return next();
       }
 
