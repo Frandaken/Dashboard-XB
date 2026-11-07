@@ -249,8 +249,8 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                   key={i}
                   className={
                     compact
-                      ? 'px-2.5 py-1 rounded-md bg-white dark:bg-[#18191C] text-emerald-950 dark:text-emerald-100 font-medium text-xs sm:text-sm border border-emerald-600/25 dark:border-emerald-500/35'
-                      : 'px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#18191C] text-emerald-950 dark:text-emerald-100 font-bold text-sm sm:text-base md:text-lg border border-emerald-600/25 dark:border-emerald-500/35 shadow-2xs'
+                      ? 'px-2.5 py-1 rounded-md bg-white dark:bg-[#18191C] text-emerald-950 dark:text-emerald-100 font-medium text-xs sm:text-sm border border-emerald-600/25 dark:border-emerald-500/35 hover:scale-105 hover:border-emerald-500/50 hover:shadow-2xs transition-all duration-200 cursor-default select-none'
+                      : 'px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#18191C] text-emerald-950 dark:text-emerald-100 font-bold text-sm sm:text-base md:text-lg border border-emerald-600/25 dark:border-emerald-500/35 shadow-2xs hover:scale-105 hover:border-emerald-500/50 hover:shadow-xs transition-all duration-200 cursor-default select-none'
                   }
                 >
                   {name}
@@ -270,7 +270,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         id="card-doa"
         className={`bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl ${
           compact ? 'p-3' : 'p-3.5 sm:p-4'
-        } transition-colors flex-shrink-0`}
+        } transition-colors flex-shrink-0 hover:border-stone-300 dark:hover:border-stone-700`}
       >
         <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-stone-100 dark:border-stone-800/60 flex-wrap">
           <h3
@@ -290,8 +290,8 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               <span
                 className={
                   compact
-                    ? 'font-editorial text-xs sm:text-sm font-semibold text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] px-2 py-0.5 rounded-md border border-emerald-600/25'
-                    : 'font-editorial text-base sm:text-lg md:text-xl font-bold text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] px-3.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 shadow-2xs'
+                    ? 'font-editorial text-xs sm:text-sm font-semibold text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] px-2 py-0.5 rounded-md border border-emerald-600/25 hover:scale-105 transition-transform duration-200 cursor-default'
+                    : 'font-editorial text-base sm:text-lg md:text-xl font-bold text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] px-3.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 shadow-2xs hover:scale-105 transition-transform duration-200 cursor-default'
                 }
               >
                 {bacaanText}
@@ -312,10 +312,10 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
             return (
               <div
                 key={idx}
-                className={`${compact ? 'rounded-lg p-2.5' : 'rounded-xl p-3'} flex flex-col justify-between transition-all ${
+                className={`${compact ? 'rounded-lg p-2.5' : 'rounded-xl p-3'} flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-xs transition-all duration-200 cursor-default ${
                   isMalaikatWithTugas
                     ? 'bg-emerald-50/90 dark:bg-emerald-950/35 border-2 border-emerald-500 dark:border-emerald-400 outline outline-2 outline-emerald-500/70 dark:outline-emerald-400/70 outline-offset-1 ring-2 ring-emerald-500/20 shadow-xs'
-                    : 'bg-stone-50/80 dark:bg-[#141518] border border-stone-200/70 dark:border-stone-800/70'
+                    : 'bg-stone-50/80 dark:bg-[#141518] border border-stone-200/70 dark:border-stone-800/70 hover:border-stone-300 dark:hover:border-stone-700'
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
@@ -424,19 +424,19 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               return (
                 <div
                   key={`${p.cleanName}-${p.time}-${idx}`}
-                  className={`relative rounded-xl transition-all duration-300 flex flex-col ${
+                  className={`relative rounded-xl transition-all duration-200 flex flex-col group hover:-translate-y-1 hover:shadow-md ${
                     status === 'active'
                       ? 'p-[2.5px] shadow-lg shadow-emerald-500/20'
                       : `border ${
                           p.hasTask
                             ? p.taskType === 'sumatif'
-                              ? 'border-rose-300/80 dark:border-rose-900/70 shadow-xs'
+                              ? 'border-rose-300/80 dark:border-rose-900/70 shadow-xs hover:border-rose-400'
                               : p.taskType === 'pr'
-                              ? 'border-amber-300/80 dark:border-amber-900/70'
-                              : 'border-blue-200/80 dark:border-blue-900/60'
+                              ? 'border-amber-300/80 dark:border-amber-900/70 hover:border-amber-400'
+                              : 'border-blue-200/80 dark:border-blue-900/60 hover:border-blue-400'
                             : isNonAcademicFriday
-                            ? 'border-emerald-200 dark:border-emerald-900/50'
-                            : 'border-stone-200/80 dark:border-stone-800/80 hover:border-stone-400 dark:hover:border-stone-600'
+                            ? 'border-emerald-200 dark:border-emerald-900/50 hover:border-emerald-400'
+                            : 'border-stone-200/80 dark:border-stone-800/80 hover:border-emerald-500/50 dark:hover:border-emerald-500/40'
                         }`
                   }`}
                   style={
@@ -472,7 +472,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                               compact
                                 ? 'w-5 h-5 rounded text-[11px] font-mono font-semibold'
                                 : 'w-6 h-6 sm:w-7 sm:h-7 rounded-md text-xs sm:text-sm font-mono font-bold'
-                            } flex items-center justify-center flex-shrink-0 ${
+                            } flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200 ${
                               status === 'active'
                                 ? 'bg-emerald-600 text-white font-bold'
                                 : isNonAcademicFriday
@@ -586,7 +586,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                                   onClick={() => toggleTaskExpand(taskKey)}
                                   aria-expanded={isExpanded}
                                   aria-label={isExpanded ? 'Tutup detail penugasan' : 'Lihat detail penugasan'}
-                                  className="flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded bg-white/90 dark:bg-[#150F07] border border-stone-200 dark:border-stone-800 transition cursor-pointer flex-shrink-0"
+                                  className="flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded bg-white/90 dark:bg-[#150F07] border border-stone-200 dark:border-stone-800 hover:border-stone-400 dark:hover:border-stone-600 hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer flex-shrink-0"
                                 >
                                   <span>{isExpanded ? 'Tutup' : 'Detail'}</span>
                                   <ChevronDown
@@ -599,7 +599,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                             </div>
 
                             {hasDetails && isExpanded && (
-                              <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10 text-xs text-stone-900 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/90 dark:bg-[#120C05] p-2 rounded border border-stone-200 dark:border-stone-800 animate-fade-in font-normal">
+                              <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10 text-xs text-stone-900 dark:text-stone-200 whitespace-pre-line leading-relaxed bg-white/90 dark:bg-[#120C05] p-2 rounded border border-stone-200 dark:border-stone-800 animate-fade-in font-normal shadow-2xs">
                                 {details}
                               </div>
                             )}
@@ -610,7 +610,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => onOpenAttachment?.(p.attachment!, p.cleanName)}
-                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#222429] text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#222429] hover:border-emerald-500 hover:scale-[1.02] active:scale-95 text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 text-[11px] font-semibold transition-all duration-150 cursor-pointer shadow-2xs"
                                 >
                                   <FileImage className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                   <span>Lampiran: {p.attachment.filename || 'Lihat Gambar'}</span>

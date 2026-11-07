@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     match /push_subscriptions/{subscriptionId} {
-      // Anyone can register or update their browser push subscription
+      // Clients can register or update their browser push subscription with strict validation
       allow create: if request.resource.data.endpoint is string &&
                        isValidEndpoint(request.resource.data.endpoint) &&
                        isValidKeys(request.resource.data.keys);
@@ -22,15 +22,22 @@ service cloud.firestore {
       allow update: if isValidEndpoint(request.resource.data.endpoint) &&
                        isValidKeys(request.resource.data.keys);
 
+      // Client can delete their subscription when opting out
       allow delete: if true;
 
-      // Allow read so client hook can check if subscription exists
-      allow read: if true;
+      // Prevent unauthorized harvesting/scraping of all student subscription endpoints
+      allow read: if false;
     }
 
     match /system_state/{stateDoc} {
+      // Read-only for health and connection checks; write prohibited from anonymous client SDK
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
+    }
+
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

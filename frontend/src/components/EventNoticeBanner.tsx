@@ -131,12 +131,12 @@ export const EventNoticeBanner: React.FC<EventNoticeBannerProps> = ({
         return (
           <div
             key={notice.id}
-            className={`rounded-xl border p-3 sm:p-3.5 transition-all shadow-xs ${theme.bg} ${theme.border}`}
+            className={`rounded-xl border p-3 sm:p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs shadow-2xs group ${theme.bg} ${theme.border}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                 <div
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-xs ${theme.iconBox}`}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-xs transition-transform duration-200 group-hover:scale-105 ${theme.iconBox}`}
                 >
                   <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
@@ -192,7 +192,7 @@ export const EventNoticeBanner: React.FC<EventNoticeBannerProps> = ({
                         <button
                           type="button"
                           onClick={() => setExpandedId(isExpanded ? null : notice.id)}
-                          className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+                          className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-0.5 transition-transform duration-150 active:scale-95"
                         >
                           {isExpanded ? (
                             <>
@@ -222,7 +222,7 @@ export const EventNoticeBanner: React.FC<EventNoticeBannerProps> = ({
                             window.open(notice.attachment!.url, '_blank');
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 transition"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 transition-all duration-150 hover:scale-[1.02] active:scale-95 shadow-2xs cursor-pointer"
                       >
                         <FileText className="w-3.5 h-3.5" />
                         <span>{notice.attachment.filename || 'Buka Lampiran'}</span>

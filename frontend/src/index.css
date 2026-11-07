@@ -69,13 +69,73 @@ html.dark .modal-backdrop-tint,
   }
 }
 
+@keyframes subtleTilt {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes subtleBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: opacity, transform;
 }
 
+.animate-subtle-tilt {
+  animation: subtleTilt 0.4s ease-in-out;
+}
+
+.animate-subtle-bounce {
+  animation: subtleBounce 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Micro-interaction ease & transitions */
+.transition-micro {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-card-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.hover-card-lift:hover {
+  transform: translateY(-2px);
+}
+
+.hover-scale-tap {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.hover-scale-tap:hover {
+  transform: scale(1.03);
+}
+
+.hover-scale-tap:active {
+  transform: scale(0.95);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-subtle-tilt,
+  .animate-subtle-bounce,
+  .hover-card-lift:hover,
+  .hover-scale-tap:hover,
+  .hover-scale-tap:active {
     animation: none !important;
+    transform: none !important;
   }
 }

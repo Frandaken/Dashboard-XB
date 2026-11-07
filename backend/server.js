@@ -61,8 +61,8 @@ app.get(['/api/uploads/:filename', '/uploads/:filename'], (req, res) => {
 
 // Upstream Google Calendar feeds
 const CALENDAR_FEEDS = {
-  pelajaran: "https://calendar.google.com/calendar/ical/a4fd56ccb6ac7cde9478e4d863191dd53cd12c6110fe380d6bf279da0e44dc8e%40group.calendar.google.com/private-f67cd9352a27790460116ba8a612434c/basic.ics",
-  birthday: "https://calendar.google.com/calendar/ical/c83e6edc41cc4489ab2a435d067ef46014bfd0fefa8fc964d83ecdc72a5e59d5%40group.calendar.google.com/private-b45f7ec9aad159bf2e0dca6627311f2b/basic.ics"
+  pelajaran: process.env.CALENDAR_FEED_PELAJARAN || "https://calendar.google.com/calendar/ical/a4fd56ccb6ac7cde9478e4d863191dd53cd12c6110fe380d6bf279da0e44dc8e%40group.calendar.google.com/private-f67cd9352a27790460116ba8a612434c/basic.ics",
+  birthday: process.env.CALENDAR_FEED_BIRTHDAY || "https://calendar.google.com/calendar/ical/c83e6edc41cc4489ab2a435d067ef46014bfd0fefa8fc964d83ecdc72a5e59d5%40group.calendar.google.com/private-b45f7ec9aad159bf2e0dca6627311f2b/basic.ics"
 };
 
 // Upstream Google Sheets published CSV feeds
@@ -234,6 +234,8 @@ app.get('/api/kas/bukti-mapping', (req, res) => {
   res.json({ ok: true, mapping: getBuktiMapping() });
 });
 
+const ALLOWED_UPLOAD_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.pdf']);
+
 app.post('/api/kas/upload-bukti', (req, res) => {
   try {
     const { pengeluaranId, filename, base64Data, contentType, linkUrl } = req.body || {};
@@ -248,7 +250,19 @@ app.post('/api/kas/upload-bukti', (req, res) => {
       const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
       const buffer = Buffer.from(cleanBase64, 'base64');
 
-      const ext = path.extname(filename || '').toLowerCase() || (contentType === 'application/pdf' ? '.pdf' : '.jpg');
+      if (buffer.length > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Ukuran file melebihi batas maksimum 10MB' });
+      }
+
+      const rawExt = path.extname(filename || '').toLowerCase();
+      const ext = ALLOWED_UPLOAD_EXTS.has(rawExt)
+        ? rawExt
+        : (contentType === 'application/pdf' ? '.pdf' : '.jpg');
+
+      if (!ALLOWED_UPLOAD_EXTS.has(ext)) {
+        return res.status(400).json({ error: 'Format file tidak diizinkan. Hanya file JPG, PNG, WEBP, atau PDF yang didukung.' });
+      }
+
       const baseClean = path.basename(filename || 'nota', ext).replace(/[^a-zA-Z0-9_-]/g, '_');
       savedFilename = `nota_${Date.now()}_${baseClean}${ext}`;
 
@@ -259,7 +273,11 @@ app.post('/api/kas/upload-bukti', (req, res) => {
       fs.writeFileSync(filePath, buffer);
       resultUrl = `/api/uploads/${savedFilename}`;
     } else if (linkUrl) {
-      resultUrl = linkUrl.trim();
+      const trimmed = linkUrl.trim();
+      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        return res.status(400).json({ error: 'URL bukti kas harus menggunakan format http:// atau https://' });
+      }
+      resultUrl = trimmed;
     } else {
       return res.status(400).json({ error: 'Either base64Data or linkUrl is required' });
     }
@@ -476,6 +494,18 @@ app.post('/api/push/unsubscribe', (req, res) => {
   }
 });
 
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY || '';
+
+function checkAdminAuth(req) {
+  if (!ADMIN_API_KEY) return true;
+  const authHeader = req.headers['authorization'] || req.headers['x-admin-key'];
+  if (!authHeader) return false;
+  const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : authHeader;
+  return token === ADMIN_API_KEY;
+}
+
 // Push API: Send Immediate Test Push Notification
 app.post('/api/push/send-test', async (req, res) => {
   try {
@@ -485,8 +515,13 @@ app.post('/api/push/send-test', async (req, res) => {
 
     if (subscription && subscription.endpoint) {
       targetSubs.push(subscription);
-    } else if (subs.length > 0) {
-      targetSubs.push(subs[subs.length - 1]);
+    } else {
+      if (!checkAdminAuth(req)) {
+        return res.status(401).json({ error: 'Unauthorized: Admin authorization required to broadcast to subscribers' });
+      }
+      if (subs.length > 0) {
+        targetSubs.push(subs[subs.length - 1]);
+      }
     }
 
     if (targetSubs.length === 0) {
@@ -544,6 +579,9 @@ app.post('/api/push/send-test', async (req, res) => {
 
 // Push API: Broadcast Notification to all subscribers
 app.post('/api/push/broadcast', async (req, res) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ error: 'Unauthorized: Admin authorization required to broadcast' });
+  }
   try {
     const { title, body, icon, url, tag, topic } = req.body || {};
     if (!title || !body) {

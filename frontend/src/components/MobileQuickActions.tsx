@@ -58,17 +58,17 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
             aria-expanded={isDropdownOpen}
             aria-label="Menu Pembagian Kelompok & Roda Putar Siswa"
             title="Kelompok & Spin Wheel"
-            className={`w-full h-10 px-1.5 py-1 rounded-lg border flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95 ${
+            className={`w-full h-10 px-1.5 py-1 rounded-lg border flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium hover:-translate-y-0.5 hover:shadow-xs active:scale-95 transition-all duration-200 cursor-pointer group ${
               isDropdownOpen
-                ? 'bg-emerald-50 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 border-emerald-600/40'
-                : 'bg-white dark:bg-[#1D1E22] text-stone-700 dark:text-stone-200 border-stone-200/80 dark:border-stone-700/80 hover:bg-stone-50 dark:hover:bg-[#25272D]'
+                ? 'bg-emerald-50 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 border-emerald-600/40 shadow-xs'
+                : 'bg-white dark:bg-[#1D1E22] text-stone-700 dark:text-stone-200 border-stone-200/80 dark:border-stone-700/80 hover:bg-stone-50 dark:hover:bg-[#25272D] hover:border-emerald-600/30'
             }`}
           >
             <div className="flex items-center gap-0.5 leading-none">
-              <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <ChevronDown className={`w-3 h-3 text-stone-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-200" />
+              <ChevronDown className={`w-3 h-3 text-stone-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />
             </div>
-            <span className="truncate leading-none text-[10px]">Kelompok</span>
+            <span className="truncate leading-none text-[10px] group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors">Kelompok</span>
           </button>
 
           {/* Dropdown Menu */}
@@ -84,13 +84,13 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
                     setIsDropdownOpen(false);
                     onOpenRandomPicker();
                   }}
-                  className="w-full text-left p-2 rounded-lg hover:bg-amber-50/80 dark:hover:bg-[#20180B] flex items-center gap-2 transition cursor-pointer"
+                  className="w-full text-left p-2 rounded-lg hover:bg-amber-50/80 dark:hover:bg-[#20180B] hover:translate-x-1 flex items-center gap-2 transition-all duration-150 cursor-pointer group"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-[#20170A] text-amber-700 dark:text-amber-400 border border-amber-300/40 flex items-center justify-center flex-shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-[#20170A] text-amber-700 dark:text-amber-400 border border-amber-300/40 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-200">
                     <FerrisWheel className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100">Roda Putar Siswa</div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors">Roda Putar Siswa</div>
                     <div className="text-[10px] text-stone-500">Pilih siswa acak</div>
                   </div>
                 </button>
@@ -102,13 +102,13 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
                     setIsDropdownOpen(false);
                     onOpenGroupGenerator();
                   }}
-                  className="w-full text-left p-2 rounded-lg hover:bg-blue-50/80 dark:hover:bg-[#0E1A29] flex items-center gap-2 transition cursor-pointer"
+                  className="w-full text-left p-2 rounded-lg hover:bg-blue-50/80 dark:hover:bg-[#0E1A29] hover:translate-x-1 flex items-center gap-2 transition-all duration-150 cursor-pointer group"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-[#0D1D2E] text-blue-700 dark:text-blue-400 border border-blue-200/60 flex items-center justify-center flex-shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-[#0D1D2E] text-blue-700 dark:text-blue-400 border border-blue-200/60 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
                     <Users className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100">Bagi Kelompok</div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 group-hover:text-blue-800 dark:group-hover:text-blue-300 transition-colors">Bagi Kelompok</div>
                     <div className="text-[10px] text-stone-500">Rata gender & seimbang</div>
                   </div>
                 </button>
@@ -123,10 +123,10 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
           onClick={onOpenSearch}
           aria-label="Cari mata pelajaran, tugas, atau acara"
           title="Pencarian Cepat"
-          className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95"
+          className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] hover:border-emerald-600/30 hover:-translate-y-0.5 hover:shadow-xs active:scale-95 text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer group"
         >
-          <Search className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
-          <span className="truncate leading-none text-[10px]">Cari</span>
+          <Search className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:scale-110 transition-all duration-200" />
+          <span className="truncate leading-none text-[10px] group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors">Cari</span>
         </button>
 
         {/* 3. Tombol Kas Murid */}
@@ -135,10 +135,10 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
           onClick={onOpenKasMurid}
           aria-label="Buka Buku Kas Murid"
           title="Buku Kas Murid"
-          className="h-10 px-1.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-[#13281E]/70 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] text-emerald-900 dark:text-emerald-300 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95"
+          className="h-10 px-1.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-[#13281E]/70 hover:bg-emerald-100/90 dark:hover:bg-[#1A382B] hover:-translate-y-0.5 hover:shadow-xs active:scale-95 text-emerald-900 dark:text-emerald-300 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer group"
         >
-          <Wallet className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
-          <span className="truncate leading-none text-[10px]">Kas Murid</span>
+          <Wallet className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-200" />
+          <span className="truncate leading-none text-[10px] font-bold">Kas Murid</span>
         </button>
 
         {/* 4. Tombol Pengaturan Notifikasi */}
@@ -147,14 +147,14 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
           onClick={onOpenNotifications}
           aria-label="Pengaturan Push Notifikasi"
           title="Pengaturan Notifikasi"
-          className={`h-10 px-1.5 py-1 rounded-lg border flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95 ${
+          className={`h-10 px-1.5 py-1 rounded-lg border flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium hover:-translate-y-0.5 hover:shadow-xs active:scale-95 transition-all duration-200 cursor-pointer group ${
             hasNotificationActive
               ? 'border-emerald-600/30 dark:border-emerald-500/35 bg-emerald-50/70 dark:bg-[#13281E]/70 text-emerald-900 dark:text-emerald-300'
-              : 'border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] text-stone-700 dark:text-stone-200'
+              : 'border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] text-stone-700 dark:text-stone-200 hover:border-emerald-600/30'
           }`}
         >
-          <Bell className={`w-3.5 h-3.5 ${hasNotificationActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-500 dark:text-stone-400'}`} />
-          <span className="truncate leading-none text-[10px]">Notifikasi</span>
+          <Bell className={`w-3.5 h-3.5 group-hover:rotate-12 transition-transform duration-200 ${hasNotificationActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-500 dark:text-stone-400'}`} />
+          <span className="truncate leading-none text-[10px] group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors">Notifikasi</span>
         </button>
 
         {/* 5. Tombol Ganti Mode Gelap/Terang */}
@@ -163,16 +163,16 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
           onClick={onToggleDarkMode}
           aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
           title={darkMode ? 'Mode Terang' : 'Mode Gelap'}
-          className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95"
+          className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] hover:border-stone-300 dark:hover:border-stone-600 hover:-translate-y-0.5 hover:shadow-xs active:scale-90 text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer group"
         >
           {darkMode ? (
             <>
-              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <Sun className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-45 transition-transform duration-300" />
               <span className="truncate leading-none text-[10px]">Terang</span>
             </>
           ) : (
             <>
-              <Moon className="w-3.5 h-3.5 text-stone-600 dark:text-stone-300" />
+              <Moon className="w-3.5 h-3.5 text-stone-600 dark:text-stone-300 group-hover:-rotate-45 transition-transform duration-300" />
               <span className="truncate leading-none text-[10px]">Gelap</span>
             </>
           )}
@@ -182,7 +182,7 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
         {isInstalled ? (
           <div
             title="Aplikasi PWA sudah terpasang"
-            className="h-10 px-1.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 bg-emerald-50/50 dark:bg-[#13281E]/50 text-emerald-800 dark:text-emerald-300 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium"
+            className="h-10 px-1.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 bg-emerald-50/50 dark:bg-[#13281E]/50 text-emerald-800 dark:text-emerald-300 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium hover:scale-[1.02] transition-transform duration-150 cursor-default"
           >
             <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span className="truncate leading-none text-[10px]">Terpasang</span>
@@ -193,9 +193,9 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
             onClick={install}
             aria-label="Install Aplikasi PWA"
             title="Install Aplikasi ke Layar Utama"
-            className="h-10 px-1.5 py-1 rounded-lg border border-[#3F6E52]/40 bg-[#3F6E52] text-white hover:bg-[#325841] flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95 shadow-2xs"
+            className="h-10 px-1.5 py-1 rounded-lg border border-[#3F6E52]/40 bg-[#3F6E52] text-white hover:bg-[#325841] hover:-translate-y-0.5 hover:shadow-xs active:scale-95 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer shadow-2xs group"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
             <span className="truncate leading-none text-[10px]">Install</span>
           </button>
         ) : isIOS ? (
@@ -204,9 +204,9 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
             onClick={() => setShowIOSGuide(true)}
             aria-label="Panduan Install PWA di iOS"
             title="Install di iOS"
-            className="h-10 px-1.5 py-1 rounded-lg border border-[#3F6E52]/30 bg-[#3F6E52]/10 text-[#3F6E52] dark:text-[#34D399] hover:bg-[#3F6E52]/20 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95"
+            className="h-10 px-1.5 py-1 rounded-lg border border-[#3F6E52]/30 bg-[#3F6E52]/10 text-[#3F6E52] dark:text-[#34D399] hover:bg-[#3F6E52]/20 hover:-translate-y-0.5 hover:shadow-xs active:scale-95 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer group"
           >
-            <Smartphone className="w-3.5 h-3.5" />
+            <Smartphone className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" />
             <span className="truncate leading-none text-[10px]">Install iOS</span>
           </button>
         ) : (
@@ -217,9 +217,9 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
             }}
             aria-label="Aplikasi Kelas XB"
             title="Aplikasi Siap Digunakan"
-            className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition cursor-pointer active:scale-95"
+            className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] hover:-translate-y-0.5 hover:shadow-xs active:scale-95 text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer group"
           >
-            <Download className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
+            <Download className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400 group-hover:scale-110 transition-transform duration-200" />
             <span className="truncate leading-none text-[10px]">Aplikasi</span>
           </button>
         )}

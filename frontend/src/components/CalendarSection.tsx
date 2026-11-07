@@ -59,12 +59,12 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-prev"
               onClick={onPrevMonth}
               aria-label="Bulan Sebelumnya"
-              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:scale-105 active:scale-90 transition-all duration-150 flex items-center justify-center text-stone-700 dark:text-stone-300 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="font-editorial font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100 px-1 sm:px-2 min-w-[76px] sm:min-w-[115px] text-center">
+            <span className="font-editorial font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100 px-1 sm:px-2 min-w-[76px] sm:min-w-[115px] text-center select-none">
               <span className="inline sm:hidden">{MONTH_ID[viewMonth].slice(0, 3)} {viewYear}</span>
               <span className="hidden sm:inline">{MONTH_ID[viewMonth]} {viewYear}</span>
             </span>
@@ -73,7 +73,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-next"
               onClick={onNextMonth}
               aria-label="Bulan Berikutnya"
-              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] flex items-center justify-center text-stone-700 dark:text-stone-300 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:scale-105 active:scale-90 transition-all duration-150 flex items-center justify-center text-stone-700 dark:text-stone-300 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -82,7 +82,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
               id="cal-btn-today"
               onClick={onToday}
               aria-label="Lompat ke tanggal hari ini"
-              className="text-xs sm:text-sm font-semibold px-2.5 py-1.5 rounded-lg border border-emerald-600/20 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] transition ml-1 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              className="text-xs sm:text-sm font-semibold px-2.5 py-1.5 rounded-lg border border-emerald-600/20 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-[#13281E] text-emerald-900 dark:text-emerald-300 hover:bg-emerald-100/90 dark:hover:bg-[#1A382B] hover:-translate-y-0.5 hover:shadow-xs active:scale-95 transition-all duration-150 ml-1 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               Hari Ini
             </button>
@@ -120,11 +120,11 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             const birthdays = hasBirthdayFn(iso);
             const hasBday = birthdays.length > 0;
 
-            let cellClass = 'relative w-full h-8 sm:h-9 rounded-md flex flex-col items-center justify-center text-xs transition cursor-pointer select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] ';
+            let cellClass = 'relative w-full h-8 sm:h-9 rounded-md flex flex-col items-center justify-center text-xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-2xs active:scale-90 cursor-pointer select-none group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] ';
 
             // Condition 1: BOTH Today AND Preview
             if (isToday && isPreview) {
-              cellClass += 'bg-[#1E3A2F] dark:bg-[#1E4A35] text-white font-semibold z-10';
+              cellClass += 'bg-[#1E3A2F] dark:bg-[#1E4A35] text-white font-semibold z-10 shadow-xs';
             }
             // Condition 2: TODAY (Real date, user previewing another date)
             else if (isToday) {
@@ -132,15 +132,15 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             }
             // Condition 3: PREVIEW DATE (Currently displayed in dashboard)
             else if (isPreview) {
-              cellClass += 'bg-stone-200 dark:bg-stone-700/80 text-stone-900 dark:text-stone-100 font-semibold ring-1 ring-stone-400 dark:ring-stone-500 z-10';
+              cellClass += 'bg-stone-200 dark:bg-stone-700/80 text-stone-900 dark:text-stone-100 font-semibold ring-1 ring-stone-400 dark:ring-stone-500 z-10 shadow-xs';
             }
             // Condition 4: Has data (school schedule, notice, doa, mbg, piket)
             else if (hasData || hasNotice) {
-              cellClass += 'bg-stone-50/80 dark:bg-[#141518] text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-[#1D1E22] font-medium';
+              cellClass += 'bg-stone-50/80 dark:bg-[#141518] text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-[#1D1E22] hover:border-emerald-500/30 font-medium';
             }
             // Condition 5: Normal empty day
             else {
-              cellClass += 'text-stone-400 dark:text-stone-600 hover:bg-stone-50 dark:hover:bg-[#15161A] font-normal';
+              cellClass += 'text-stone-400 dark:text-stone-600 hover:bg-stone-100/60 dark:hover:bg-[#15161A] font-normal';
             }
 
             const weekOfDate = getWeekOfMonth(viewYear, viewMonth, day);

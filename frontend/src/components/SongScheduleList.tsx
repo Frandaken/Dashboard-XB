@@ -64,10 +64,10 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
         <button
           type="button"
           onClick={handleOpenAllSongs}
-          className="w-full text-left p-3 sm:p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+          className="w-full text-left p-3 sm:p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-xs transition-all duration-200 group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-[#13281E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20 dark:border-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-[#13281E] text-emerald-800 dark:text-emerald-300 border border-emerald-600/20 dark:border-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
               <Music className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
             </div>
             <div className="min-w-0">
@@ -79,7 +79,7 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
               </p>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
+          <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform duration-200 group-hover:translate-x-1 flex-shrink-0" />
         </button>
       ) : (
         <div
@@ -95,10 +95,10 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
               setShowLyrics(true);
             }
           }}
-          className="p-3 sm:p-3.5 rounded-xl border flex items-center justify-between gap-3 transition bg-stone-50/80 dark:bg-[#141518] hover:bg-stone-100 dark:hover:bg-[#1E2025] border-stone-200/80 dark:border-stone-800/80 hover:border-stone-400 dark:hover:border-stone-600 cursor-pointer group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+          className="p-3 sm:p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all duration-200 bg-stone-50/80 dark:bg-[#141518] hover:bg-stone-100 dark:hover:bg-[#1E2025] hover:-translate-y-0.5 hover:shadow-xs border-stone-200/80 dark:border-stone-800/80 hover:border-emerald-500/40 dark:hover:border-emerald-500/30 cursor-pointer group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xs sm:text-sm font-mono font-bold px-2.5 py-1 rounded-md bg-stone-200/90 dark:bg-stone-800 text-stone-800 dark:text-stone-200 flex-shrink-0">
+            <span className="text-xs sm:text-sm font-mono font-bold px-2.5 py-1 rounded-md bg-stone-200/90 dark:bg-stone-800 text-stone-800 dark:text-stone-200 flex-shrink-0 group-hover:scale-105 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-950/80 transition-all duration-200">
               M{week}
             </span>
             <div className="min-w-0">
@@ -119,7 +119,7 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
                 setShowLyrics(true);
               }}
               aria-label={`Lihat teks lirik lagu ${songTitle}`}
-              className="text-xs font-medium text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] hover:bg-emerald-100/80 dark:hover:bg-[#1A382B] px-2.5 py-1 rounded-md border border-emerald-600/20 dark:border-emerald-500/30 flex items-center gap-1.5 transition cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+              className="text-xs font-semibold text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-[#13281E] hover:bg-emerald-100/90 dark:hover:bg-[#1A382B] hover:scale-105 active:scale-95 px-2.5 py-1 rounded-md border border-emerald-600/20 dark:border-emerald-500/30 flex items-center gap-1.5 transition-all duration-150 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>Lirik</span>

@@ -840,7 +840,7 @@ export default function App() {
                           setActiveISO(todayWIB.iso);
                           setIsManualDate(true);
                         }}
-                        className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-emerald-50 dark:bg-[#122A1E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] transition cursor-pointer"
+                        className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-emerald-50 dark:bg-[#122A1E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] hover:-translate-y-0.5 hover:shadow-xs active:scale-95 transition-all duration-150 cursor-pointer"
                         title={`Lihat Agenda Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
                         aria-label="Kembali ke agenda hari ini"
                       >
@@ -856,36 +856,36 @@ export default function App() {
                     onClick={handleCopyDailySummary}
                     aria-label={dailyCopied ? 'Agenda hari ini tersalin ke clipboard' : 'Salin Agenda Harian'}
                     title={dailyCopied ? 'Tersalin ke clipboard!' : 'Salin Agenda Hari Ini ke WhatsApp'}
-                    className={`w-9 h-9 rounded-lg border flex items-center justify-center transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+                    className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all duration-150 cursor-pointer hover:-translate-y-0.5 active:scale-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 group ${
                       dailyCopied
                         ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40 shadow-xs'
-                        : 'border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-stone-800 dark:text-stone-200'
+                        : 'border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:border-stone-300 dark:hover:border-stone-700 hover:shadow-xs text-stone-800 dark:text-stone-200'
                     }`}
                   >
                     {dailyCopied ? (
-                      <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-subtle-bounce" />
                     ) : (
-                      <Copy className="w-4 h-4 text-stone-600 dark:text-stone-300" />
+                      <Copy className="w-4 h-4 text-stone-600 dark:text-stone-300 transition-transform duration-150 group-hover:scale-110" />
                     )}
                   </button>
 
                   <button
                     onClick={() => handleStepDay(-1)}
                     aria-label="Agenda Hari Sebelumnya"
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:border-stone-300 dark:hover:border-stone-700 hover:-translate-y-0.5 hover:shadow-xs text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] group"
                     title="Hari Sebelumnya"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
                     <span className="inline">Sebelumnya</span>
                   </button>
                   <button
                     onClick={() => handleStepDay(1)}
                     aria-label="Agenda Hari Berikutnya"
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:border-stone-300 dark:hover:border-stone-700 hover:-translate-y-0.5 hover:shadow-xs text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] group"
                     title="Hari Berikutnya"
                   >
                     <span className="inline">Berikutnya</span>
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-0.5" />
                   </button>
                 </div>
               </div>

@@ -6,3 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Sensitive runtime data, private keys, and user uploads
+data/
+backend/exports/
+*.pem
+*.key
+vapid.json
+push-subscriptions.json
+
