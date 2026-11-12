@@ -32,7 +32,7 @@ Aplikasi ini menyinkronkan jadwal pelajaran, penugasan berformat rich text, petu
 - **👥 Pembagian Kelompok (Team Generator):** Generator tim seimbang otomatis dengan opsi pembagian rata gender (Laki-laki & Perempuan) atau acak murni berdasarkan kuota anggota.
 - **📋 Ekspor Agenda Mingguan (WhatsApp):** Format rangkuman tugas dan jadwal pelajaran siap salin ke grup WhatsApp dengan live preview.
 - **🔍 Pencarian Global (Ctrl+K / ⌘K):** Akses instan pencarian pelajaran, tugas, pengumuman, dan data siswa.
-- **🎵 Buku Lirik Lagu Nasional:** Daftar lirik lagu wajib bulanan resmi dengan struktur bait rapi untuk pembiasaan pagi.
+- **🎵 Buku Lirik Lagu Wajib:** Daftar lirik lagu wajib bulanan resmi, Mars Salib Suci (Himne Sekolah), dan Indonesia Raya dengan struktur bait rapi untuk pembiasaan pagi serta tampilan kartu khusus Mars Salib Suci di beranda dashboard.
 - **🔔 Push Notifikasi Web:** Pengingat otomatis H-1 pukul 19.00 WIB untuk jadwal esok hari dan tenggat tugas mendatang.
 
 ### 5. 🏷️ Pengelolaan Nomor Versi Aplikasi

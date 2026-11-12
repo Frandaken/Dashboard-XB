@@ -66,7 +66,7 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
 
   const currentSongData = SONG_LYRICS_DB[activeSongTitle] || {
     title: activeSongTitle,
-    composer: 'Nasional',
+    composer: '-',
     lyrics: []
   };
 
@@ -121,7 +121,7 @@ export const AllSongsModal: React.FC<AllSongsModalProps> = ({
                 id="all-songs-title"
                 className="font-editorial font-bold text-lg sm:text-xl text-stone-900 dark:text-stone-100 leading-tight"
               >
-                Koleksi Lirik Lagu Wajib Nasional
+                Koleksi Lirik Lagu Wajib
               </h2>
               <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
                 SMA Putra Nirmala • Panduan Apel &amp; Pembiasaan Pagi

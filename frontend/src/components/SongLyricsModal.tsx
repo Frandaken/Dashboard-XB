@@ -59,7 +59,7 @@ export const SongLyricsModal: React.FC<SongLyricsModalProps> = ({
 
   const songData = SONG_LYRICS_DB[songTitle] || {
     title: songTitle,
-    composer: 'Nasional',
+    composer: '-',
     lyrics: ['(Lirik lengkap dapat dinyanyikan bersama saat apel/pagi hari)']
   };
 

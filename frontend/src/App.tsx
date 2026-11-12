@@ -7,6 +7,7 @@ import { UpcomingDeadlinesTab } from './components/UpcomingDeadlinesTab';
 import { ScheduleBlocks } from './components/ScheduleBlocks';
 import { CalendarSection } from './components/CalendarSection';
 import { SongScheduleList } from './components/SongScheduleList';
+import { MarsSalibSuciCard } from './components/MarsSalibSuciCard';
 import { StatusBanner } from './components/StatusBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardSkeleton } from './components/DashboardSkeleton';
@@ -1209,6 +1210,12 @@ export default function App() {
                 darkMode={darkMode}
                 onToggleDarkMode={toggleDarkMode}
                 onOpenAllSongs={() => setIsAllSongsOpen(true)}
+              />
+
+              {/* Mars Salib Suci Card (Distinct box below Lagu Wajib) */}
+              <MarsSalibSuciCard
+                darkMode={darkMode}
+                onToggleDarkMode={toggleDarkMode}
               />
             </aside>
           </main>

@@ -284,14 +284,14 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
-                    Koleksi Lagu Wajib Nasional
+                    Koleksi Lagu Wajib
                   </span>
                   <span className="text-[11px] font-medium text-emerald-900 dark:text-emerald-300 bg-emerald-50 dark:bg-[#13281E] px-2 py-0.5 rounded-md border border-emerald-600/20 dark:border-emerald-500/20">
                     Buka Lirik
                   </span>
                 </div>
                 <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
-                  Daftar lengkap lirik lagu wajib nasional per minggu semester aktif.
+                  Daftar lengkap lirik lagu wajib per minggu semester aktif.
                 </p>
               </div>
             </div>

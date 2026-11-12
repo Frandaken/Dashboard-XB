@@ -72,7 +72,7 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
             </div>
             <div className="min-w-0">
               <span className="text-sm font-bold text-stone-900 dark:text-stone-100 group-hover:text-emerald-800 dark:group-hover:text-emerald-300 transition-colors block leading-tight">
-                Koleksi Lagu Wajib Nasional
+                Koleksi Lagu Wajib
               </span>
               <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
                 Minggu ke-{week} kosong • Klik untuk melihat koleksi lengkap lagu
@@ -103,7 +103,7 @@ export const SongScheduleList: React.FC<SongScheduleListProps> = ({
             </span>
             <div className="min-w-0">
               <span className="text-xs text-stone-500 dark:text-stone-400 block leading-tight font-medium">
-                Lagu Wajib Nasional
+                Lagu Wajib
               </span>
               <span className="text-sm sm:text-base font-bold truncate block leading-snug mt-0.5 text-stone-900 dark:text-stone-100 group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors">
                 {songTitle}
