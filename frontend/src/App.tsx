@@ -1,0 +1,1409 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Copy, Check, Clock } from 'lucide-react';
+import { Header } from './components/Header';
+import { TaskBanner } from './components/TaskBanner';
+import { UpcomingDeadlinesTab } from './components/UpcomingDeadlinesTab';
+import { ScheduleBlocks } from './components/ScheduleBlocks';
+import { CalendarSection } from './components/CalendarSection';
+import { SongScheduleList } from './components/SongScheduleList';
+import { StatusBanner } from './components/StatusBanner';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { DashboardSkeleton } from './components/DashboardSkeleton';
+import { NotFoundUI } from './components/NotFoundUI';
+
+// Code-split modals to minimize main JS bundle
+const DayDetailModal = React.lazy(() => import('./components/DayDetailModal').then(m => ({ default: m.DayDetailModal })));
+const AllSongsModal = React.lazy(() => import('./components/AllSongsModal').then(m => ({ default: m.AllSongsModal })));
+const WheelOfNamesModal = React.lazy(() => import('./components/WheelOfNamesModal').then(m => ({ default: m.WheelOfNamesModal })));
+const GroupGeneratorModal = React.lazy(() => import('./components/GroupGeneratorModal').then(m => ({ default: m.GroupGeneratorModal })));
+const IceBreakingScheduleModal = React.lazy(() => import('./components/IceBreakingScheduleModal').then(m => ({ default: m.IceBreakingScheduleModal })));
+const KasMuridModal = React.lazy(() => import('./components/KasMuridModal').then(m => ({ default: m.KasMuridModal })));
+const WeeklyExportModal = React.lazy(() => import('./components/WeeklyExportModal').then(m => ({ default: m.WeeklyExportModal })));
+const SiswaListModal = React.lazy(() => import('./components/SiswaListModal').then(m => ({ default: m.SiswaListModal })));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+const HamburgerMenuModal = React.lazy(() => import('./components/HamburgerMenuModal').then(m => ({ default: m.HamburgerMenuModal })));
+const NotificationModal = React.lazy(() => import('./components/NotificationModal').then(m => ({ default: m.NotificationModal })));
+const ReceiptLightboxModal = React.lazy(() => import('./components/ReceiptLightboxModal').then(m => ({ default: m.ReceiptLightboxModal })));
+const GlobalSearchModal = React.lazy(() => import('./components/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })));
+import { MobileQuickActions } from './components/MobileQuickActions';
+import { EventNoticeBanner } from './components/EventNoticeBanner';
+import type { ReceiptLightboxData } from './components/ReceiptLightboxModal';
+import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
+import { usePushNotifications } from './hooks/usePushNotifications';
+import { usePullToRefresh } from './hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from './components/PullToRefreshIndicator';
+import { validateFirestoreConnection } from './firebase';
+import { ClassDataStore, TaskAttachment } from './types';
+import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
+import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
+import { DEMO_CSV, DOW_ID, MONTH_ID } from './data/demoData';
+import { KAS_DEMO_CSV } from './data/kasDemoData';
+import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
+import { getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
+import { isTaskTimePassed, getUpcomingDeadlines } from './utils/taskUtils';
+import { formatWeeklySummary, formatDailySummary, copyTextToClipboard } from './utils/summaryFormatter';
+
+export default function App() {
+  // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) return saved === 'dark';
+    return false; // Default to light mode as requested
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) {
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  // Validate Cloud Firestore connection on initial mount
+  useEffect(() => {
+    validateFirestoreConnection().catch(() => {});
+  }, []);
+
+  const toggleDarkMode = () => setDarkMode(prev => !prev);
+
+  // Hamburger modal state (Menu navigasi)
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  // All songs lyrics modal
+  const [isAllSongsOpen, setIsAllSongsOpen] = useState<boolean>(false);
+  // Ice Breaking schedule modal
+  const [isIceBreakingModalOpen, setIsIceBreakingModalOpen] = useState<boolean>(false);
+  // Push Notification settings modal
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
+  const { isNotificationActive } = usePushNotifications();
+  // 5-minute pre-lesson in-app toast popup
+  const [nextLessonNotice, setNextLessonNotice] = useState<NextLessonInfo | null>(null);
+  // Global search modal state
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+
+  // Global keyboard shortcut: Cmd+K / Ctrl+K / '/' to open search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+      } else if (e.key === '/' && !isSearchOpen) {
+        const target = e.target as HTMLElement | null;
+        const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+        if (!isInput) {
+          e.preventDefault();
+          setIsSearchOpen(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
+
+  const [dataStore, setDataStore] = useState<ClassDataStore>(() => {
+    try {
+      const doaRows = parseCSV(DEMO_CSV.doa);
+      const doaByDate = parseDoaRows(doaRows);
+      const mbgRows = parseCSV(DEMO_CSV.mbg);
+      const mbgByDate = parseMbgRows(mbgRows);
+      const piketRows = parseCSV(DEMO_CSV.piket);
+      const piketByDow = parsePiketRows(piketRows);
+      const iceBreakingRows = parseCSV(DEMO_CSV.icebreaking);
+      const iceBreakingByDate = parseIceBreakingRows(iceBreakingRows);
+      const kasData = parseKasData(
+        KAS_DEMO_CSV.penunggakan,
+        KAS_DEMO_CSV.pengeluaran,
+        KAS_DEMO_CSV.pendapatan_lain,
+        KAS_DEMO_CSV.rekap
+      );
+
+      return {
+        doaByDate,
+        mbgByDate,
+        piketByDow,
+        iceBreakingByDate,
+        pelajaranByDate: {},
+        tasksByDate: {},
+        eventNoticesByDate: {},
+        birthdayByMonthDay: {},
+        kasData
+      };
+    } catch {
+      return {
+        doaByDate: {},
+        mbgByDate: {},
+        piketByDow: {},
+        iceBreakingByDate: {},
+        pelajaranByDate: {},
+        tasksByDate: {},
+        eventNoticesByDate: {},
+        birthdayByMonthDay: {}
+      };
+    }
+  });
+
+  // Real-time clock for current time in WIB (updates every 15s to react exactly to period start/end)
+  const [currentWIBTime, setCurrentWIBTime] = useState<string>(() => getCurrentWIBTimeHHMM());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentWIBTime(getCurrentWIBTimeHHMM());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const [status, setStatus] = useState<{ type: 'loading' | 'error' | 'success'; message: string } | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Compute today's date strictly in Western Indonesia Time (WIB / Asia/Jakarta, UTC+7)
+  const todayWIB = useMemo(() => {
+    return getWIBDateParts();
+  }, []);
+
+  // 5 Menit Sebelum Jam Selanjutnya Dimulai: Pop up kecil di bagian atas auto close setelah 5 detik
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkNextLesson = () => {
+      const todaySchedule = dataStore.pelajaranByDate[todayWIB.iso] || [];
+      if (todaySchedule.length === 0) return;
+
+      const nowParts = getWIBDateParts();
+      const [nowH, nowM] = nowParts.timeStr.split(':').map(Number);
+      const nowTotalMin = nowH * 60 + nowM;
+
+      const isFriday = todayWIB.dowName.toLowerCase().includes('jumat');
+      let academicCounter = 0;
+
+      for (let idx = 0; idx < todaySchedule.length; idx++) {
+        const period = todaySchedule[idx];
+        if (!period.time || !period.cleanName) continue;
+
+        const isNonAcademicFriday = isFriday && (
+          period.cleanName.toLowerCase().includes('literasi') ||
+          period.cleanName.toLowerCase().includes('senam')
+        );
+
+        let sessionNumber: number | string = idx + 1;
+        if (isFriday) {
+          if (isNonAcademicFriday) {
+            sessionNumber = 0;
+          } else {
+            academicCounter += 1;
+            sessionNumber = academicCounter;
+          }
+        }
+
+        const match = period.time.match(/(\d{1,2}):(\d{2})/);
+        if (!match) continue;
+        const startH = parseInt(match[1], 10);
+        const startM = parseInt(match[2], 10);
+        const startTotalMin = startH * 60 + startM;
+        const diff = startTotalMin - nowTotalMin;
+
+        // Tampilkan tepat saat 5 menit sebelum jam selanjutnya dimulai (diff <= 5 dan diff > 0)
+        if (diff <= 5 && diff > 0) {
+          const storageKey = `next_lesson_popup_${todayWIB.iso}_${period.cleanName}_${period.time}`;
+          if (!sessionStorage.getItem(storageKey)) {
+            sessionStorage.setItem(storageKey, 'true');
+            setNextLessonNotice({
+              lessonName: period.cleanName,
+              sessionNumber,
+              timeStr: period.time,
+              minutesRemaining: diff
+            });
+            break;
+          }
+        }
+      }
+    };
+
+    checkNextLesson();
+    const interval = setInterval(checkNextLesson, 10000); // periksa setiap 10 detik
+    return () => clearInterval(interval);
+  }, [dataStore.pelajaranByDate, todayWIB.iso, todayWIB.dowName]);
+
+  // Compute default active school date:
+  // On weekend:
+  // - If today is Sunday (dayOfWeek === 0), jump to upcoming Monday (+1 day, e.g. 27 -> 28).
+  // - If today is Saturday (dayOfWeek === 6), jump to upcoming Monday (+2 days, e.g. 26 -> 28).
+  // On weekdays: default to today.
+  const defaultSchoolISO = useMemo(() => {
+    if (todayWIB.dayOfWeek === 0) {
+      return stepISODate(todayWIB.iso, 1);
+    }
+    if (todayWIB.dayOfWeek === 6) {
+      return stepISODate(todayWIB.iso, 2);
+    }
+    return todayWIB.iso;
+  }, [todayWIB.dayOfWeek, todayWIB.iso]);
+
+  // Active date displayed in the hero section (default to next active school day on weekend)
+  const [activeISO, setActiveISO] = useState<string>(() => defaultSchoolISO);
+  const [isManualDate, setIsManualDate] = useState<boolean>(false);
+  const [selectedISO, setSelectedISO] = useState<string | null>(null);
+  const [heroActiveTab, setHeroActiveTab] = useState<'schedule' | 'deadlines'>('schedule');
+
+  const [isRandomPickerOpen, setIsRandomPickerOpen] = useState<boolean>(false);
+  const [isGroupGeneratorOpen, setIsGroupGeneratorOpen] = useState<boolean>(false);
+  const [isKasModalOpen, setIsKasModalOpen] = useState<boolean>(false);
+  const [isWeeklyExportOpen, setIsWeeklyExportOpen] = useState<boolean>(false);
+  const [isSiswaModalOpen, setIsSiswaModalOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [previewAttachment, setPreviewAttachment] = useState<ReceiptLightboxData | null>(null);
+
+  const handleOpenAttachment = useCallback((attachment: TaskAttachment, subjectTitle?: string) => {
+    setPreviewAttachment({
+      url: attachment.url,
+      title: subjectTitle ? `Lampiran: ${subjectTitle}` : (attachment.filename || 'Lampiran Tugas'),
+      subtitle: attachment.filename || 'File Lampiran',
+      originalLink: attachment.url
+    });
+  }, []);
+
+  // 404 Route state & browser pathname listener
+  const [is404, setIs404] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname;
+      return p !== '' && p !== '/' && p !== '/index.html';
+    }
+    return false;
+  });
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    return typeof window !== 'undefined' ? window.location.pathname : '/';
+  });
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      setCurrentPath(path);
+      const notFound = path !== '' && path !== '/' && path !== '/index.html';
+      setIs404(notFound);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  const handleGoHome = () => {
+    if (typeof window !== 'undefined' && window.history) {
+      window.history.pushState({}, '', '/');
+    }
+    setIs404(false);
+    setCurrentPath('/');
+  };
+
+  const [viewYear, setViewYear] = useState<number>(() => todayWIB.year);
+  const [viewMonth, setViewMonth] = useState<number>(() => todayWIB.month);
+
+  // Check if a specific date has any academic/school activity
+  const hasSchoolData = useCallback((iso: string, store: ClassDataStore) => {
+    return !!(
+      store.doaByDate[iso] ||
+      store.mbgByDate[iso] ||
+      store.iceBreakingByDate[iso] ||
+      (store.pelajaranByDate[iso] && store.pelajaranByDate[iso].length > 0) ||
+      (store.eventNoticesByDate && store.eventNoticesByDate[iso] && store.eventNoticesByDate[iso].length > 0)
+    );
+  }, []);
+
+  // Helper to find the most relevant active date in the semester dataset
+  const findBestActiveDate = useCallback((targetIso: string, store: ClassDataStore): string => {
+    if (hasSchoolData(targetIso, store)) return targetIso;
+
+    const availableDates = new Set<string>();
+    Object.keys(store.doaByDate).forEach(d => availableDates.add(d));
+    Object.keys(store.mbgByDate).forEach(d => availableDates.add(d));
+    Object.keys(store.iceBreakingByDate || {}).forEach(d => availableDates.add(d));
+    Object.keys(store.pelajaranByDate).forEach(d => {
+      if (store.pelajaranByDate[d]?.length) availableDates.add(d);
+    });
+    Object.keys(store.eventNoticesByDate || {}).forEach(d => {
+      if (store.eventNoticesByDate[d]?.length) availableDates.add(d);
+    });
+
+    const sortedDates = Array.from(availableDates).sort();
+    if (sortedDates.length === 0) return targetIso;
+
+    // Check same MMDD
+    const targetMMDD = targetIso.slice(5);
+    const matchInSemester = sortedDates.find(d => d.slice(5) === targetMMDD);
+    if (matchInSemester && hasSchoolData(matchInSemester, store)) return matchInSemester;
+
+    // Find closest date with school data
+    const pastDates = sortedDates.filter(d => d <= targetIso);
+    const futureDates = sortedDates.filter(d => d >= targetIso);
+
+    if (pastDates.length > 0 && futureDates.length > 0) {
+      const lastPast = pastDates[pastDates.length - 1];
+      const firstFuture = futureDates[0];
+      // On weekends, always prefer the upcoming future school day (Monday) rather than previous Friday
+      const targetDow = parseISODateParts(targetIso).dayOfWeek;
+      if (targetDow === 0 || targetDow === 6) {
+        return firstFuture;
+      }
+      const targetTime = new Date(targetIso + 'T12:00:00Z').getTime();
+      const pastDiff = Math.abs(targetTime - new Date(lastPast + 'T12:00:00Z').getTime());
+      const futureDiff = Math.abs(new Date(firstFuture + 'T12:00:00Z').getTime() - targetTime);
+      return futureDiff < pastDiff ? firstFuture : lastPast;
+    }
+
+    if (futureDates.length > 0) return futureDates[0];
+    return sortedDates[sortedDates.length - 1];
+  }, [hasSchoolData]);
+
+  // Fetch real data with fallback (isSilent prevents skeleton flashing during periodic 5-minute background sync)
+  const fetchData = useCallback(async (forceFresh: boolean = false, isSilent: boolean = false) => {
+    if (!isSilent) {
+      setIsLoading(true);
+      setStatus({ type: 'loading', message: 'Memperbarui data kelas...' });
+    }
+
+    if (forceFresh) {
+      try {
+        await fetch('/api/refresh', { method: 'POST' });
+      } catch (e) {
+        // ignore network error on cache clearing
+      }
+    }
+
+    const fetchEndpoint = async (path: string, fallbackKey?: keyof typeof DEMO_CSV) => {
+      try {
+        const sep = path.includes('?') ? '&' : '?';
+        const url = `${path}${sep}fresh=1&t=${Date.now()}`;
+        const res = await fetch(url, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get('content-type') || '';
+        const text = await res.text();
+        const trimmed = text.trim();
+        // If an API endpoint returns HTML (e.g. <!doctype html> from SPA fallback or proxy error), reject it to trigger fallback
+        if (path.startsWith('/api/') && (contentType.includes('text/html') || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html'))) {
+          throw new Error(`API ${path} returned HTML content instead of expected data`);
+        }
+        return { text, isFallback: false };
+      } catch (err) {
+        console.warn(`Fetch ${path} gagal, menggunakan data lokal:`, err);
+        return {
+          text: fallbackKey ? DEMO_CSV[fallbackKey] : '',
+          isFallback: true
+        };
+      }
+    };
+
+    try {
+      const curYear = new Date().getFullYear();
+      const rangeStart = new Date(curYear - 1, 0, 1);
+      const rangeEnd = new Date(curYear + 1, 11, 31);
+
+      const [doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
+        fetchEndpoint('/api/sheets/doa', 'doa'),
+        fetchEndpoint('/api/sheets/mbg', 'mbg'),
+        fetchEndpoint('/api/sheets/piket', 'piket'),
+        fetchEndpoint('/api/sheets/icebreaking', 'icebreaking'),
+        fetchEndpoint('/api/calendar/pelajaran'),
+        fetchEndpoint('/api/calendar/birthday'),
+        fetchEndpoint('/api/sheets/penunggakan'),
+        fetchEndpoint('/api/sheets/pengeluaran'),
+        fetchEndpoint('/api/sheets/pendapatan_lain'),
+        fetchEndpoint('/api/sheets/rekap')
+      ]);
+
+      const doaRows = parseCSV(doaRes.text);
+      const doaByDate = parseDoaRows(doaRows);
+
+      const mbgRows = parseCSV(mbgRes.text);
+      const mbgByDate = parseMbgRows(mbgRows);
+
+      const piketRows = parseCSV(piketRes.text);
+      const piketByDow = parsePiketRows(piketRows);
+
+      const iceBreakingRows = parseCSV(iceBreakingRes.text);
+      const iceBreakingByDate = parseIceBreakingRows(iceBreakingRows);
+
+      // Parse pelajaran iCal (keeping subjects on different schedules strictly separated)
+      const { pelajaranByDate, tasksByDate, eventNoticesByDate } = parsePelajaranICS(pelajaranRes.text, rangeStart, rangeEnd);
+
+      // Parse birthday iCal
+      const birthdayByMonthDay = parseBirthdayICS(birthdayRes.text, rangeStart, rangeEnd);
+
+      // Parse Kas Data (falling back to KAS_DEMO_CSV if network failed or empty)
+      const kasPenunggakanText = penunggakanRes.text || KAS_DEMO_CSV.penunggakan;
+      const kasPengeluaranText = pengeluaranRes.text || KAS_DEMO_CSV.pengeluaran;
+      const kasPendapatanLainText = pendapatanLainRes.text || KAS_DEMO_CSV.pendapatan_lain;
+      const kasRekapText = rekapRes.text || KAS_DEMO_CSV.rekap;
+      const kasData = parseKasData(
+        kasPenunggakanText,
+        kasPengeluaranText,
+        kasPendapatanLainText,
+        kasRekapText
+      );
+
+      const newStore: ClassDataStore = {
+        doaByDate,
+        mbgByDate,
+        piketByDow,
+        iceBreakingByDate,
+        pelajaranByDate,
+        tasksByDate,
+        eventNoticesByDate,
+        birthdayByMonthDay,
+        kasData
+      };
+
+      setDataStore(newStore);
+
+      setActiveISO(prev => {
+        if (!isManualDate) {
+          if (hasSchoolData(prev, newStore)) {
+            return prev;
+          }
+          if (hasSchoolData(defaultSchoolISO, newStore)) {
+            return defaultSchoolISO;
+          }
+          return findBestActiveDate(defaultSchoolISO, newStore);
+        }
+        return prev;
+      });
+
+      setStatus(null);
+      setIsLoading(false);
+    } catch (err: any) {
+      console.error('Error in fetchData:', err);
+      if (!isSilent) {
+        setStatus({
+          type: 'error',
+          message: 'Gagal memuat sebagian data. Silakan muat ulang halaman.'
+        });
+      }
+      setIsLoading(false);
+    }
+  }, [defaultSchoolISO, findBestActiveDate, hasSchoolData, isManualDate]);
+
+  useEffect(() => {
+    // Initial load: show loader with fresh data
+    fetchData(true, false);
+
+    // Periodic 5-minute background sync: runs silently without screen refresh or skeleton unmounting
+    const interval = setInterval(() => {
+      fetchData(true, true);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  // Disable pull-to-refresh gesture when any modal is open or when in 404 state
+  const isAnyModalOpen = Boolean(
+    isMenuOpen ||
+    isAllSongsOpen ||
+    isIceBreakingModalOpen ||
+    isNotificationModalOpen ||
+    isSearchOpen ||
+    isRandomPickerOpen ||
+    isGroupGeneratorOpen ||
+    isKasModalOpen ||
+    isWeeklyExportOpen ||
+    isSiswaModalOpen ||
+    isSettingsModalOpen ||
+    previewAttachment ||
+    selectedISO
+  );
+
+  const handlePullRefresh = useCallback(async () => {
+    await fetchData(true, true);
+  }, [fetchData]);
+
+  const {
+    containerRef,
+    pullDistance,
+    progress,
+    isPulling,
+    isThresholdReached,
+    isRefreshing: isPullRefreshing,
+    isSuccess: isPullSuccess,
+    triggerRefresh
+  } = usePullToRefresh({
+    onRefresh: handlePullRefresh,
+    disabled: isAnyModalOpen || is404
+  });
+
+  // Information for the currently displayed active date
+  const activeInfo = useMemo(() => parseISODateParts(activeISO), [activeISO]);
+  const activeDow = activeInfo.dowName;
+  const activeMbg = dataStore.mbgByDate[activeISO];
+  const activePiket = dataStore.piketByDow[activeDow];
+  const activeDoa = dataStore.doaByDate[activeISO];
+  const activeIceBreaking = dataStore.iceBreakingByDate[activeISO];
+  const activePelajaran = dataStore.pelajaranByDate[activeISO] || [];
+  const activeTasks = useMemo(() => {
+    const raw = (dataStore.tasksByDate[activeISO] || []).filter(t => t.taskType !== 'agenda');
+    return raw.filter(t => !isTaskTimePassed(t, activeISO, todayWIB.iso, currentWIBTime));
+  }, [dataStore.tasksByDate, activeISO, todayWIB.iso, currentWIBTime]);
+  const activeEventNotices = useMemo(() => {
+    return (dataStore.eventNoticesByDate?.[activeISO] || []).filter(n => {
+      // 1. jika acara sudah selesai, tidak usah tampilkan
+      if (n.endDate && n.endDate < todayWIB.iso) return false;
+      return true;
+    });
+  }, [dataStore.eventNoticesByDate, activeISO, todayWIB.iso]);
+
+  const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
+  const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
+
+  // Count of future pending assignments (sumatif & PR) across all future dates whose time has not passed
+  const upcomingDeadlinesCount = useMemo(() => {
+    return getUpcomingDeadlines(dataStore.tasksByDate, todayWIB.iso, currentWIBTime).totalCount;
+  }, [dataStore.tasksByDate, todayWIB.iso, currentWIBTime]);
+
+  // Helper check for calendar dots (only show indicator if there are pending active tasks)
+  const hasTasksForISO = (iso: string): boolean => {
+    return (dataStore.tasksByDate[iso] || []).some(
+      t => t.taskType !== 'agenda' && !isTaskTimePassed(t, iso, todayWIB.iso, currentWIBTime)
+    );
+  };
+
+  const hasEventNoticeForISO = (iso: string): boolean => {
+    return Boolean(dataStore.eventNoticesByDate?.[iso]?.length);
+  };
+
+  const hasDataForISO = (iso: string): boolean => {
+    const info = parseISODateParts(iso);
+    const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
+    return (
+      !!dataStore.doaByDate[iso] ||
+      !!dataStore.mbgByDate[iso] ||
+      !!dataStore.iceBreakingByDate[iso] ||
+      !!dataStore.piketByDow[info.dowName] ||
+      (dataStore.pelajaranByDate[iso] && dataStore.pelajaranByDate[iso].length > 0) ||
+      hasEventNoticeForISO(iso) ||
+      hasTasksForISO(iso) ||
+      (dataStore.birthdayByMonthDay[md] && dataStore.birthdayByMonthDay[md].length > 0)
+    );
+  };
+
+  const getBirthdaysForISO = (iso: string): string[] => {
+    const info = parseISODateParts(iso);
+    const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
+    return dataStore.birthdayByMonthDay[md] || [];
+  };
+
+  // Selected date details for modal
+  const selectedDetails = useMemo(() => {
+    if (!selectedISO) return null;
+    const info = parseISODateParts(selectedISO);
+    const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
+
+    return {
+      isoDate: selectedISO,
+      dow: info.dowName,
+      mbg: dataStore.mbgByDate[selectedISO],
+      piket: dataStore.piketByDow[info.dowName],
+      doa: dataStore.doaByDate[selectedISO],
+      iceBreaking: dataStore.iceBreakingByDate[selectedISO],
+      pelajaran: dataStore.pelajaranByDate[selectedISO] || [],
+      tasks: (dataStore.tasksByDate[selectedISO] || []).filter(
+        t => t.taskType !== 'agenda' && !isTaskTimePassed(t, selectedISO, todayWIB.iso, currentWIBTime)
+      ),
+      eventNotices: dataStore.eventNoticesByDate?.[selectedISO] || [],
+      birthdays: dataStore.birthdayByMonthDay[md] || []
+    };
+  }, [selectedISO, dataStore, todayWIB.iso, currentWIBTime]);
+
+  const handlePrevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(y => y - 1);
+    } else {
+      setViewMonth(m => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(y => y + 1);
+    } else {
+      setViewMonth(m => m + 1);
+    }
+  };
+
+  const [slideDirection, setSlideDirection] = useState<number>(1);
+  const shouldReduceMotion = useReducedMotion();
+
+  const handleJumpToToday = () => {
+    const curWIB = getWIBDateParts();
+    setViewYear(curWIB.year);
+    setViewMonth(curWIB.month);
+    if (curWIB.iso !== activeISO) {
+      setSlideDirection(curWIB.iso >= activeISO ? 1 : -1);
+      setActiveISO(curWIB.iso);
+      setIsManualDate(true);
+    }
+    setSelectedISO(null);
+  };
+
+  const handleStepDay = (delta: number) => {
+    setSlideDirection(delta >= 0 ? 1 : -1);
+    setActiveISO(prev => stepISODate(prev, delta));
+    setIsManualDate(true);
+  };
+
+  const handleSelectDate = (newIso: string) => {
+    if (newIso !== activeISO) {
+      setSlideDirection(newIso >= activeISO ? 1 : -1);
+      setActiveISO(newIso);
+      setIsManualDate(true);
+    }
+  };
+
+  const scheduleSlideVariants = {
+    enter: (direction: number) => ({
+      x: shouldReduceMotion ? 0 : (direction > 0 ? 36 : -36),
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        x: { type: 'spring', stiffness: 360, damping: 28 },
+        opacity: { duration: 0.2, ease: [0.16, 1, 0.3, 1] }
+      }
+    },
+    exit: (direction: number) => ({
+      x: shouldReduceMotion ? 0 : (direction > 0 ? -36 : 36),
+      opacity: 0,
+      transition: {
+        x: { duration: 0.16, ease: [0.16, 1, 0.3, 1] },
+        opacity: { duration: 0.14, ease: 'easeIn' }
+      }
+    })
+  };
+
+  const titleSlideVariants = {
+    enter: (direction: number) => ({
+      x: shouldReduceMotion ? 0 : (direction > 0 ? 16 : -16),
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        x: { type: 'spring', stiffness: 380, damping: 30 },
+        opacity: { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
+      }
+    },
+    exit: (direction: number) => ({
+      x: shouldReduceMotion ? 0 : (direction > 0 ? -16 : 16),
+      opacity: 0,
+      transition: {
+        x: { duration: 0.14, ease: [0.16, 1, 0.3, 1] },
+        opacity: { duration: 0.12, ease: 'easeIn' }
+      }
+    })
+  };
+
+  // Safe Date object for components expecting a Date instance
+  const safeActiveDate = useMemo(() => {
+    return new Date(Date.UTC(activeInfo.year, activeInfo.month, activeInfo.day, 12, 0, 0));
+  }, [activeInfo.year, activeInfo.month, activeInfo.day]);
+
+  const [dailyCopied, setDailyCopied] = useState<boolean>(false);
+
+  const handleCopyDailySummary = useCallback(async () => {
+    const text = formatDailySummary({
+      isoDate: activeISO || todayWIB.iso,
+      doa: activeDoa,
+      pelajaran: activePelajaran,
+      tasks: dataStore.tasksByDate[activeISO] || [],
+      eventNotices: activeEventNotices,
+      piket: activePiket,
+      mbg: activeMbg,
+      iceBreaking: activeIceBreaking,
+      birthdays: activeBirthdays
+    });
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      setDailyCopied(true);
+      setTimeout(() => setDailyCopied(false), 2000);
+    }
+    return ok;
+  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activeEventNotices, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
+
+  const handleCopyWeeklySummary = useCallback(async () => {
+    const text = formatWeeklySummary({
+      baseIso: activeISO || todayWIB.iso,
+      store: dataStore
+    });
+    return await copyTextToClipboard(text);
+  }, [activeISO, todayWIB.iso, dataStore]);
+
+  if (is404) {
+    return (
+      <>
+        {/* 5-minute pre-lesson in-app toast popup (auto closes after 5 seconds) */}
+        <NextLessonToast
+          info={nextLessonNotice}
+          onClose={() => setNextLessonNotice(null)}
+        />
+
+        <NotFoundUI
+          onGoHome={handleGoHome}
+          onOpenMenu={() => setIsMenuOpen(true)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          currentPath={currentPath}
+        />
+
+        {/* Keep Hamburger Menu & Modals accessible from 404 page */}
+        <HamburgerMenuModal
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          onOpenSongLyrics={() => setIsAllSongsOpen(true)}
+          onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+          onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+          onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
+          onOpenNotifications={() => setIsNotificationModalOpen(true)}
+          hasNotificationActive={isNotificationActive}
+          onOpenKasMurid={() => setIsKasModalOpen(true)}
+          onJumpToToday={() => {
+            handleGoHome();
+            handleJumpToToday();
+          }}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
+          onOpenSiswa={() => setIsSiswaModalOpen(true)}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
+        />
+
+        {isWeeklyExportOpen && (
+          <WeeklyExportModal
+            isOpen={isWeeklyExportOpen}
+            onClose={() => setIsWeeklyExportOpen(false)}
+            store={dataStore}
+            baseIso={activeISO || todayWIB.iso}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        <WheelOfNamesModal
+          isOpen={isRandomPickerOpen}
+          onClose={() => setIsRandomPickerOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <GroupGeneratorModal
+          isOpen={isGroupGeneratorOpen}
+          onClose={() => setIsGroupGeneratorOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <AllSongsModal
+          isOpen={isAllSongsOpen}
+          onClose={() => setIsAllSongsOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <IceBreakingScheduleModal
+          isOpen={isIceBreakingModalOpen}
+          onClose={() => setIsIceBreakingModalOpen(false)}
+          schedules={dataStore.iceBreakingByDate}
+          pelajaranByDate={dataStore.pelajaranByDate}
+          todayISO={todayWIB.iso}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <KasMuridModal
+          isOpen={isKasModalOpen}
+          onClose={() => setIsKasModalOpen(false)}
+          kasData={dataStore.kasData}
+          onRefresh={() => fetchData(true)}
+          isRefreshing={isLoading}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <NotificationModal
+          isOpen={isNotificationModalOpen}
+          onClose={() => setIsNotificationModalOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <SiswaListModal
+          isOpen={isSiswaModalOpen}
+          onClose={() => setIsSiswaModalOpen(false)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          onOpenWeeklyExport={() => {
+            setIsSettingsModalOpen(false);
+            setIsWeeklyExportOpen(true);
+          }}
+          onOpenNotifications={() => {
+            setIsSettingsModalOpen(false);
+            setIsNotificationModalOpen(true);
+          }}
+          onBackToMenu={() => {
+            setIsSettingsModalOpen(false);
+            setIsMenuOpen(true);
+          }}
+          hasNotificationActive={isNotificationActive}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          onRefreshData={() => fetchData(true)}
+          isRefreshing={isLoading}
+        />
+      </>
+    );
+  }
+
+  return (
+    // 5. Overflow scrolling on mobile enabled (min-h-screen overflow-y-auto on mobile, desktop keeps clean full viewport)
+    <div
+      ref={containerRef}
+      className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#F8F9FA] dark:bg-[#111215] text-[#191B1F] dark:text-[#F1F3F5] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200 relative"
+      style={{
+        overscrollBehaviorY: 'contain'
+      }}
+    >
+      {/* Mobile Pull-To-Refresh Visual Feedback Indicator */}
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        progress={progress}
+        isPulling={isPulling}
+        isThresholdReached={isThresholdReached}
+        isRefreshing={isPullRefreshing}
+        isSuccess={isPullSuccess}
+        onManualTrigger={triggerRefresh}
+      />
+
+      {/* 5-minute pre-lesson in-app toast popup (auto closes after 5 seconds) */}
+      <NextLessonToast
+        info={nextLessonNotice}
+        onClose={() => setNextLessonNotice(null)}
+      />
+
+      <div
+        className="max-w-[1600px] w-full mx-auto flex flex-col flex-1 min-h-0 gap-2.5 transition-transform duration-200 ease-out"
+        style={{
+          transform: pullDistance > 0 ? `translateY(${Math.min(pullDistance * 0.45, 42)}px)` : undefined,
+          willChange: pullDistance > 0 ? 'transform' : undefined
+        }}
+      >
+        {/* Top Header with Dark Mode Toggle & Hamburger Button */}
+        <Header
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          onOpenMenu={() => setIsMenuOpen(true)}
+          onOpenNotifications={() => setIsNotificationModalOpen(true)}
+          hasNotificationActive={isNotificationActive}
+          onOpenKasMurid={() => setIsKasModalOpen(true)}
+          onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+          onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+          onOpenSearch={() => setIsSearchOpen(true)}
+        />
+
+        {/* Status Notification (Only show on error) */}
+        {status && status.type === 'error' && (
+          <StatusBanner
+            type={status.type}
+            message={status.message}
+            onDismiss={() => setStatus(null)}
+          />
+        )}
+
+        {/* Main Grid: Skeleton Loader during data loading, or actual Dashboard */}
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : (
+          <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0 animate-fade-in">
+            {/* LEFT: TODAY DASHBOARD (Col Span 7-8) */}
+            <section
+              id="hero-today-section"
+              className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-hidden"
+            >
+              {/* Shortcut Grid: HANYA BERLAKU BILA SPACE HORIZONTAL KECIL (sm:hidden) */}
+              <MobileQuickActions
+                onOpenSearch={() => setIsSearchOpen(true)}
+                onOpenKasMurid={() => setIsKasModalOpen(true)}
+                onOpenNotifications={() => setIsNotificationModalOpen(true)}
+                hasNotificationActive={isNotificationActive}
+                onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+                onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+                darkMode={darkMode}
+                onToggleDarkMode={toggleDarkMode}
+              />
+
+              {/* Hero Section Tabs: Switch between Daily Schedule and Upcoming Deadlines */}
+              <div className="flex items-center justify-between gap-2 p-1 bg-stone-100/90 dark:bg-[#151619] rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
+                <div className="flex items-center gap-1 w-full sm:w-auto" role="tablist" aria-label="Pilihan Tampilan Agenda">
+                  <button
+                    type="button"
+                    onClick={() => setHeroActiveTab('schedule')}
+                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+                      heroActiveTab === 'schedule'
+                        ? 'bg-white dark:bg-[#202227] text-stone-900 dark:text-stone-100 shadow-2xs border border-stone-200/70 dark:border-stone-700/80 font-bold'
+                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-[#1D1E22]'
+                    }`}
+                    aria-selected={heroActiveTab === 'schedule'}
+                    role="tab"
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                    <span>Agenda Harian</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setHeroActiveTab('deadlines')}
+                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer relative ${
+                      heroActiveTab === 'deadlines'
+                        ? 'bg-white dark:bg-[#202227] text-amber-900 dark:text-amber-200 shadow-2xs border border-amber-300/70 dark:border-amber-800/80 font-bold'
+                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-[#1D1E22]'
+                    }`}
+                    aria-selected={heroActiveTab === 'deadlines'}
+                    role="tab"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    <span>Tenggat Mendatang</span>
+                    {upcomingDeadlinesCount > 0 ? (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full tabular-nums ${
+                        heroActiveTab === 'deadlines'
+                          ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                          : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300'
+                      }`}>
+                        {upcomingDeadlinesCount > 3 ? `3 dari ${upcomingDeadlinesCount}` : upcomingDeadlinesCount}
+                      </span>
+                    ) : heroActiveTab === 'deadlines' ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full tabular-nums bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
+                        0
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+
+                {heroActiveTab === 'deadlines' ? (
+                  <span className="hidden sm:inline-block text-[11px] text-stone-500 dark:text-stone-400 font-medium px-2">
+                    {upcomingDeadlinesCount === 0
+                      ? 'Tidak Ada Tenggat Mendatang'
+                      : upcomingDeadlinesCount > 3
+                      ? `3 dari ${upcomingDeadlinesCount} Tugas Terdekat`
+                      : upcomingDeadlinesCount === 1
+                      ? '1 Tugas Terdekat'
+                      : `${upcomingDeadlinesCount} Tugas Terdekat`}
+                  </span>
+                ) : (
+                  <span className="hidden sm:inline-block text-[11px] text-stone-500 dark:text-stone-400 font-medium px-2">
+                    Jadwal & Agenda Kelas
+                  </span>
+                )}
+              </div>
+
+              {heroActiveTab === 'schedule' ? (
+                <>
+                  {/* Date Title with Navigation */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <div className="relative overflow-hidden inline-flex min-h-[36px] items-center">
+                    <AnimatePresence mode="wait" initial={false} custom={slideDirection}>
+                      <motion.h2
+                        key={activeISO}
+                        custom={slideDirection}
+                        variants={titleSlideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        className="font-editorial font-bold text-xl sm:text-2xl lg:text-3xl text-stone-900 dark:text-stone-100 tracking-tight leading-tight"
+                      >
+                        {activeInfo.formattedDate}
+                      </motion.h2>
+                    </AnimatePresence>
+                  </div>
+                  {activeISO === todayWIB.iso ? (
+                    <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-emerald-50 dark:bg-[#122A1E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35">
+                      Hari Ini
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-stone-100 dark:bg-[#1B1D22] text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
+                        {(todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6) && activeISO === defaultSchoolISO
+                          ? `Agenda ${activeInfo.dowName} Depan`
+                          : 'Sedang Ditampilkan'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setSlideDirection(todayWIB.iso >= activeISO ? 1 : -1);
+                          setActiveISO(todayWIB.iso);
+                          setIsManualDate(true);
+                        }}
+                        className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-emerald-50 dark:bg-[#122A1E] text-emerald-900 dark:text-emerald-300 border border-emerald-600/25 dark:border-emerald-500/35 hover:bg-emerald-100/70 dark:hover:bg-[#1A382B] hover:-translate-y-0.5 hover:shadow-xs active:scale-95 transition-all duration-150 cursor-pointer"
+                        title={`Lihat Agenda Hari Ini (${todayWIB.dowName}, ${todayWIB.day} ${MONTH_ID[todayWIB.month]})`}
+                        aria-label="Kembali ke agenda hari ini"
+                      >
+                        Lihat Hari Ini
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Prev / Next Day Steppers with accessible touch targets & Salin Agenda (Icon Only) */}
+                <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                  <button
+                    onClick={handleCopyDailySummary}
+                    aria-label={dailyCopied ? 'Agenda hari ini tersalin ke clipboard' : 'Salin Agenda Harian'}
+                    title={dailyCopied ? 'Tersalin ke clipboard!' : 'Salin Agenda Hari Ini ke WhatsApp'}
+                    className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all duration-150 cursor-pointer hover:-translate-y-0.5 active:scale-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-700 group ${
+                      dailyCopied
+                        ? 'bg-emerald-50 dark:bg-[#122A1E] text-emerald-800 dark:text-emerald-300 border-emerald-600/40 shadow-xs'
+                        : 'border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:border-stone-300 dark:hover:border-stone-700 hover:shadow-xs text-stone-800 dark:text-stone-200'
+                    }`}
+                  >
+                    {dailyCopied ? (
+                      <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-subtle-bounce" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-stone-600 dark:text-stone-300 transition-transform duration-150 group-hover:scale-110" />
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleStepDay(-1)}
+                    aria-label="Agenda Hari Sebelumnya"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:border-stone-300 dark:hover:border-stone-700 hover:-translate-y-0.5 hover:shadow-xs text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] group"
+                    title="Hari Sebelumnya"
+                  >
+                    <ChevronLeft className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
+                    <span className="inline">Sebelumnya</span>
+                  </button>
+                  <button
+                    onClick={() => handleStepDay(1)}
+                    aria-label="Agenda Hari Berikutnya"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-100 dark:hover:bg-[#222429] hover:border-stone-300 dark:hover:border-stone-700 hover:-translate-y-0.5 hover:shadow-xs text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F] group"
+                    title="Hari Berikutnya"
+                  >
+                    <span className="inline">Berikutnya</span>
+                    <ChevronRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-0.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Dynamic Day Content with tactile horizontal slide transition */}
+              <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+                <AnimatePresence mode="wait" initial={false} custom={slideDirection}>
+                  <motion.div
+                    key={activeISO}
+                    custom={slideDirection}
+                    variants={scheduleSlideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    className="flex-1 flex flex-col gap-2.5 min-h-0 w-full"
+                  >
+                    {/* Smart Notice if displayed date differs from WIB date */}
+                    {activeISO !== todayWIB.iso && !isManualDate && (
+                      <div className="px-3.5 py-2 rounded-xl bg-stone-100/90 dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 text-stone-700 dark:text-stone-300 text-xs flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="w-4 h-4 text-emerald-800 dark:text-emerald-400 flex-shrink-0" />
+                          <span className="font-normal">
+                            {todayWIB.dayOfWeek === 0 || todayWIB.dayOfWeek === 6
+                              ? `Hari ini hari libur sekolah (${todayWIB.formattedDate}). Menampilkan agenda hari efektif sekolah terdekat: ${activeInfo.formattedDate}`
+                              : `Menampilkan agenda hari efektif sekolah terdekat: ${activeInfo.formattedDate}`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Event Notice Banner (All-day / Multi-day events like Camping, PJJ, Masuk Sekolah) */}
+                    {activeEventNotices.length > 0 && (
+                      <EventNoticeBanner
+                        notices={activeEventNotices}
+                        onOpenAttachment={handleOpenAttachment}
+                        todayISO={todayWIB.iso}
+                      />
+                    )}
+
+                    {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
+                    {activeTasks.length > 0 && (
+                      <TaskBanner
+                        tasks={activeTasks}
+                        onOpenAttachment={handleOpenAttachment}
+                      />
+                    )}
+
+                    {/* Schedule Blocks (MBG, Piket, Doa & Bacaan Injil, Jadwal Pelajaran) */}
+                    <ScheduleBlocks
+                      mbg={activeMbg}
+                      piket={activePiket}
+                      doa={activeDoa}
+                      pelajaran={activePelajaran}
+                      dowName={activeDow}
+                      iceBreaking={activeIceBreaking}
+                      onOpenAttachment={handleOpenAttachment}
+                      isoDate={activeISO}
+                      isToday={activeISO === todayWIB.iso}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </>
+          ) : (
+            /* Upcoming Deadlines Tab View */
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pr-0.5">
+              <UpcomingDeadlinesTab
+                tasksByDate={dataStore.tasksByDate}
+                todayISO={todayWIB.iso}
+                currentTimeWIB={currentWIBTime}
+                onSelectDate={iso => {
+                  setSelectedISO(iso);
+                  handleSelectDate(iso);
+                }}
+                onOpenAttachment={handleOpenAttachment}
+                onSwitchToSchedule={() => setHeroActiveTab('schedule')}
+                darkMode={darkMode}
+              />
+            </div>
+          )}
+        </section>
+
+            {/* RIGHT: CALENDAR, BIRTHDAYS & SONG SCHEDULE (Col Span 4-5) */}
+            <aside className="lg:col-span-5 xl:col-span-4 flex flex-col h-auto lg:h-full min-h-0 w-full justify-between gap-2.5 overflow-visible lg:overflow-hidden">
+              <CalendarSection
+                viewYear={viewYear}
+                viewMonth={viewMonth}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                onToday={handleJumpToToday}
+                previewISO={activeISO}
+                todayISO={todayWIB.iso}
+                selectedISO={selectedISO}
+                onSelectDate={iso => {
+                  setSelectedISO(iso);
+                  handleSelectDate(iso);
+                }}
+                hasDataFn={hasDataForISO}
+                hasTaskFn={hasTasksForISO}
+                hasEventNoticeFn={hasEventNoticeForISO}
+                hasBirthdayFn={getBirthdaysForISO}
+                birthdaysToday={activeBirthdays}
+              />
+
+              {/* Song Schedule Card */}
+              <SongScheduleList
+                currentDate={safeActiveDate}
+                darkMode={darkMode}
+                onToggleDarkMode={toggleDarkMode}
+                onOpenAllSongs={() => setIsAllSongsOpen(true)}
+              />
+            </aside>
+          </main>
+        )}
+      </div>
+
+      {/* Offline Status Toast */}
+      <OfflineIndicator />
+
+      {/* Lazy-Loaded Modals wrapped in Suspense for optimal bundle splitting */}
+      <React.Suspense fallback={null}>
+        {/* Hamburger Navigation Modal (No placeholders) */}
+        {isMenuOpen && (
+          <HamburgerMenuModal
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            onOpenSongLyrics={() => setIsAllSongsOpen(true)}
+            onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
+            onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+            onOpenIceBreaking={() => setIsIceBreakingModalOpen(true)}
+            onOpenNotifications={() => setIsNotificationModalOpen(true)}
+            hasNotificationActive={isNotificationActive}
+            onOpenKasMurid={() => setIsKasModalOpen(true)}
+            onJumpToToday={handleJumpToToday}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
+            onOpenSiswa={() => setIsSiswaModalOpen(true)}
+            onOpenSettings={() => setIsSettingsModalOpen(true)}
+          />
+        )}
+        {/* Random Name Picker (Wheel of Names) Modal */}
+        {isRandomPickerOpen && (
+          <WheelOfNamesModal
+            isOpen={isRandomPickerOpen}
+            onClose={() => setIsRandomPickerOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Random Group Name Picker (Team Generator) Modal */}
+        {isGroupGeneratorOpen && (
+          <GroupGeneratorModal
+            isOpen={isGroupGeneratorOpen}
+            onClose={() => setIsGroupGeneratorOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* All Songs Lyrics Modal */}
+        {isAllSongsOpen && (
+          <AllSongsModal
+            isOpen={isAllSongsOpen}
+            onClose={() => setIsAllSongsOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Jadwal Petugas Ice Breaking Modal */}
+        {isIceBreakingModalOpen && (
+          <IceBreakingScheduleModal
+            isOpen={isIceBreakingModalOpen}
+            onClose={() => setIsIceBreakingModalOpen(false)}
+            schedules={dataStore.iceBreakingByDate}
+            pelajaranByDate={dataStore.pelajaranByDate}
+            todayISO={todayWIB.iso}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            onSelectDate={iso => {
+              setSelectedISO(iso);
+              setActiveISO(iso);
+              setIsManualDate(true);
+            }}
+          />
+        )}
+
+        {/* Buku Kas & Penunggakan Murid Modal */}
+        {isKasModalOpen && (
+          <KasMuridModal
+            isOpen={isKasModalOpen}
+            onClose={() => setIsKasModalOpen(false)}
+            kasData={dataStore.kasData}
+            onRefresh={() => fetchData(true)}
+            isRefreshing={isLoading}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Day Detail Modal (When user clicks on a calendar date) */}
+        {selectedDetails && (
+          <DayDetailModal
+            isoDate={selectedDetails.isoDate}
+            onClose={() => setSelectedISO(null)}
+            doa={selectedDetails.doa}
+            mbg={selectedDetails.mbg}
+            piket={selectedDetails.piket}
+            iceBreaking={selectedDetails.iceBreaking}
+            pelajaran={selectedDetails.pelajaran}
+            tasks={selectedDetails.tasks}
+            eventNotices={selectedDetails.eventNotices}
+            birthdays={selectedDetails.birthdays}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            onOpenAllSongs={() => setIsAllSongsOpen(true)}
+            onOpenAttachment={handleOpenAttachment}
+          />
+        )}
+
+        {/* Push Notification Settings Modal */}
+        {isNotificationModalOpen && (
+          <NotificationModal
+            isOpen={isNotificationModalOpen}
+            onClose={() => setIsNotificationModalOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Weekly & Custom Range Schedule Export Modal */}
+        {isWeeklyExportOpen && (
+          <WeeklyExportModal
+            isOpen={isWeeklyExportOpen}
+            onClose={() => setIsWeeklyExportOpen(false)}
+            store={dataStore}
+            baseIso={activeISO || todayWIB.iso}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Daftar Siswa Kelas XB Modal */}
+        {isSiswaModalOpen && (
+          <SiswaListModal
+            isOpen={isSiswaModalOpen}
+            onClose={() => setIsSiswaModalOpen(false)}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        )}
+
+        {/* Settings Modal (Pengaturan & Ekspor) */}
+        {isSettingsModalOpen && (
+          <SettingsModal
+            isOpen={isSettingsModalOpen}
+            onClose={() => setIsSettingsModalOpen(false)}
+            onOpenWeeklyExport={() => {
+              setIsSettingsModalOpen(false);
+              setIsWeeklyExportOpen(true);
+            }}
+            onOpenNotifications={() => {
+              setIsSettingsModalOpen(false);
+              setIsNotificationModalOpen(true);
+            }}
+            onBackToMenu={() => {
+              setIsSettingsModalOpen(false);
+              setIsMenuOpen(true);
+            }}
+            hasNotificationActive={isNotificationActive}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            onRefreshData={() => fetchData(true)}
+            isRefreshing={isLoading}
+          />
+        )}
+
+        {/* Lightbox Modal for Task Attachment Previews (Photos, Documents, Drive Files) */}
+        {previewAttachment && (
+          <ReceiptLightboxModal
+            isOpen={!!previewAttachment}
+            onClose={() => setPreviewAttachment(null)}
+            data={previewAttachment}
+            darkMode={darkMode}
+          />
+        )}
+
+        {/* Global Search Bar Modal (Subjects, Tasks, Event Notices, Students) */}
+        {isSearchOpen && (
+          <GlobalSearchModal
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+            dataStore={dataStore}
+            onSelectDate={iso => {
+              handleSelectDate(iso);
+              setSelectedISO(null);
+            }}
+            onOpenAttachment={handleOpenAttachment}
+            darkMode={darkMode}
+            todayISO={todayWIB.iso}
+          />
+        )}
+      </React.Suspense>
+    </div>
+  );
+}

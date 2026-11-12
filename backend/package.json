@@ -1,0 +1,15 @@
+{
+  "name": "dashboard-xb-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "ical.js": "^2.2.1",
+    "web-push": "^3.6.7"
+  }
+}

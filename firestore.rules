@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidEndpoint(endpoint) {
+      return endpoint is string && endpoint.size() >= 10 && endpoint.size() <= 2048 &&
+             (endpoint.matches('^https://.*'));
+    }
+
+    function isValidKeys(keys) {
+      return keys is map &&
+             keys.p256dh is string && keys.p256dh.size() > 0 && keys.p256dh.size() <= 256 &&
+             keys.auth is string && keys.auth.size() > 0 && keys.auth.size() <= 128;
+    }
+
+    match /push_subscriptions/{subscriptionId} {
+      // Clients can register or update their browser push subscription with strict validation
+      allow create: if request.resource.data.endpoint is string &&
+                       isValidEndpoint(request.resource.data.endpoint) &&
+                       isValidKeys(request.resource.data.keys);
+
+      allow update: if isValidEndpoint(request.resource.data.endpoint) &&
+                       isValidKeys(request.resource.data.keys);
+
+      // Client can delete their subscription when opting out
+      allow delete: if true;
+
+      // Prevent unauthorized harvesting/scraping of all student subscription endpoints
+      allow read: if false;
+    }
+
+    match /system_state/{stateDoc} {
+      // Read-only for health and connection checks; write prohibited from anonymous client SDK
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

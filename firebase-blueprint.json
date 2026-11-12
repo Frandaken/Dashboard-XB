@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "PushSubscription": {
+      "title": "PushSubscription",
+      "description": "Browser Web Push subscription record for classroom notifications",
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "Web Push subscription endpoint URL"
+        },
+        "keys": {
+          "type": "object",
+          "description": "Encryption keys for Web Push payload (p256dh and auth)",
+          "properties": {
+            "p256dh": { "type": "string" },
+            "auth": { "type": "string" }
+          },
+          "required": ["p256dh", "auth"]
+        },
+        "preferences": {
+          "type": "object",
+          "description": "User notification category preferences",
+          "properties": {
+            "jadwalHarian": { "type": "boolean" },
+            "sumatif": { "type": "boolean" },
+            "tugasPr": { "type": "boolean" },
+            "piketMbg": { "type": "boolean" },
+            "iceBreaking": { "type": "boolean" }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when subscribed"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last preference update"
+        }
+      },
+      "required": ["endpoint", "keys"]
+    },
+    "SystemState": {
+      "title": "SystemState",
+      "description": "System operational status and notification dispatch logs",
+      "type": "object",
+      "properties": {
+        "lastSentDate": {
+          "type": "string",
+          "description": "Date YYYY-MM-DD when routine notification was dispatched"
+        },
+        "lastCheckTimestamp": {
+          "type": "number",
+          "description": "Epoch timestamp of last run"
+        },
+        "totalSent": {
+          "type": "number",
+          "description": "Count of successfully notified subscribers"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/push_subscriptions/{subscriptionId}": {
+      "schema": { "$ref": "#/entities/PushSubscription" },
+      "description": "Collection of browser push notification subscriptions"
+    },
+    "/system_state/{stateDoc}": {
+      "schema": { "$ref": "#/entities/SystemState" },
+      "description": "System state and daily notification dispatch history"
+    }
+  }
+}
