@@ -63,6 +63,7 @@ Dashboard-XB/
 │       ├── data/                   # Data fallback (demoData, studentsData, songSchedule, kasDemoData)
 │       ├── utils/                  # Utilitas (version, csvParser, icalParser, dateUtils, audioEffects)
 │       └── App.tsx                 # Root komponen dashboard utama
+├── docker-bake.hcl             # Konfigurasi Docker Buildx Bake (build paralel multi-target)
 ├── docker-compose.yml              # Konfigurasi Docker Compose utama (Git context)
 ├── docker-compose.local.yml        # Konfigurasi Docker Compose untuk build lokal (Local context)
 ├── server.ts                       # Server Express full-stack lokal (dev server & production SSR)
@@ -114,6 +115,33 @@ docker compose up -d --build
 docker compose down
 docker compose up -d --build --no-cache
 ```
+
+---
+
+### Opsi C: Build Cepat Paralel dengan Docker Buildx Bake (`docker-bake.hcl`)
+
+Docker Buildx Bake mengorkestrasi kompilasi image frontend dan backend secara simultan (paralel murni) dengan arsitektur `linux/amd64` tanpa mengubah file `docker-compose.yml`.
+
+1. **Build Semua Image Secara Simultan (Paralel):**
+   ```bash
+   docker buildx bake
+   ```
+
+2. **Build dengan Tag Versi Khusus:**
+   ```bash
+   TAG=v1.0.0 docker buildx bake
+   ```
+
+3. **Build Target Tertentu Saja:**
+   ```bash
+   docker buildx bake frontend   # Hanya build frontend
+   docker buildx bake backend    # Hanya build backend
+   ```
+
+4. **Jalankan Kontainer Setelah Image Selesai di-Bake:**
+   ```bash
+   docker compose up -d
+   ```
 
 ---
 
