@@ -26,6 +26,12 @@ services:
       - NODE_ENV=production
       - DATA_DIR=/app/data
       - UPLOADS_DIR=/app/data/uploads
+      - APP_URL=${APP_URL:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+      - CALENDAR_FEED_PELAJARAN=${CALENDAR_FEED_PELAJARAN:-}
+      - CALENDAR_FEED_BIRTHDAY=${CALENDAR_FEED_BIRTHDAY:-}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

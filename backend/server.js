@@ -63,22 +63,24 @@ app.get(['/api/uploads/:filename', '/uploads/:filename'], (req, res) => {
   });
 });
 
-// Upstream Google Calendar feeds
+const normalizeEnvUrl = (val) => (val || '').trim().replace(/^["']|["']$/g, '');
+
+// Upstream Google Calendar feeds (diambil murni dari environment variable, tanpa hardcode)
 const CALENDAR_FEEDS = {
-  pelajaran: process.env.CALENDAR_FEED_PELAJARAN || "https://calendar.google.com/calendar/ical/a4fd56ccb6ac7cde9478e4d863191dd53cd12c6110fe380d6bf279da0e44dc8e%40group.calendar.google.com/private-f67cd9352a27790460116ba8a612434c/basic.ics",
-  birthday: process.env.CALENDAR_FEED_BIRTHDAY || "https://calendar.google.com/calendar/ical/c83e6edc41cc4489ab2a435d067ef46014bfd0fefa8fc964d83ecdc72a5e59d5%40group.calendar.google.com/private-b45f7ec9aad159bf2e0dca6627311f2b/basic.ics"
+  pelajaran: normalizeEnvUrl(process.env.CALENDAR_FEED_PELAJARAN),
+  birthday: normalizeEnvUrl(process.env.CALENDAR_FEED_BIRTHDAY)
 };
 
-// Upstream Google Sheets published CSV feeds
+// Upstream Google Sheets published CSV feeds (opsional override via env)
 const SHEET_FEEDS = {
-  doa: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=0&single=true&output=csv",
-  mbg: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=215098819&single=true&output=csv",
-  piket: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1149044316&single=true&output=csv",
-  icebreaking: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1073417057&single=true&output=csv",
-  penunggakan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=2142387216&single=true&output=csv",
-  pengeluaran: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=47581979&single=true&output=csv",
-  pendapatan_lain: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=775852732&single=true&output=csv",
-  rekap: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=172836771&single=true&output=csv"
+  doa: normalizeEnvUrl(process.env.SHEET_FEED_DOA) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=0&single=true&output=csv",
+  mbg: normalizeEnvUrl(process.env.SHEET_FEED_MBG) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=215098819&single=true&output=csv",
+  piket: normalizeEnvUrl(process.env.SHEET_FEED_PIKET) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1149044316&single=true&output=csv",
+  icebreaking: normalizeEnvUrl(process.env.SHEET_FEED_ICEBREAKING) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vRU3A29DVHfQZkjsDcUPnAojvTldw2tpSxSGwaG1O8m4pXD8I8NVPeaF0U1TLYtqUzZjDJujYRu1OHp/pub?gid=1073417057&single=true&output=csv",
+  penunggakan: normalizeEnvUrl(process.env.SHEET_FEED_PENUNGGAKAN) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=2142387216&single=true&output=csv",
+  pengeluaran: normalizeEnvUrl(process.env.SHEET_FEED_PENGELUARAN) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=47581979&single=true&output=csv",
+  pendapatan_lain: normalizeEnvUrl(process.env.SHEET_FEED_PENDAPATAN_LAIN) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=775852732&single=true&output=csv",
+  rekap: normalizeEnvUrl(process.env.SHEET_FEED_REKAP) || "https://docs.google.com/spreadsheets/d/e/2PACX-1vSaTU3Nzsaf2hBANcxE-7r9JKoKCpR5XYj30PqAu9Vp6ufPdizt7GMLtDOTxuk7ERV24lu5EEtFOqlC/pub?gid=172836771&single=true&output=csv"
 };
 
 const cache = new Map();
@@ -91,17 +93,26 @@ async function fetchWithRetry(url, headers = {}, timeoutMs = 12000) {
     try {
       const res = await fetch(url, {
         signal: controller.signal,
+        redirect: 'follow',
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           ...headers
         }
       });
       if (!res.ok) {
-        throw new Error(`Upstream returned HTTP ${res.status}`);
+        const err = new Error(`Upstream returned HTTP ${res.status} ${res.statusText}`);
+        err.status = res.status;
+        throw err;
       }
       return await res.text();
     } catch (err) {
-      if (attempt === 1) throw err;
+      const causeCode = err?.cause?.code || err?.code || '';
+      if (attempt === 1) {
+        if (causeCode && !err.message.includes(causeCode)) {
+          err.message = `${err.message} (${causeCode})`;
+        }
+        throw err;
+      }
       await new Promise(r => setTimeout(r, 400));
     } finally {
       clearTimeout(timeoutId);
@@ -110,41 +121,79 @@ async function fetchWithRetry(url, headers = {}, timeoutMs = 12000) {
   throw new Error('Failed to fetch after retry');
 }
 
-// Health check endpoint
+// Health check endpoint (tanpa membocorkan URL private kalender)
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'dashboard-xb-backend', time: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'dashboard-xb-backend',
+    time: new Date().toISOString(),
+    env: {
+      pelajaranConfigured: Boolean(CALENDAR_FEEDS.pelajaran),
+      birthdayConfigured: Boolean(CALENDAR_FEEDS.birthday)
+    },
+    sheetsConfigured: Object.keys(SHEET_FEEDS)
+  });
 });
 
 // Proxy route for Google Calendar feeds
 app.get('/api/calendar/:feed', async (req, res) => {
   const feed = req.params.feed;
-  const url = CALENDAR_FEEDS[feed];
-  if (!url) {
-    return res.status(404).json({ error: `Unknown calendar feed: ${feed}` });
+  if (!(feed in CALENDAR_FEEDS)) {
+    return res.status(404).json({ error: `Unknown calendar feed: ${feed}`, feed });
   }
 
+  const url = CALENDAR_FEEDS[feed];
+  if (!url) {
+    const envName = `CALENDAR_FEED_${feed.toUpperCase()}`;
+    console.warn(`[Calendar] ${envName} belum diatur di environment server.`);
+    return res.status(503).json({
+      error: `Environment variable ${envName} belum diatur atau kosong di server.`,
+      feed,
+      missingEnv: envName
+    });
+  }
+
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
   const cached = cache.get(`cal:${feed}`);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  if (!forceFresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     res.setHeader('Content-Type', cached.contentType);
     res.setHeader('X-Cache', 'HIT');
     return res.send(cached.data);
   }
 
   try {
-    const icsText = await fetchWithRetry(url);
+    const sep = url.includes('?') ? '&' : '?';
+    const upstreamUrl = `${url}${sep}_cb=${Date.now()}`;
+    const icsText = await fetchWithRetry(upstreamUrl, {
+      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+      'Pragma': 'no-cache'
+    });
+    if (!icsText || !icsText.includes('BEGIN:VCALENDAR')) {
+      const preview = (icsText || '').trim().slice(0, 120).replace(/\s+/g, ' ');
+      throw new Error(`Invalid iCal payload from Google Calendar (preview: "${preview}")`);
+    }
     const contentType = 'text/calendar; charset=utf-8';
     cache.set(`cal:${feed}`, { data: icsText, contentType, timestamp: Date.now() });
     res.setHeader('Content-Type', contentType);
     res.setHeader('X-Cache', 'MISS');
     return res.send(icsText);
   } catch (err) {
-    console.error(`Error fetching calendar feed "${feed}":`, err.message);
+    console.error(`[Calendar] Error fetching feed "${feed}":`, err.message, err.cause || '');
     if (cached) {
       res.setHeader('Content-Type', cached.contentType);
       res.setHeader('X-Cache', 'STALE');
       return res.send(cached.data);
     }
-    return res.status(502).json({ error: `Failed to fetch calendar ${feed}: ${err.message}` });
+    return res.status(502).json({
+      error: `Failed to fetch calendar ${feed}: ${err.message}`,
+      feed,
+      upstreamStatus: err.status || null,
+      code: err.cause?.code || err.code || 'UPSTREAM_ERROR'
+    });
   }
 });
 
@@ -153,31 +202,51 @@ app.get('/api/sheets/:key', async (req, res) => {
   const key = req.params.key;
   const url = SHEET_FEEDS[key];
   if (!url) {
-    return res.status(404).json({ error: `Unknown sheet key: ${key}` });
+    return res.status(404).json({ error: `Unknown sheet key: ${key}`, key });
   }
 
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
   const cached = cache.get(`sheet:${key}`);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  if (!forceFresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     res.setHeader('Content-Type', cached.contentType);
     res.setHeader('X-Cache', 'HIT');
     return res.send(cached.data);
   }
 
   try {
-    const csvText = await fetchWithRetry(url);
+    const sep = url.includes('?') ? '&' : '?';
+    const upstreamUrl = `${url}${sep}_cb=${Date.now()}`;
+    const csvText = await fetchWithRetry(upstreamUrl, {
+      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+      'Pragma': 'no-cache'
+    });
+    const trimmed = (csvText || '').trim();
+    if (!trimmed || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.startsWith('<HTML')) {
+      const preview = trimmed.slice(0, 120).replace(/\s+/g, ' ');
+      throw new Error(`Google Sheets returned HTML instead of CSV (preview: "${preview}")`);
+    }
     const contentType = 'text/plain; charset=utf-8';
     cache.set(`sheet:${key}`, { data: csvText, contentType, timestamp: Date.now() });
     res.setHeader('Content-Type', contentType);
     res.setHeader('X-Cache', 'MISS');
     return res.send(csvText);
   } catch (err) {
-    console.error(`Error fetching sheet "${key}":`, err.message);
+    console.error(`[Sheets] Error fetching "${key}":`, err.message, err.cause || '');
     if (cached) {
       res.setHeader('Content-Type', cached.contentType);
       res.setHeader('X-Cache', 'STALE');
       return res.send(cached.data);
     }
-    return res.status(502).json({ error: `Failed to fetch sheet ${key}: ${err.message}` });
+    return res.status(502).json({
+      error: `Failed to fetch sheet ${key}: ${err.message}`,
+      key,
+      upstreamStatus: err.status || null,
+      code: err.cause?.code || err.code || 'UPSTREAM_ERROR'
+    });
   }
 });
 

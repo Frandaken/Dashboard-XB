@@ -53,6 +53,7 @@ export default defineConfig(() => {
         },
         workbox: {
           importScripts: ['/push-worker.js'],
+          navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           runtimeCaching: [
             {

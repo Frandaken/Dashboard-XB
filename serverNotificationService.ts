@@ -241,7 +241,7 @@ export async function buildTomorrowNotification(
   const doFetch = fetchFn || defaultFetch;
 
   // 1. Fetch Pelajaran Calendar
-  const calUrl = calendarFeeds?.pelajaran || "https://calendar.google.com/calendar/ical/a4fd56ccb6ac7cde9478e4d863191dd53cd12c6110fe380d6bf279da0e44dc8e%40group.calendar.google.com/private-f67cd9352a27790460116ba8a612434c/basic.ics";
+  const calUrl = (calendarFeeds?.pelajaran || process.env.CALENDAR_FEED_PELAJARAN || '').trim();
   
   const pelajaranList: string[] = [];
   const noticeList: { title: string; dayIndex: number; totalDays: number; location?: string }[] = [];
@@ -250,7 +250,10 @@ export async function buildTomorrowNotification(
   const agendaList: { subject: string; title: string; details?: string }[] = [];
 
   try {
-    const icsText = await doFetch(calUrl);
+    if (!calUrl) {
+      console.warn('buildTomorrowNotification: CALENDAR_FEED_PELAJARAN belum diatur di env, skip fetch kalender.');
+    } else {
+      const icsText = await doFetch(calUrl);
     if (icsText && icsText.includes('BEGIN:VCALENDAR')) {
       const jcal = ICAL.parse(icsText);
       const comp = new ICAL.Component(jcal);
@@ -395,6 +398,7 @@ export async function buildTomorrowNotification(
           }
         }
       }
+    }
     }
   } catch (err: any) {
     console.warn('buildTomorrowNotification: Could not parse calendar:', err.message);

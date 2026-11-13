@@ -652,10 +652,17 @@ export function parseBirthdayICS(
       const st = event.startDate;
       if (!st) continue;
 
-      const monthDayKey = `${String(st.month).padStart(2, '0')}-${String(st.day).padStart(2, '0')}`;
+      let monthDayKey = `${String(st.month).padStart(2, '0')}-${String(st.day).padStart(2, '0')}`;
+      if (!st.isDate) {
+        const wib = getWIBDateTime(st, event);
+        if (wib.dateKey && wib.dateKey.length >= 10) {
+          monthDayKey = wib.dateKey.slice(5, 10);
+        }
+      }
+
       let name = event.summary || '';
-      // Clean up "🎂 Name (X-B)"
-      name = name.replace(/🎂/g, '').replace(/\(X-B\)/gi, '').trim();
+      // Clean up "🎂 Name (X-B)" / "🎂 Name (XB)"
+      name = name.replace(/🎂/g, '').replace(/\(X-?B\)/gi, '').trim();
 
       if (name) {
         if (!birthdayByMonthDay[monthDayKey]) {

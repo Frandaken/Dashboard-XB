@@ -358,6 +358,10 @@ export default function App() {
 
   // Fetch real data with fallback (isSilent prevents skeleton flashing during periodic 5-minute background sync)
   const fetchData = useCallback(async (forceFresh: boolean = false, isSilent: boolean = false) => {
+    const syncStartedAt = performance.now();
+    const syncTag = `[Dashboard XB Sync @ ${new Date().toLocaleTimeString('id-ID')}]`;
+    console.group(`${syncTag} Memulai sinkronisasi data (forceFresh=${forceFresh}, isSilent=${isSilent}, online=${typeof navigator !== 'undefined' ? navigator.onLine : 'unknown'}, origin=${typeof window !== 'undefined' ? window.location.origin : 'unknown'})`);
+
     if (!isSilent) {
       setIsLoading(true);
       setStatus({ type: 'loading', message: 'Memperbarui data kelas...' });
@@ -365,16 +369,61 @@ export default function App() {
 
     if (forceFresh) {
       try {
-        await fetch('/api/refresh', { method: 'POST' });
-      } catch (e) {
-        // ignore network error on cache clearing
+        const refreshRes = await fetch('/api/refresh', { method: 'POST' });
+        console.debug(`${syncTag} POST /api/refresh -> HTTP ${refreshRes.status}`);
+      } catch (e: any) {
+        console.warn(`${syncTag} POST /api/refresh gagal:`, e?.message || e);
       }
     }
 
-    const fetchEndpoint = async (path: string, fallbackKey?: keyof typeof DEMO_CSV) => {
+    interface EndpointDebugRow {
+      endpoint: string;
+      status: string;
+      http: number | string;
+      cache: string;
+      ms: number;
+      bytes: number;
+      source: 'LIVE' | 'FALLBACK' | 'EMPTY';
+      error: string;
+    }
+    const debugRows: EndpointDebugRow[] = [];
+
+    // Probe /api/health untuk diagnosa koneksi Nginx -> Backend & status .env
+    const probeHealth = async () => {
+      const t0 = performance.now();
       try {
-        const sep = path.includes('?') ? '&' : '?';
-        const url = `${path}${sep}fresh=1&t=${Date.now()}`;
+        const res = await fetch(`/api/health?t=${Date.now()}`, { cache: 'no-cache' });
+        const ms = Math.round(performance.now() - t0);
+        const contentType = res.headers.get('content-type') || '';
+        const bodyText = await res.text();
+        if (!res.ok) {
+          console.error(`${syncTag} [HEALTH] Backend /api/health HTTP ${res.status} (${ms}ms):`, bodyText.slice(0, 300));
+          return;
+        }
+        if (contentType.includes('text/html') || bodyText.trim().startsWith('<!doctype') || bodyText.trim().startsWith('<html')) {
+          console.error(`${syncTag} [HEALTH] /api/health mengembalikan HTML SPA (proxy /api/ ke backend kemungkinan belum tersambung)! Preview:`, bodyText.trim().slice(0, 200));
+          return;
+        }
+        try {
+          const json = JSON.parse(bodyText);
+          console.info(`${syncTag} [HEALTH] OK (${ms}ms):`, json);
+          if (json?.env && (!json.env.pelajaranConfigured || !json.env.birthdayConfigured)) {
+            console.error(`${syncTag} [HEALTH WARNING] Env kalender belum lengkap di server! pelajaranConfigured=${json.env.pelajaranConfigured}, birthdayConfigured=${json.env.birthdayConfigured}. Pastikan CALENDAR_FEED_PELAJARAN & CALENDAR_FEED_BIRTHDAY ada di .env dan diteruskan ke container backend.`);
+          }
+        } catch {
+          console.warn(`${syncTag} [HEALTH] Response non-JSON (${ms}ms):`, bodyText.slice(0, 200));
+        }
+      } catch (err: any) {
+        const ms = Math.round(performance.now() - t0);
+        console.error(`${syncTag} [HEALTH] Gagal menghubungi /api/health (${ms}ms):`, err?.name, err?.message, err);
+      }
+    };
+
+    const fetchEndpoint = async (path: string, fallbackKey?: keyof typeof DEMO_CSV) => {
+      const t0 = performance.now();
+      const sep = path.includes('?') ? '&' : '?';
+      const url = `${path}${sep}fresh=1&t=${Date.now()}`;
+      try {
         const res = await fetch(url, {
           cache: 'no-cache',
           headers: {
@@ -382,17 +431,56 @@ export default function App() {
             'Pragma': 'no-cache'
           }
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ms = Math.round(performance.now() - t0);
         const contentType = res.headers.get('content-type') || '';
+        const xCache = res.headers.get('x-cache') || '-';
         const text = await res.text();
         const trimmed = text.trim();
-        // If an API endpoint returns HTML (e.g. <!doctype html> from SPA fallback or proxy error), reject it to trigger fallback
-        if (path.startsWith('/api/') && (contentType.includes('text/html') || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html'))) {
-          throw new Error(`API ${path} returned HTML content instead of expected data`);
+
+        if (!res.ok) {
+          let serverError = trimmed.slice(0, 300);
+          try {
+            const parsedErr = JSON.parse(trimmed);
+            serverError = JSON.stringify(parsedErr);
+          } catch {}
+          throw new Error(`HTTP ${res.status} ${res.statusText} | Body: ${serverError}`);
         }
+
+        // If an API endpoint returns HTML (e.g. <!doctype html> from SPA fallback or proxy error), reject it to trigger fallback
+        if (path.startsWith('/api/') && (contentType.includes('text/html') || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.startsWith('<HTML'))) {
+          throw new Error(`API ${path} mengembalikan HTML (${contentType}) alih-alih data. Preview: ${trimmed.slice(0, 150)}`);
+        }
+
+        if (path.startsWith('/api/calendar/') && !trimmed.includes('BEGIN:VCALENDAR')) {
+          throw new Error(`Payload kalender ${path} tidak mengandung BEGIN:VCALENDAR. Preview: ${trimmed.slice(0, 150)}`);
+        }
+
+        console.debug(`${syncTag} [OK] ${path} | HTTP ${res.status} | X-Cache=${xCache} | ${contentType} | ${text.length} bytes | ${ms}ms`);
+        debugRows.push({
+          endpoint: path,
+          status: 'OK',
+          http: res.status,
+          cache: xCache,
+          ms,
+          bytes: text.length,
+          source: 'LIVE',
+          error: '-'
+        });
         return { text, isFallback: false };
-      } catch (err) {
-        console.warn(`Fetch ${path} gagal, menggunakan data lokal:`, err);
+      } catch (err: any) {
+        const ms = Math.round(performance.now() - t0);
+        const errMsg = err?.message || String(err);
+        console.error(`${syncTag} [GAGAL] ${path} (${ms}ms) -> fallback=${fallbackKey ? 'DEMO_CSV' : 'EMPTY/KAS_DEMO'}:`, errMsg);
+        debugRows.push({
+          endpoint: path,
+          status: 'FAILED',
+          http: errMsg.match(/HTTP\s+(\d+)/)?.[1] || 'ERR',
+          cache: '-',
+          ms,
+          bytes: 0,
+          source: fallbackKey ? 'FALLBACK' : 'EMPTY',
+          error: errMsg
+        });
         return {
           text: fallbackKey ? DEMO_CSV[fallbackKey] : '',
           isFallback: true
@@ -405,7 +493,8 @@ export default function App() {
       const rangeStart = new Date(curYear - 1, 0, 1);
       const rangeEnd = new Date(curYear + 1, 11, 31);
 
-      const [doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
+      const [, doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
+        probeHealth(),
         fetchEndpoint('/api/sheets/doa', 'doa'),
         fetchEndpoint('/api/sheets/mbg', 'mbg'),
         fetchEndpoint('/api/sheets/piket', 'piket'),
@@ -417,6 +506,8 @@ export default function App() {
         fetchEndpoint('/api/sheets/pendapatan_lain'),
         fetchEndpoint('/api/sheets/rekap')
       ]);
+
+      console.table(debugRows);
 
       const doaRows = parseCSV(doaRes.text);
       const doaByDate = parseDoaRows(doaRows);
@@ -433,7 +524,7 @@ export default function App() {
       // Parse pelajaran iCal (keeping subjects on different schedules strictly separated)
       const { pelajaranByDate, tasksByDate, eventNoticesByDate } = parsePelajaranICS(pelajaranRes.text, rangeStart, rangeEnd);
 
-      // Parse birthday iCal
+      // Parse birthday iCal (kalender ulang tahun tunggal gabungan)
       const birthdayByMonthDay = parseBirthdayICS(birthdayRes.text, rangeStart, rangeEnd);
 
       // Parse Kas Data (falling back to KAS_DEMO_CSV if network failed or empty)
@@ -447,6 +538,22 @@ export default function App() {
         kasPendapatanLainText,
         kasRekapText
       );
+
+      const failedCount = debugRows.filter(r => r.status === 'FAILED').length;
+      const totalBirthdayNames = Object.values(birthdayByMonthDay).reduce((acc, list) => acc + list.length, 0);
+      console.info(`${syncTag} Ringkasan Parsing (${Math.round(performance.now() - syncStartedAt)}ms, failed=${failedCount}/${debugRows.length}):`, {
+        pelajaranDates: Object.keys(pelajaranByDate).length,
+        tasksDates: Object.keys(tasksByDate).length,
+        eventNoticesDates: Object.keys(eventNoticesByDate).length,
+        birthdayMonthDays: Object.keys(birthdayByMonthDay).length,
+        birthdayTotalNames: totalBirthdayNames,
+        doaDates: Object.keys(doaByDate).length,
+        mbgDates: Object.keys(mbgByDate).length,
+        piketDays: Object.keys(piketByDow).length,
+        iceBreakingDates: Object.keys(iceBreakingByDate).length,
+        kasStudents: kasData?.students?.length ?? 0,
+        kasPengeluaranRows: kasData?.pengeluaranList?.length ?? 0
+      });
 
       const newStore: ClassDataStore = {
         doaByDate,
@@ -478,7 +585,7 @@ export default function App() {
       setStatus(null);
       setIsLoading(false);
     } catch (err: any) {
-      console.error('Error in fetchData:', err);
+      console.error(`${syncTag} Fatal error in fetchData:`, err);
       if (!isSilent) {
         setStatus({
           type: 'error',
@@ -486,6 +593,8 @@ export default function App() {
         });
       }
       setIsLoading(false);
+    } finally {
+      console.groupEnd();
     }
   }, [defaultSchoolISO, findBestActiveDate, hasSchoolData, isManualDate]);
 
