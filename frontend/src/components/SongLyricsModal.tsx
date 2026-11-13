@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Music, User, Sun, Moon } from 'lucide-react';
-import { SONG_LYRICS_DB, formatLyricsVerses } from '../data/songSchedule';
+import { SONG_LYRICS_DB, formatLyricsVerses } from '../constants/songSchedule';
 
 interface SongLyricsModalProps {
   isOpen: boolean;

@@ -13,7 +13,7 @@ import {
   FileText,
   ExternalLink
 } from 'lucide-react';
-import { MONTH_ID } from '../data/demoData';
+import { MONTH_ID } from '../constants/demoData';
 import { getWIBDateParts } from '../utils/dateUtils';
 import { FormattedText } from './FormattedText';
 

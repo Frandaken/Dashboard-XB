@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon } from 'lucide-react';
-import { MONTH_ID } from '../data/demoData';
-import { getWeekOfMonth, getSongForWeek } from '../data/songSchedule';
+import { MONTH_ID } from '../constants/demoData';
+import { getWeekOfMonth, getSongForWeek } from '../constants/songSchedule';
 
 interface CalendarSectionProps {
   viewYear: number;

@@ -1,4 +1,4 @@
-import { DOW_ID, MONTH_ID } from '../data/demoData';
+import { DOW_ID, MONTH_ID } from '../constants/demoData';
 
 export interface WIBDateInfo {
   iso: string;

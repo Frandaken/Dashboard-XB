@@ -14,7 +14,7 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
-import { Student, STUDENTS_DATA } from '../data/studentsData';
+import { Student, STUDENTS_DATA } from '../constants/studentsData';
 import { cryptoShuffle, cryptoRandomInt } from '../utils/cryptoRandom';
 
 interface GroupGeneratorModalProps {

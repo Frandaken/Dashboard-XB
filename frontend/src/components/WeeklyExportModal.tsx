@@ -24,7 +24,7 @@ import {
   copyTextToClipboard
 } from '../utils/summaryFormatter';
 import { parseISODateParts, stepISODate, getWIBDateParts } from '../utils/dateUtils';
-import { MONTH_ID, DOW_ID } from '../data/demoData';
+import { MONTH_ID, DOW_ID } from '../constants/demoData';
 
 interface WeeklyExportModalProps {
   isOpen: boolean;

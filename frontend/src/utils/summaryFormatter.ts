@@ -1,7 +1,7 @@
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, ClassDataStore, CalendarEventNotice } from '../types';
-import { MONTH_ID } from '../data/demoData';
+import { MONTH_ID } from '../constants/demoData';
 import { parseISODateParts, stepISODate } from './dateUtils';
-import { getSongForDate, SONG_LYRICS_DB } from '../data/songSchedule';
+import { getSongForDate, SONG_LYRICS_DB } from '../constants/songSchedule';
 import { stripHtmlToPlainText } from './icalParser';
 
 export const DEFAULT_SERVER_URL = 'x-b.abipraya.id';

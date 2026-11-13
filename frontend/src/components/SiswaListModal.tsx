@@ -11,7 +11,7 @@ import {
   Sparkles,
   ArrowUpDown
 } from 'lucide-react';
-import { Student, STUDENTS_DATA, PIKET_SCHEDULE_MAP } from '../data/studentsData';
+import { Student, STUDENTS_DATA, PIKET_SCHEDULE_MAP } from '../constants/studentsData';
 import { copyTextToClipboard } from '../utils/summaryFormatter';
 
 interface SiswaListModalProps {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Menu, Sun, Moon, Bell, Wallet, Users, FerrisWheel, ChevronDown, Search } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 import { getWIBDateParts, WIBDateInfo } from '../utils/dateUtils';
-import { MONTH_ID } from '../data/demoData';
+import { MONTH_ID } from '../constants/demoData';
 
 interface HeaderProps {
   darkMode: boolean;

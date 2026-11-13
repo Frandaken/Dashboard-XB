@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon, Copy, Check } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment, CalendarEventNotice } from '../types';
-import { DOW_ID, MONTH_ID } from '../data/demoData';
+import { DOW_ID, MONTH_ID } from '../constants/demoData';
 import { parseISODateParts, getWIBDateParts } from '../utils/dateUtils';
-import { getSongForDate } from '../data/songSchedule';
+import { getSongForDate } from '../constants/songSchedule';
 import { getFirstLessonSession } from '../utils/iceBreakingUtils';
 import { formatDailySummary, copyTextToClipboard } from '../utils/summaryFormatter';
 import { TaskBanner } from './TaskBanner';

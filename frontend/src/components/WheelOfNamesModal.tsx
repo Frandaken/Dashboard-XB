@@ -21,7 +21,7 @@ import {
   Settings,
   ArrowRight
 } from 'lucide-react';
-import { Student, STUDENTS_DATA } from '../data/studentsData';
+import { Student, STUDENTS_DATA } from '../constants/studentsData';
 import { cryptoRandomFloat } from '../utils/cryptoRandom';
 import { playTickSound, playFanfareSound } from '../utils/audioEffects';
 

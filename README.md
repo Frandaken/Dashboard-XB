@@ -60,7 +60,7 @@ Dashboard-XB/
 │   ├── .env                        # Konfigurasi frontend (VITE_APP_VERSION, dll.)
 │   └── src/
 │       ├── components/             # Komponen UI (Modal, Header, Kalender, Card Jadwal)
-│       ├── data/                   # Data fallback (demoData, studentsData, songSchedule, kasDemoData)
+│       ├── constants/              # Data fallback & konstanta (demoData, studentsData, songSchedule, kasDemoData)
 │       ├── utils/                  # Utilitas (version, csvParser, icalParser, dateUtils, audioEffects)
 │       └── App.tsx                 # Root komponen dashboard utama
 ├── docker-bake.hcl             # Konfigurasi Docker Buildx Bake (build paralel multi-target)

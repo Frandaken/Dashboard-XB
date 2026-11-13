@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Music, User, Calendar, Search, Sun, Moon } from 'lucide-react';
-import { SONG_LYRICS_DB, ALL_SONGS_LIST, MONTHLY_SONG_SCHEDULE, formatLyricsVerses } from '../data/songSchedule';
-import { MONTH_ID } from '../data/demoData';
+import { SONG_LYRICS_DB, ALL_SONGS_LIST, MONTHLY_SONG_SCHEDULE, formatLyricsVerses } from '../constants/songSchedule';
+import { MONTH_ID } from '../constants/demoData';
 
 interface AllSongsModalProps {
   isOpen: boolean;

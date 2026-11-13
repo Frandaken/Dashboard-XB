@@ -26,8 +26,8 @@ import {
   BookMarked
 } from 'lucide-react';
 import { ClassDataStore, TaskAttachment, TaskItem } from '../types';
-import { Student, STUDENTS_DATA, PIKET_SCHEDULE_MAP } from '../data/studentsData';
-import { MONTH_ID, DOW_ID } from '../data/demoData';
+import { Student, STUDENTS_DATA, PIKET_SCHEDULE_MAP } from '../constants/studentsData';
+import { MONTH_ID, DOW_ID } from '../constants/demoData';
 import { parseISODateParts, getWIBDateParts } from '../utils/dateUtils';
 import { copyTextToClipboard } from '../utils/summaryFormatter';
 import { isTaskTimePassed } from '../utils/taskUtils';

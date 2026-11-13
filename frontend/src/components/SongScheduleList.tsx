@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Music, BookOpen, ChevronRight } from 'lucide-react';
-import { MONTH_ID } from '../data/demoData';
-import { getWeekOfMonth, MONTHLY_SONG_SCHEDULE } from '../data/songSchedule';
+import { MONTH_ID } from '../constants/demoData';
+import { getWeekOfMonth, MONTHLY_SONG_SCHEDULE } from '../constants/songSchedule';
 import { SongLyricsModal } from './SongLyricsModal';
 import { AllSongsModal } from './AllSongsModal';
 
