@@ -97,7 +97,7 @@ Tersedia dua opsi konfigurasi Docker Compose:
 #### 1. Menggunakan Konfigurasi Lokal (`docker-compose.local.yml`)
 Gunakan opsi ini jika Anda ingin melakukan build langsung dari source code di folder lokal:
 ```bash
-COMPOSE_BAKE=true docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.local.yml up -d --build
 ```
 - **Frontend Dashboard:** [http://localhost:8202](http://localhost:8202)
 - **Backend API & Health Check:** [http://localhost:3003/api/health](http://localhost:3003/api/health)
@@ -105,24 +105,24 @@ COMPOSE_BAKE=true docker compose -f docker-compose.local.yml up -d --build
 #### 2. Menggunakan Konfigurasi Remote Git (`docker-compose.yml`)
 Gunakan opsi ini untuk deploy server yang mengambil kode langsung dari repository GitHub:
 ```bash
-COMPOSE_BAKE=true docker compose up -d --build
+docker compose up -d --build
 ```
 - **Frontend Dashboard:** [http://localhost:8101](http://localhost:8101)
 - **Backend API & Health Check:** [http://localhost:3003/api/health](http://localhost:3003/api/health)
 
-> **Catatan:** `COMPOSE_BAKE=true` juga sudah dicantumkan di `.env.example`. Jika Anda menyalin `.env.example` menjadi `.env`, perintah `docker compose up -d --build` biasa otomatis memakai engine Bake (di Docker Compose v2.31+).
+> **Opsional (Build Paralel dengan Bake):** Jika plugin `docker-buildx-plugin` sudah terpasang di server (`sudo apt install docker-buildx-plugin`), jalankan dengan `COMPOSE_BAKE=true docker compose up -d --build` atau aktifkan `# COMPOSE_BAKE=true` di `.env`.
 
 #### Menghentikan atau Me-restart Kontainer:
 ```bash
 docker compose down
-COMPOSE_BAKE=true docker compose up -d --build --no-cache
+docker compose up -d --build --no-cache
 ```
 
 ---
 
 ### Opsi C: Build Cepat Paralel dengan Docker Buildx Bake (`docker-bake.hcl`)
 
-Docker Buildx Bake mengorkestrasi kompilasi image frontend dan backend secara simultan (paralel murni) dengan arsitektur `linux/amd64` dan tag image yang sudah sinkron dengan `docker-compose.yml`.
+Jika `docker-buildx-plugin` sudah terpasang, Docker Buildx Bake mengorkestrasi kompilasi image frontend dan backend secara simultan (paralel murni) dengan arsitektur `linux/amd64`.
 
 1. **Build Semua Image Secara Simultan (Paralel):**
    ```bash

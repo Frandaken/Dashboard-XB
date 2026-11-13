@@ -1,18 +1,9 @@
-# Jalankan dengan Bake engine aktif:
-#   COMPOSE_BAKE=true docker compose up -d --build
-# (Atau tambahkan COMPOSE_BAKE=true di file .env root proyek)
 services:
   frontend-xb:
-    image: dashboard-xb-frontend:${TAG:-latest}
     build:
       context: https://github.com/Frandaken/Dashboard-XB.git
       dockerfile: frontend/Dockerfile
-      platforms:
-        - linux/amd64
       no_cache: true
-      x-bake:
-        tags:
-          - dashboard-xb-frontend:${TAG:-latest}
     container_name: dashboard-xb-frontend
     ports:
       - 8101:80
@@ -23,16 +14,10 @@ services:
       - dashboard-net
 
   backend-xb:
-    image: dashboard-xb-backend:${TAG:-latest}
     build:
       context: https://github.com/Frandaken/Dashboard-XB.git
       dockerfile: backend/Dockerfile
-      platforms:
-        - linux/amd64
       no_cache: true
-      x-bake:
-        tags:
-          - dashboard-xb-backend:${TAG:-latest}
     container_name: dashboard-xb-backend
     ports:
       - 3003:3003 # Backend communication & health check
