@@ -97,7 +97,7 @@ Tersedia dua opsi konfigurasi Docker Compose:
 #### 1. Menggunakan Konfigurasi Lokal (`docker-compose.local.yml`)
 Gunakan opsi ini jika Anda ingin melakukan build langsung dari source code di folder lokal:
 ```bash
-docker compose -f docker-compose.local.yml up -d --build
+COMPOSE_BAKE=true docker compose -f docker-compose.local.yml up -d --build
 ```
 - **Frontend Dashboard:** [http://localhost:8202](http://localhost:8202)
 - **Backend API & Health Check:** [http://localhost:3003/api/health](http://localhost:3003/api/health)
@@ -105,22 +105,24 @@ docker compose -f docker-compose.local.yml up -d --build
 #### 2. Menggunakan Konfigurasi Remote Git (`docker-compose.yml`)
 Gunakan opsi ini untuk deploy server yang mengambil kode langsung dari repository GitHub:
 ```bash
-docker compose up -d --build
+COMPOSE_BAKE=true docker compose up -d --build
 ```
 - **Frontend Dashboard:** [http://localhost:8101](http://localhost:8101)
 - **Backend API & Health Check:** [http://localhost:3003/api/health](http://localhost:3003/api/health)
 
+> **Catatan:** `COMPOSE_BAKE=true` juga sudah dicantumkan di `.env.example`. Jika Anda menyalin `.env.example` menjadi `.env`, perintah `docker compose up -d --build` biasa otomatis memakai engine Bake (di Docker Compose v2.31+).
+
 #### Menghentikan atau Me-restart Kontainer:
 ```bash
 docker compose down
-docker compose up -d --build --no-cache
+COMPOSE_BAKE=true docker compose up -d --build --no-cache
 ```
 
 ---
 
 ### Opsi C: Build Cepat Paralel dengan Docker Buildx Bake (`docker-bake.hcl`)
 
-Docker Buildx Bake mengorkestrasi kompilasi image frontend dan backend secara simultan (paralel murni) dengan arsitektur `linux/amd64` tanpa mengubah file `docker-compose.yml`.
+Docker Buildx Bake mengorkestrasi kompilasi image frontend dan backend secara simultan (paralel murni) dengan arsitektur `linux/amd64` dan tag image yang sudah sinkron dengan `docker-compose.yml`.
 
 1. **Build Semua Image Secara Simultan (Paralel):**
    ```bash
@@ -160,6 +162,7 @@ Salin `.env.example` ke `.env` untuk mengatur konfigurasi server:
 | `VAPID_PUBLIC_KEY` | Public key untuk Web Push Notifications | *(Auto-generated jika kosong)* |
 | `VAPID_PRIVATE_KEY` | Private key untuk Web Push Notifications | *(Auto-generated jika kosong)* |
 | `VITE_APP_VERSION` | Nomor versi dashboard (diatur di `frontend/.env`) | `v1.0.0` |
+| `COMPOSE_BAKE` | Mengaktifkan Buildx Bake untuk `docker compose build` | `true` |
 
 ---
 

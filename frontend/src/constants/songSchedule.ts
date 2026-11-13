@@ -165,7 +165,7 @@ export function getSongForDate(date: Date): { song: string; week: number; month:
   return { song, week, month, year };
 }
 
-// Database lirik lagu wajib nasional resmi sesuai teks lampiran
+// Database lirik lagu wajib resmi sesuai teks lampiran
 export const SONG_LYRICS_DB: Record<string, SongDetail> = {
   'Garuda Pancasila': {
     title: 'Garuda Pancasila',
@@ -285,11 +285,63 @@ export const SONG_LYRICS_DB: Record<string, SongDetail> = {
       'Bertingkah laku halus hai putra negeri',
       'Bertingkah laku halus hai putra negeri'
     ]
+  },
+  'Mars Salib Suci': {
+    title: 'Mars Salib Suci',
+    composer: 'Pst. Eka Wahyu Djoko S., OSC',
+    lyrics: [
+      'Salib Kristus mengobarkan api cinta kita',
+      'Menebarkan kasih dan pelayanan',
+      'Dalam karya pendidikan',
+      '',
+      'Kami anak anak salib suci,',
+      'Beriman, berilmu dan beramal kasih',
+      'Itulah bekal kami hidup.',
+      'Disinilah kami dididik',
+      'Dalam kasih dan perhatian',
+      'Hingga jadi manusia berbela sesama.',
+      'Tiada pernah kami sendirian',
+      'Saling asah serta saling asuh,',
+      'Karna kita satu saudara',
+      '',
+      'Salib Kristus mengobarkan api cinta kita',
+      'Menebar kasih dan pelayanan',
+      'In Cruce Salus'
+    ]
+  },
+  'Indonesia Raya': {
+    title: 'Indonesia Raya',
+    composer: 'W.R. Supratman',
+    lyrics: [
+      'Indonesia, tanah airku,',
+      'Tanah tumpah darahku,',
+      'Di sanalah aku berdiri,',
+      'Jadi pandu ibuku.',
+      '',
+      'Indonesia, kebangsaanku,',
+      'Bangsa dan tanah airku,',
+      'Marilah kita berseru,',
+      'Indonesia bersatu!',
+      '',
+      'Hiduplah tanahku,',
+      'Hiduplah negeriku,',
+      'Bangsaku, rakyatku, semuanya,',
+      'Bangunlah jiwanya,',
+      'Bangunlah badannya,',
+      'Untuk Indonesia Raya.',
+      '',
+      'Indonesia Raya, merdeka! Merdeka!',
+      'Tanahku, negeriku yang kucinta.',
+      'Indonesia Raya, merdeka! Merdeka!',
+      'Hiduplah Indonesia Raya!'
+    ]
   }
 };
 
-// Daftar seluruh judul lagu wajib nasional
+// Daftar seluruh judul lagu wajib & mars
 export const ALL_SONGS_LIST: string[] = [
+  'Indonesia Raya',
+  'Mars Salib Suci',
   'Garuda Pancasila',
   'Satu Nusa Satu Bangsa',
   'Dari Sabang Sampai Merauke',
