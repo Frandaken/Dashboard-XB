@@ -14,6 +14,7 @@ export function getTaskDeadlineMinutes(task: {
   taskText?: string;
   taskTitle?: string;
   taskDetails?: string;
+  entries?: { time?: string; taskText?: string; taskTitle?: string; taskDetails?: string }[];
 }): { minutes: number; timeStr: string } {
   const combinedText = `${task.taskTitle || ''} ${task.taskText || ''} ${task.taskDetails || ''}`.toLowerCase();
 
@@ -32,34 +33,58 @@ export function getTaskDeadlineMinutes(task: {
     }
   }
 
-  // 2. Look for time range in task.time: e.g. "08:40 - 09:25"
-  if (task.time) {
-    const rangeMatch = task.time.match(
-      /(\d{1,2})[:.](\d{2})\s*(?:[-–—]|s\/d|\bto\b)\s*(\d{1,2})[:.](\d{2})/i
+  // Collect all time strings (supports merged multi-time cards like "07:15 - 08:00, 10:45 - 11:25")
+  const timeCandidates: string[] = [];
+  if (task.time) timeCandidates.push(task.time);
+  if (task.entries) {
+    task.entries.forEach(e => {
+      if (e.time) timeCandidates.push(e.time);
+    });
+  }
+
+  let latestMinutes = -1;
+  let latestTimeStr = '';
+
+  for (const timeStr of timeCandidates) {
+    // 2. Look for all time ranges: e.g. "08:40 - 09:25"
+    const rangeMatches = Array.from(
+      timeStr.matchAll(/(\d{1,2})[:.](\d{2})\s*(?:[-–—]|s\/d|\bto\b)\s*(\d{1,2})[:.](\d{2})/gi)
     );
-    if (rangeMatch) {
-      const h2 = parseInt(rangeMatch[3], 10);
-      const m2 = parseInt(rangeMatch[4], 10);
-      if (h2 >= 0 && h2 < 24 && m2 >= 0 && m2 < 60) {
-        return {
-          minutes: h2 * 60 + m2,
-          timeStr: `${String(h2).padStart(2, '0')}:${String(m2).padStart(2, '0')}`
-        };
+    if (rangeMatches.length > 0) {
+      for (const rm of rangeMatches) {
+        const h2 = parseInt(rm[3], 10);
+        const m2 = parseInt(rm[4], 10);
+        if (h2 >= 0 && h2 < 24 && m2 >= 0 && m2 < 60) {
+          const mins = h2 * 60 + m2;
+          if (mins > latestMinutes) {
+            latestMinutes = mins;
+            latestTimeStr = `${String(h2).padStart(2, '0')}:${String(m2).padStart(2, '0')}`;
+          }
+        }
       }
+      continue;
     }
 
-    // 3. Look for single time in task.time: e.g. "08:40"
-    const singleMatch = task.time.match(/(\d{1,2})[:.](\d{2})/);
-    if (singleMatch) {
-      const h = parseInt(singleMatch[1], 10);
-      const m = parseInt(singleMatch[2], 10);
+    // 3. Look for single times: e.g. "08:40"
+    const singleMatches = Array.from(timeStr.matchAll(/(\d{1,2})[:.](\d{2})/g));
+    for (const sm of singleMatches) {
+      const h = parseInt(sm[1], 10);
+      const m = parseInt(sm[2], 10);
       if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-        return {
-          minutes: h * 60 + m,
-          timeStr: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-        };
+        const mins = h * 60 + m;
+        if (mins > latestMinutes) {
+          latestMinutes = mins;
+          latestTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
       }
     }
+  }
+
+  if (latestMinutes >= 0) {
+    return {
+      minutes: latestMinutes,
+      timeStr: latestTimeStr
+    };
   }
 
   // 4. Default: end of day

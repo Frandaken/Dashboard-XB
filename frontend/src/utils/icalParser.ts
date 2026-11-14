@@ -1,5 +1,5 @@
 import ICAL from 'ical.js';
-import { PeriodItem, TaskItem, TaskType, TaskAttachment, CalendarEventNotice } from '../types';
+import { PeriodItem, TaskItem, TaskSubEntry, TaskType, TaskAttachment, CalendarEventNotice } from '../types';
 
 export interface ParsedTask {
   title: string;
@@ -493,24 +493,152 @@ export function parsePelajaranICS(
         if (!tasksByDate[dateKey]) {
           tasksByDate[dateKey] = [];
         }
-        // Deduplicate identical tasks for the same subject on the same day (e.g. multiple JPs of the same class)
-        const isDuplicate = tasksByDate[dateKey].some(
-          t => t.subject === cleanName && t.taskTitle === parsedTask.title && t.taskDetails === parsedTask.details
+        tasksByDate[dateKey].push({
+          id: `${ev.uid || 'task'}_${dateKey}_${startTime}`,
+          subject: cleanName,
+          taskType,
+          taskText: fullTaskText,
+          taskTitle: parsedTask.title,
+          taskDetails: parsedTask.details,
+          hasDetails: parsedTask.hasDetails,
+          time: startTime,
+          attachment
+        });
+      }
+    };
+
+    const mergeTimes = (times: Array<string | undefined>): string => {
+      const unique = Array.from(new Set(times.map(t => (t || '').trim()).filter(Boolean)));
+      unique.sort((a, b) => a.localeCompare(b));
+      // Gabungkan rentang waktu yang berurutan langsung (misal "07:15 - 08:00" + "08:00 - 08:45" -> "07:15 - 08:45")
+      const merged: string[] = [];
+      for (const cur of unique) {
+        const curRange = cur.match(/^(\d{2}:\d{2})\s*[-–—]\s*(\d{2}:\d{2})$/);
+        const prev = merged[merged.length - 1];
+        const prevRange = prev ? prev.match(/^(\d{2}:\d{2})\s*[-–—]\s*(\d{2}:\d{2})$/) : null;
+        if (curRange && prevRange && prevRange[2] === curRange[1]) {
+          merged[merged.length - 1] = `${prevRange[1]} - ${curRange[2]}`;
+        } else {
+          merged.push(cur);
+        }
+      }
+      return merged.join(', ');
+    };
+
+    const taskPriority = (t?: TaskType): number => (t === 'sumatif' ? 3 : t === 'pr' ? 2 : 1);
+
+    const mergeSameSubjectTasks = (rawTasks: TaskItem[]): TaskItem[] => {
+      const grouped = new Map<string, TaskItem[]>();
+      const orderedKeys: string[] = [];
+
+      for (const t of rawTasks) {
+        const normSubject = (t.subject || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const tier = t.taskType === 'agenda' ? 'agenda' : 'assignment';
+        const groupKey = `${normSubject}__${tier}`;
+        if (!grouped.has(groupKey)) {
+          grouped.set(groupKey, []);
+          orderedKeys.push(groupKey);
+        }
+        grouped.get(groupKey)!.push(t);
+      }
+
+      const result: TaskItem[] = [];
+
+      for (const groupKey of orderedKeys) {
+        const items = grouped.get(groupKey)!;
+        if (items.length === 1) {
+          result.push(items[0]);
+          continue;
+        }
+
+        // Deduplikasi tugas yang judul & detailnya sama persis di jam berbeda
+        const subEntries: TaskSubEntry[] = [];
+        for (const item of items) {
+          const normTitle = stripHtmlToPlainText(item.taskTitle || item.taskText || '').toLowerCase().trim();
+          const normDetails = stripHtmlToPlainText(item.taskDetails || '').toLowerCase().trim();
+
+          const existing = subEntries.find(e => {
+            const eTitle = stripHtmlToPlainText(e.taskTitle || e.taskText || '').toLowerCase().trim();
+            const eDetails = stripHtmlToPlainText(e.taskDetails || '').toLowerCase().trim();
+            return eTitle === normTitle && eDetails === normDetails;
+          });
+
+          if (existing) {
+            existing.time = mergeTimes([existing.time, item.time]);
+            if (!existing.attachment && item.attachment) {
+              existing.attachment = item.attachment;
+            }
+            if (taskPriority(item.taskType) > taskPriority(existing.taskType)) {
+              existing.taskType = item.taskType;
+            }
+          } else {
+            subEntries.push({
+              id: item.id,
+              time: item.time,
+              taskType: item.taskType,
+              taskText: item.taskText,
+              taskTitle: item.taskTitle,
+              taskDetails: item.taskDetails,
+              hasDetails: item.hasDetails,
+              attachment: item.attachment
+            });
+          }
+        }
+
+        const primary = items[0];
+        const mergedTime = mergeTimes(items.map(i => i.time));
+        const highestType = items.reduce<TaskType | undefined>(
+          (best, cur) => (taskPriority(cur.taskType) > taskPriority(best) ? cur.taskType : best),
+          primary.taskType
         );
-        if (!isDuplicate) {
-          tasksByDate[dateKey].push({
-            id: `${ev.uid || 'task'}_${dateKey}_${startTime}`,
-            subject: cleanName,
-            taskType,
-            taskText: fullTaskText,
-            taskTitle: parsedTask.title,
-            taskDetails: parsedTask.details,
-            hasDetails: parsedTask.hasDetails,
-            time: startTime,
-            attachment
+        const firstAttachment = subEntries.find(e => e.attachment)?.attachment;
+
+        if (subEntries.length === 1) {
+          const single = subEntries[0];
+          result.push({
+            id: single.id || primary.id,
+            subject: primary.subject,
+            taskType: highestType,
+            taskText: single.taskText,
+            taskTitle: single.taskTitle,
+            taskDetails: single.taskDetails,
+            hasDetails: single.hasDetails,
+            time: mergedTime || single.time,
+            attachment: firstAttachment
+          });
+        } else {
+          const combinedTitle = subEntries
+            .map(e => (e.taskTitle || (e.taskText ? e.taskText.split('\n')[0] : '')).trim())
+            .filter(Boolean)
+            .join(' & ');
+          const combinedDetails = subEntries
+            .map(e => {
+              const header = `${e.time ? `[${e.time}] ` : ''}${e.taskTitle || ''}`.trim();
+              return e.taskDetails ? `${header}\n${e.taskDetails}` : header;
+            })
+            .filter(Boolean)
+            .join('\n\n');
+          const combinedText = subEntries
+            .map(e => `${e.time ? `(${e.time}) ` : ''}${e.taskText}`.trim())
+            .filter(Boolean)
+            .join('\n');
+
+          result.push({
+            id: subEntries.map(e => e.id).filter(Boolean).join('__') || primary.id,
+            subject: primary.subject,
+            taskType: highestType,
+            taskText: combinedText,
+            taskTitle: combinedTitle || primary.taskTitle,
+            taskDetails: combinedDetails || primary.taskDetails,
+            hasDetails: subEntries.some(e => e.hasDetails || !!e.taskDetails) || subEntries.length > 1,
+            time: mergedTime,
+            attachment: firstAttachment,
+            entries: subEntries
           });
         }
       }
+
+      return result;
     };
 
     const rStart = rangeStart
@@ -612,9 +740,10 @@ export function parsePelajaranICS(
         return timeA.localeCompare(timeB);
       });
 
-      // Synchronize clean tasks list for this date in chronological order
+      // Synchronize clean tasks list for this date in chronological order, merging tasks in same subject
       if (tasksByDate[key]) {
         tasksByDate[key].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        tasksByDate[key] = mergeSameSubjectTasks(tasksByDate[key]);
       }
     }
   } catch (err: any) {

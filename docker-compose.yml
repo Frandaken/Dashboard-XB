@@ -4,6 +4,8 @@ services:
       context: https://github.com/Frandaken/Dashboard-XB.git
       dockerfile: frontend/Dockerfile
       no_cache: true
+      args:
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-}
     container_name: dashboard-xb-frontend
     ports:
       - 8101:80

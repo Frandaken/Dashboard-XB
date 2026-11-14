@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, PartyPopper, FileImage } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronDown, PartyPopper, FileImage, Maximize2, Minimize2 } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, IceBreakingSchedule, TaskAttachment } from '../types';
 import { getWIBDateParts } from '../utils/dateUtils';
 import { isTaskTimePassed } from '../utils/taskUtils';
@@ -31,6 +32,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   isToday
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+  const [isScheduleExpanded, setIsScheduleExpanded] = useState<boolean>(false);
 
   // Live timer for smooth real-time progress & countdown
   const [nowWIB, setNowWIB] = useState<Date>(() => new Date());
@@ -41,6 +43,17 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!isScheduleExpanded) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsScheduleExpanded(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isScheduleExpanded]);
 
   const wibInfo = getWIBDateParts(nowWIB);
   const [nowH, nowM, nowS] = wibInfo.timeStr.split(':').map(Number);
@@ -122,8 +135,15 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
     ? pelajaran.filter(p => !isLiterasiOrSenam(p)).length
     : pelajaran.length;
 
-  // Track sequence for academic Jam Pelajaran on Friday
+  // Precompute session numbers so both inline and expanded views stay consistent
   let academicCounter = 0;
+  const sessionNumbers = pelajaran.map((p, idx) => {
+    const isNonAcademicFriday = isFriday && isLiterasiOrSenam(p);
+    if (!isFriday) return idx + 1;
+    if (isNonAcademicFriday) return 0;
+    academicCounter += 1;
+    return academicCounter;
+  });
 
   const hasMbg = Boolean(mbg && mbg.petugas && mbg.petugas.length > 0);
   const hasIceBreaking = Boolean(iceBreaking && iceBreaking.petugas && iceBreaking.petugas.length > 0);
@@ -408,27 +428,35 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
               {totalJamPelajaran} Sesi Pelajaran
             </span>
           </div>
+
+          {!compact && (
+            <button
+              type="button"
+              onClick={() => setIsScheduleExpanded(true)}
+              aria-label="Perluas tampilan jadwal pelajaran"
+              title="Perluas tampilan jadwal pelajaran"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-stone-50 dark:bg-stone-800/70 hover:bg-emerald-50 dark:hover:bg-[#122A1E] hover:border-emerald-500/40 text-stone-700 dark:text-stone-200 hover:text-emerald-800 dark:hover:text-emerald-300 text-[11px] sm:text-xs font-semibold transition-all duration-150 cursor-pointer active:scale-95"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Perluas</span>
+            </button>
+          )}
         </div>
 
-        {pelajaran && pelajaran.length > 0 ? (
-          <div
-            className={
-              compact
-                ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto flex-1 pr-1'
-                : 'grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pr-1'
-            }
-          >
-            {pelajaran.map((p, idx) => {
-              const isNonAcademicFriday = isFriday && isLiterasiOrSenam(p);
-              let sessionNumber: number | string = idx + 1;
-              if (isFriday) {
-                if (isNonAcademicFriday) {
-                  sessionNumber = 0;
-                } else {
-                  academicCounter += 1;
-                  sessionNumber = academicCounter;
-                }
+        {(() => {
+          const renderPelajaranItems = (inExpandedModal: boolean) => (
+            <div
+              className={
+                inExpandedModal
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5'
+                  : compact
+                  ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto flex-1 pr-1'
+                  : 'grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pr-1'
               }
+            >
+              {pelajaran.map((p, idx) => {
+                const isNonAcademicFriday = isFriday && isLiterasiOrSenam(p);
+                const sessionNumber = sessionNumbers[idx] ?? idx + 1;
 
               const timeInfo = parsePeriodTime(p.time);
               let status: 'active' | 'upcoming' | 'completed' | 'not-today' = 'not-today';
@@ -664,13 +692,69 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                   </div>
                 </div>
               );
-            })}
-          </div>
-        ) : (
-          <p className="text-stone-400 dark:text-stone-500 italic text-xs sm:text-sm py-2 font-normal">
-            Tidak ada jadwal mata pelajaran untuk hari ini.
-          </p>
-        )}
+              })}
+            </div>
+          );
+
+          return (
+            <>
+              {pelajaran && pelajaran.length > 0 ? (
+                renderPelajaranItems(false)
+              ) : (
+                <p className="text-stone-400 dark:text-stone-500 italic text-xs sm:text-sm py-2 font-normal">
+                  Tidak ada jadwal mata pelajaran untuk hari ini.
+                </p>
+              )}
+
+              {!compact && isScheduleExpanded && typeof document !== 'undefined' && createPortal(
+                <div
+                  className="fixed inset-0 z-[45] bg-black/55 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 lg:p-8 animate-fade-in"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={`Tampilan Diperluas Jadwal Pelajaran Hari ${dowName}`}
+                  onClick={() => setIsScheduleExpanded(false)}
+                >
+                  <div
+                    className="bg-white dark:bg-[#18191C] border border-stone-200 dark:border-stone-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 sm:py-4 border-b border-stone-100 dark:border-stone-800/80 flex-shrink-0 flex-wrap">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h3 className="text-stone-900 dark:text-stone-100 font-bold text-base sm:text-lg tracking-tight">
+                          Jadwal Pelajaran — Hari {dowName}
+                        </h3>
+                        <span className="text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800/70 px-2.5 py-0.5 rounded-md border border-stone-200/60 dark:border-stone-700/50">
+                          {totalJamPelajaran} Sesi Pelajaran
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsScheduleExpanded(false)}
+                        aria-label="Perkecil tampilan jadwal pelajaran"
+                        title="Perkecil tampilan (Esc)"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-stone-50 dark:bg-stone-800/70 hover:bg-stone-100 dark:hover:bg-stone-700/80 text-stone-700 dark:text-stone-200 text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer active:scale-95"
+                      >
+                        <Minimize2 className="w-4 h-4" />
+                        <span>Perkecil</span>
+                      </button>
+                    </div>
+
+                    <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+                      {pelajaran && pelajaran.length > 0 ? (
+                        renderPelajaranItems(true)
+                      ) : (
+                        <p className="text-stone-400 dark:text-stone-500 italic text-sm py-4 text-center font-normal">
+                          Tidak ada jadwal mata pelajaran untuk hari ini.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>,
+                document.body
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

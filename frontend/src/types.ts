@@ -55,6 +55,17 @@ export interface PeriodItem {
   attachment?: TaskAttachment;
 }
 
+export interface TaskSubEntry {
+  id?: string;
+  time?: string;
+  taskType?: TaskType;
+  taskText: string;
+  taskTitle?: string;
+  taskDetails?: string;
+  hasDetails?: boolean;
+  attachment?: TaskAttachment;
+}
+
 export interface TaskItem {
   id?: string;
   subject: string;
@@ -66,6 +77,7 @@ export interface TaskItem {
   time?: string;
   dueDate?: string;
   attachment?: TaskAttachment;
+  entries?: TaskSubEntry[];
 }
 
 export interface KasWeekColumn {

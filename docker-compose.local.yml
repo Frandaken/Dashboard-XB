@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       no_cache: true
+      args:
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-}
     container_name: dashboard-xb-frontend
     ports:
       - 8202:80
