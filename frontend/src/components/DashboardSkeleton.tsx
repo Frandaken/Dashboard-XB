@@ -5,7 +5,7 @@ interface DashboardSkeletonProps {
 }
 
 export const DashboardSkeleton: React.FC<DashboardSkeletonProps> = ({
-  scrollableLayout = false
+  scrollableLayout = true
 }) => {
   return (
     <div

@@ -384,11 +384,11 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
                       Pengaturan &amp; Tampilan
                     </span>
                     <span className="text-[11px] font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-[#202227] px-2 py-0.5 rounded-md border border-stone-200/80 dark:border-stone-700/60">
-                      Dashboard / Gulir
+                      Gulir / Dashboard
                     </span>
                   </div>
                   <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
-                    Ubah mode tampilan (Dashboard vs Mode Gulir), tema, notifikasi, &amp; ekspor WhatsApp.
+                    Ubah mode tampilan (Mode Gulir vs opsi Dashboard), tema, notifikasi, &amp; ekspor WhatsApp.
                   </p>
                 </div>
               </div>

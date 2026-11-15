@@ -31,7 +31,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   onOpenAttachment,
   isoDate,
   isToday,
-  scrollableLayout = false
+  scrollableLayout = true
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
   const [isScheduleExpanded, setIsScheduleExpanded] = useState<boolean>(false);

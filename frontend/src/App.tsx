@@ -59,12 +59,12 @@ export default function App() {
   });
 
   const [layoutMode, setLayoutMode] = useState<'dashboard' | 'scrollable'>(() => {
-    const saved = localStorage.getItem('layout_mode');
-    return saved === 'scrollable' ? 'scrollable' : 'dashboard';
+    const saved = localStorage.getItem('layout_mode_v2');
+    return saved === 'dashboard' ? 'dashboard' : 'scrollable';
   });
 
   useEffect(() => {
-    localStorage.setItem('layout_mode', layoutMode);
+    localStorage.setItem('layout_mode_v2', layoutMode);
   }, [layoutMode]);
 
   const isScrollableMode = layoutMode === 'scrollable';
@@ -1245,6 +1245,15 @@ export default function App() {
                 hasNotificationActive={isNotificationActive}
                 onOpenRandomPicker={() => setIsRandomPickerOpen(true)}
                 onOpenGroupGenerator={() => setIsGroupGeneratorOpen(true)}
+                onOpenSitatib={() =>
+                  openSitatibModal(
+                    sitatibData?.announcements?.length
+                      ? 'announcements'
+                      : sitatibData?.rules?.length
+                      ? 'rules'
+                      : 'announcements'
+                  )
+                }
                 darkMode={darkMode}
                 onToggleDarkMode={toggleDarkMode}
               />

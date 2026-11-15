@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, FerrisWheel, Search, Wallet, Bell, Sun, Moon, Download, Smartphone, X, ChevronDown, Check } from 'lucide-react';
+import { Users, FerrisWheel, Search, Wallet, Bell, Sun, Moon, Download, Smartphone, X, ChevronDown, Check, Scale } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 interface MobileQuickActionsProps {
@@ -9,6 +9,7 @@ interface MobileQuickActionsProps {
   hasNotificationActive?: boolean;
   onOpenRandomPicker?: () => void;
   onOpenGroupGenerator?: () => void;
+  onOpenSitatib?: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
   className?: string;
@@ -21,6 +22,7 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
   hasNotificationActive,
   onOpenRandomPicker,
   onOpenGroupGenerator,
+  onOpenSitatib,
   darkMode,
   onToggleDarkMode,
   className = ''
@@ -179,15 +181,28 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
           )}
         </button>
 
-        {/* 6. Tombol Install PWA */}
+        {/* 6. Tombol Install PWA (atau Shortcut Panel SITATIB jika sudah terpasang) */}
         {isInstalled ? (
-          <div
-            title="Aplikasi PWA sudah terpasang"
-            className="h-10 px-1.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 bg-emerald-50/50 dark:bg-[#13281E]/50 text-emerald-800 dark:text-emerald-300 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium hover:scale-[1.02] transition-transform duration-150 cursor-default"
-          >
-            <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span className="truncate leading-none text-[10px]">Terpasang</span>
-          </div>
+          onOpenSitatib ? (
+            <button
+              type="button"
+              onClick={onOpenSitatib}
+              aria-label="Buka Panel SITATIB & Pengumuman"
+              title="SITATIB & Tata Tertib"
+              className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] hover:border-emerald-600/30 hover:-translate-y-0.5 hover:shadow-xs active:scale-95 text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer group"
+            >
+              <Scale className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-200" />
+              <span className="truncate leading-none text-[10px] group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors">SITATIB</span>
+            </button>
+          ) : (
+            <div
+              title="Aplikasi PWA sudah terpasang"
+              className="h-10 px-1.5 py-1 rounded-lg border border-emerald-600/25 dark:border-emerald-500/25 bg-emerald-50/50 dark:bg-[#13281E]/50 text-emerald-800 dark:text-emerald-300 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium hover:scale-[1.02] transition-transform duration-150 cursor-default"
+            >
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="truncate leading-none text-[10px]">Terpasang</span>
+            </div>
+          )
         ) : isInstallable ? (
           <button
             type="button"

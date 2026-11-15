@@ -45,7 +45,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   hasNotificationActive,
   darkMode,
   onToggleDarkMode,
-  layoutMode = 'dashboard',
+  layoutMode = 'scrollable',
   onChangeLayoutMode,
   onRefreshData,
   isRefreshing
@@ -260,8 +260,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </span>
                       <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
                         {layoutMode === 'scrollable'
-                          ? 'Mode Gulir (User): seluruh konten scrollable tanpa tinggi fixed'
-                          : 'Dashboard: tampilan ringkas 1 layar penuh (fixed)'}
+                          ? 'Mode Gulir (Default): seluruh konten scrollable tanpa tinggi fixed'
+                          : 'Mode Dashboard (Opsi): tampilan ringkas 1 layar penuh (fixed)'}
                       </p>
                     </div>
                   </div>
@@ -275,21 +275,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={layoutMode === 'dashboard'}
-                    onClick={() => onChangeLayoutMode('dashboard')}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
-                      layoutMode === 'dashboard'
-                        ? 'bg-white dark:bg-[#202227] text-stone-900 dark:text-stone-100 shadow-xs border border-stone-200/80 dark:border-stone-700/80'
-                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
-                    }`}
-                  >
-                    <Monitor className={`w-3.5 h-3.5 ${layoutMode === 'dashboard' ? 'text-emerald-700 dark:text-emerald-400' : ''}`} />
-                    <span>Dashboard</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    role="radio"
                     aria-checked={layoutMode === 'scrollable'}
                     onClick={() => onChangeLayoutMode('scrollable')}
                     className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
@@ -299,7 +284,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     }`}
                   >
                     <ScrollText className={`w-3.5 h-3.5 ${layoutMode === 'scrollable' ? 'text-emerald-700 dark:text-emerald-400' : ''}`} />
-                    <span>Mode Gulir (User)</span>
+                    <span>Mode Gulir</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={layoutMode === 'dashboard'}
+                    onClick={() => onChangeLayoutMode('dashboard')}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                      layoutMode === 'dashboard'
+                        ? 'bg-white dark:bg-[#202227] text-stone-900 dark:text-stone-100 shadow-xs border border-stone-200/80 dark:border-stone-700/80'
+                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                    }`}
+                  >
+                    <Monitor className={`w-3.5 h-3.5 ${layoutMode === 'dashboard' ? 'text-emerald-700 dark:text-emerald-400' : ''}`} />
+                    <span>Mode Dashboard</span>
                   </button>
                 </div>
               </div>
