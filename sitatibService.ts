@@ -1,13 +1,23 @@
 import { URL } from 'url';
 
+export interface SitatibAttachment {
+  id: string;
+  label: string;
+  kind: 'pdf' | 'image' | 'file' | 'link';
+  url: string;
+  sourceUrl?: string;
+}
+
 export interface SitatibAnnouncement {
   id: string;
   title: string;
   content: string;
+  fullContent?: string;
   publishedAt?: string;
   category?: string;
   isPinned?: boolean;
   sourceUrl?: string;
+  attachments?: SitatibAttachment[];
 }
 
 export interface SitatibRuleItem {
@@ -411,6 +421,315 @@ function extractAnnouncementsFromHtml(html: string, sourceUrl?: string): Sitatib
   return announcements.slice(0, 50);
 }
 
+const IGNORED_EXTERNAL_HOSTS = new Set([
+  'fonts.googleapis.com',
+  'fonts.gstatic.com',
+  'cdnjs.cloudflare.com',
+  'cdn.jsdelivr.net',
+  'unpkg.com',
+  'cdn.tailwindcss.com',
+  'www.w3.org',
+  'schema.org'
+]);
+
+function extractMainContentHtml(html: string): string {
+  const mainMatch = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
+  let target = mainMatch ? mainMatch[1] : html;
+  target = target
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
+    .replace(/<aside[\s\S]*?<\/aside>/gi, ' ')
+    .replace(/<footer[\s\S]*?<\/footer>/gi, ' ');
+  return target;
+}
+
+function buildSitatibAttachmentProxyUrl(absUrl: string, kind: 'pdf' | 'image' | 'file'): string {
+  return `/api/sitatib/attachment?url=${encodeURIComponent(absUrl)}&kind=${kind}`;
+}
+
+function inferFilenameLabel(absUrl: string, fallback: string): string {
+  try {
+    const parsed = new URL(absUrl);
+    const seg = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '');
+    if (seg && seg.includes('.')) {
+      return sanitizeText(seg);
+    }
+  } catch {}
+  return fallback;
+}
+
+function extractAnnouncementDetailFromHtml(
+  html: string,
+  pageUrl: string,
+  baseUrl: string
+): { fullContent?: string; attachments: SitatibAttachment[] } {
+  const attachments: SitatibAttachment[] = [];
+  const seenUrls = new Set<string>();
+  let baseOrigin = '';
+  let pagePath = '';
+  try {
+    baseOrigin = new URL(baseUrl).origin;
+    pagePath = new URL(pageUrl).pathname.replace(/\/+$/, '');
+  } catch {}
+
+  const mainHtml = extractMainContentHtml(html);
+
+  const pushAttachment = (item: Omit<SitatibAttachment, 'id'>) => {
+    const dedupeKey = (item.sourceUrl || item.url).trim();
+    if (!dedupeKey || seenUrls.has(dedupeKey)) return;
+    seenUrls.add(dedupeKey);
+    attachments.push({
+      ...item,
+      id: `att_${attachments.length + 1}`
+    });
+  };
+
+  // 0. SITATIB preview buttons (<button data-preview-url="..." data-preview-title="...">)
+  const previewElRegex = /<(?:button|a|div|span)\b([^>]*\bdata-preview-url=["'][^"']+["'][^>]*)>([\s\S]*?)<\/(?:button|a|div|span)>/gi;
+  let previewMatch: RegExpExecArray | null;
+  while ((previewMatch = previewElRegex.exec(mainHtml)) !== null) {
+    const attrs = previewMatch[1] || '';
+    const innerLabel = sanitizeText(stripTags(previewMatch[2] || '').replace(/\s+/g, ' ').trim());
+    const urlAttr = attrs.match(/\bdata-preview-url=["']([^"']+)["']/i);
+    const titleAttr = attrs.match(/\bdata-preview-title=["']([^"']+)["']/i);
+    const rawPreviewUrl = decodeHtmlEntities((urlAttr?.[1] || '').trim());
+    const rawPreviewTitle = sanitizeText(decodeHtmlEntities((titleAttr?.[1] || '').trim()));
+    if (!rawPreviewUrl) continue;
+
+    let parsed: URL;
+    try {
+      parsed = new URL(rawPreviewUrl, pageUrl);
+      if (!/^https?:$/i.test(parsed.protocol)) continue;
+    } catch {
+      continue;
+    }
+
+    const absUrl = parsed.toString();
+    const combined = `${absUrl} ${rawPreviewTitle} ${innerLabel}`.toLowerCase();
+    const isImg = /\.(jpe?g|png|webp|gif|avif|bmp)(\?|$)/i.test(combined);
+    const isPdf = /\.pdf\b|pdf|dokumen/i.test(combined);
+    const kind: SitatibAttachment['kind'] = isImg ? 'image' : isPdf ? 'pdf' : 'file';
+    const isSameOrigin = Boolean(baseOrigin && parsed.origin === baseOrigin);
+    const url = isSameOrigin
+      ? buildSitatibAttachmentProxyUrl(absUrl, kind)
+      : absUrl;
+    const label = rawPreviewTitle || innerLabel || inferFilenameLabel(absUrl, 'Lampiran Surat (PDF)');
+
+    pushAttachment({
+      label,
+      kind,
+      url,
+      sourceUrl: absUrl
+    });
+  }
+
+  // 1. Embedded PDF / document viewers (<iframe src>, <embed src>, <object data>)
+  const embedRegex = /<(?:iframe|embed|object)\b([^>]*?)(?:\b(?:src|data)=["']([^"']+)["'])([^>]*)>/gi;
+  let embedMatch: RegExpExecArray | null;
+  while ((embedMatch = embedRegex.exec(mainHtml)) !== null) {
+    const attrs = `${embedMatch[1] || ''} ${embedMatch[3] || ''}`;
+    const rawSrc = decodeHtmlEntities((embedMatch[2] || '').trim());
+    if (!rawSrc || /^(?:about:|javascript:|data:text\/html)/i.test(rawSrc)) continue;
+
+    let absUrl = '';
+    try {
+      const parsed = new URL(rawSrc, pageUrl);
+      if (!/^https?:$/i.test(parsed.protocol)) continue;
+      if (IGNORED_EXTERNAL_HOSTS.has(parsed.hostname.toLowerCase())) continue;
+      if (/recaptcha|doubleclick|googletagmanager/i.test(parsed.hostname)) continue;
+      absUrl = parsed.toString();
+    } catch {
+      continue;
+    }
+
+    const isImg = /\.(jpe?g|png|webp|gif|avif|bmp)(\?|$)/i.test(absUrl);
+    const kind: SitatibAttachment['kind'] = isImg
+      ? 'image'
+      : 'pdf';
+    const isSameOrigin = Boolean(baseOrigin && absUrl.startsWith(baseOrigin));
+    const url = isSameOrigin ? buildSitatibAttachmentProxyUrl(absUrl, kind) : absUrl;
+    const titleAttr = attrs.match(/\btitle=["']([^"']+)["']/i);
+    const label = sanitizeText(
+      stripTags(titleAttr ? titleAttr[1] : '') ||
+      inferFilenameLabel(absUrl, 'Lampiran Surat (PDF)')
+    );
+
+    pushAttachment({
+      label,
+      kind,
+      url,
+      sourceUrl: absUrl
+    });
+  }
+
+  // 2. Links inside announcement body (<a href="...">)
+  const linkRegex = /<a\b([^>]*?)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi;
+  let linkMatch: RegExpExecArray | null;
+  while ((linkMatch = linkRegex.exec(mainHtml)) !== null) {
+    const attrs = `${linkMatch[1] || ''} ${linkMatch[3] || ''}`;
+    const rawHref = decodeHtmlEntities((linkMatch[2] || '').trim());
+    const anchorText = sanitizeText(stripTags(linkMatch[4] || '').replace(/\s+/g, ' ').trim());
+
+    if (!rawHref || /^(?:#|javascript:|mailto:|tel:)/i.test(rawHref)) continue;
+
+    let parsed: URL;
+    try {
+      parsed = new URL(rawHref, pageUrl);
+      if (!/^https?:$/i.test(parsed.protocol)) continue;
+    } catch {
+      continue;
+    }
+
+    const absUrl = parsed.toString();
+    const cleanTargetPath = parsed.pathname.replace(/\/+$/, '');
+    const isSameOrigin = parsed.origin === baseOrigin;
+
+    if (isSameOrigin) {
+      if (cleanTargetPath === pagePath) continue;
+      if (
+        /^\/(?:dashboard|pengumuman|notifikasi|tata-tertib|jadwal-kegiatan-kelas|pelanggaran|penghargaan|profil|logout|login|auth|ubah-password)(?:\/\d+)?$/i.test(
+          cleanTargetPath
+        )
+      ) {
+        continue;
+      }
+      if (/\/(konfirmasi|tandai|baca)\b/i.test(cleanTargetPath) && !/\.(pdf|jpe?g|png|webp|docx?|xlsx?)$/i.test(cleanTargetPath)) {
+        continue;
+      }
+      if (/^kembali\b/i.test(anchorText)) continue;
+
+      const isPdfTarget =
+        /\.pdf(\?|$)/i.test(absUrl) ||
+        /\bpdf\b/i.test(anchorText) ||
+        /\/(?:pdf|lihat-pdf|download-pdf|view-pdf|surat)\b/i.test(cleanTargetPath);
+      const isImgTarget = /\.(jpe?g|png|webp|gif|avif|bmp)(\?|$)/i.test(absUrl);
+      const isFileTarget =
+        /\bdownload\b/i.test(attrs) ||
+        /\.(docx?|xlsx?|pptx?|zip|rar|csv|txt)(\?|$)/i.test(absUrl) ||
+        /\/(?:uploads?|files?|lampiran|attachment|download|unduh|berkas|dokumen)\b/i.test(cleanTargetPath) ||
+        /\b(unduh|download|lampiran|lihat\s+(?:surat|file|lampiran)|buka\s+(?:file|lampiran)|dokumen)\b/i.test(anchorText);
+
+      if (!isPdfTarget && !isImgTarget && !isFileTarget) {
+        continue;
+      }
+
+      const kind: 'pdf' | 'image' | 'file' = isImgTarget ? 'image' : isPdfTarget ? 'pdf' : 'file';
+      const label = anchorText && anchorText.length > 1
+        ? anchorText
+        : inferFilenameLabel(absUrl, kind === 'pdf' ? 'Lampiran Surat (PDF)' : 'Lampiran Berkas');
+
+      pushAttachment({
+        label,
+        kind,
+        url: buildSitatibAttachmentProxyUrl(absUrl, kind),
+        sourceUrl: absUrl
+      });
+    } else {
+      const hostLower = parsed.hostname.toLowerCase();
+      if (IGNORED_EXTERNAL_HOSTS.has(hostLower)) continue;
+      if (isLikelyPersonalRecord(`${anchorText} ${absUrl}`)) continue;
+
+      const isPdfTarget = /\.pdf(\?|$)/i.test(absUrl);
+      const isImgTarget = /\.(jpe?g|png|webp|gif|avif|bmp)(\?|$)/i.test(absUrl);
+      const kind: SitatibAttachment['kind'] = isPdfTarget ? 'pdf' : isImgTarget ? 'image' : 'link';
+      const label = anchorText && anchorText.length > 1
+        ? anchorText
+        : `Tautan: ${parsed.hostname.replace(/^www\./, '')}`;
+
+      pushAttachment({
+        label,
+        kind,
+        url: absUrl,
+        sourceUrl: absUrl
+      });
+    }
+  }
+
+  // 3. Content images inside announcement (<img src="...">)
+  const imgRegex = /<img\b([^>]*?)src=["']([^"']+)["']([^>]*)>/gi;
+  let imgMatch: RegExpExecArray | null;
+  while ((imgMatch = imgRegex.exec(mainHtml)) !== null) {
+    const attrs = `${imgMatch[1] || ''} ${imgMatch[3] || ''}`;
+    const rawSrc = decodeHtmlEntities((imgMatch[2] || '').trim());
+    if (!rawSrc || /^data:image\/svg/i.test(rawSrc)) continue;
+
+    let parsed: URL;
+    try {
+      parsed = new URL(rawSrc, pageUrl);
+      if (!/^https?:$/i.test(parsed.protocol)) continue;
+    } catch {
+      continue;
+    }
+
+    const absUrl = parsed.toString();
+    if (/logo|favicon|avatar|icon|sprite|spinner|loader/i.test(`${absUrl} ${attrs}`)) continue;
+
+    const altMatch = attrs.match(/\balt=["']([^"']+)["']/i);
+    const label = sanitizeText(stripTags(altMatch ? altMatch[1] : '')) || inferFilenameLabel(absUrl, 'Lampiran Gambar');
+    const isSameOrigin = parsed.origin === baseOrigin;
+
+    pushAttachment({
+      label,
+      kind: 'image',
+      url: isSameOrigin ? buildSitatibAttachmentProxyUrl(absUrl, 'image') : absUrl,
+      sourceUrl: absUrl
+    });
+  }
+
+  // 4. Extract clean full body text and bare external URLs inside letter text
+  const contentContainerMatch =
+    mainHtml.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i) ||
+    mainHtml.match(/<div\b[^>]*class=["'][^"']*(?:prose|card-body|announcement-content|isi-pengumuman|whitespace-pre-line)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+  const bodyHtml = contentContainerMatch ? contentContainerMatch[1] : mainHtml;
+
+  const paragraphBlocks: string[] = [];
+  const pRegex = /<(?:p|li|blockquote)\b[^>]*>([\s\S]*?)<\/(?:p|li|blockquote)>/gi;
+  let pMatch: RegExpExecArray | null;
+  while ((pMatch = pRegex.exec(bodyHtml)) !== null) {
+    if (/^\s*<a\b[^>]*class=["'][^"']*sitatib-link-button[^"']*["'][^>]*>[\s\S]*?<\/a>\s*$/i.test(pMatch[1])) {
+      continue;
+    }
+    const line = sanitizeText(stripTags(pMatch[1]));
+    if (!line || line.length < 3) continue;
+    if (/^(kembali|lihat pdf|unduh pdf|download|konfirmasi|tandai dibaca|pengumuman sekolah)$/i.test(line)) continue;
+    if (isLikelyPersonalRecord(line)) continue;
+    paragraphBlocks.push(line);
+  }
+
+  const fullContentText = paragraphBlocks.length > 0
+    ? Array.from(new Set(paragraphBlocks)).join('\n')
+    : '';
+
+  // Also scan bare https:// URLs written directly as plain text in bodyHtml
+  const plainBodyText = stripTags(bodyHtml);
+  const bareUrlRegex = /\bhttps?:\/\/[^\s<>"')\]}]+/gi;
+  let bareMatch: RegExpExecArray | null;
+  while ((bareMatch = bareUrlRegex.exec(plainBodyText)) !== null) {
+    const rawUrl = bareMatch[0].replace(/[.,;:!?)]+$/, '');
+    try {
+      const parsed = new URL(rawUrl);
+      if (parsed.origin === baseOrigin) continue;
+      if (IGNORED_EXTERNAL_HOSTS.has(parsed.hostname.toLowerCase())) continue;
+      if (seenUrls.has(parsed.toString())) continue;
+      const isPdfTarget = /\.pdf(\?|$)/i.test(parsed.pathname);
+      const isImgTarget = /\.(jpe?g|png|webp|gif)(\?|$)/i.test(parsed.pathname);
+      pushAttachment({
+        label: `Tautan: ${parsed.hostname.replace(/^www\./, '')}`,
+        kind: isPdfTarget ? 'pdf' : isImgTarget ? 'image' : 'link',
+        url: parsed.toString(),
+        sourceUrl: parsed.toString()
+      });
+    } catch {}
+  }
+
+  return {
+    fullContent: fullContentText || undefined,
+    attachments: attachments.slice(0, 12)
+  };
+}
+
 const INDONESIAN_MONTH_MAP: Record<string, string> = {
   januari: '01', jan: '01', january: '01',
   februari: '02', feb: '02', pebruari: '02', february: '02',
@@ -796,6 +1115,145 @@ export class SitatibService {
     return { html: res.html, finalUrl: res.finalUrl, contentType: res.contentType };
   }
 
+  private async fetchBinaryWithCookies(
+    targetUrl: string,
+    maxRedirects = 5
+  ): Promise<{ status: number; finalUrl: string; contentType: string; contentDisposition: string; buffer: Buffer }> {
+    const cfg = this.getConfig();
+    const baseOrigin = new URL(cfg.baseUrl).origin;
+    let currentUrl = targetUrl;
+
+    for (let hop = 0; hop <= maxRedirects; hop++) {
+      const parsed = new URL(currentUrl);
+      if (parsed.origin !== baseOrigin) {
+        throw new Error('Forbidden external asset origin');
+      }
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      try {
+        const cookieHeader = this.buildCookieHeader();
+        const res = await fetch(currentUrl, {
+          method: 'GET',
+          redirect: 'manual',
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'DashboardXB-SITATIB-Proxy/1.0',
+            Accept: 'application/pdf,image/*,application/octet-stream,*/*;q=0.8',
+            ...(cookieHeader ? { Cookie: cookieHeader } : {})
+          }
+        });
+
+        this.absorbCookies(res.headers);
+
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get('location');
+          if (location) {
+            currentUrl = new URL(location, currentUrl).toString();
+            continue;
+          }
+        }
+
+        const arrayBuf = await res.arrayBuffer();
+        const buffer = Buffer.from(arrayBuf);
+        let contentType = res.headers.get('content-type') || 'application/octet-stream';
+        const contentDisposition = res.headers.get('content-disposition') || '';
+
+        // Sniff PDF magic bytes if upstream sent generic octet-stream
+        if (buffer.length >= 4 && buffer.subarray(0, 4).toString('ascii') === '%PDF') {
+          contentType = 'application/pdf';
+        }
+
+        return {
+          status: res.status,
+          finalUrl: currentUrl,
+          contentType,
+          contentDisposition,
+          buffer
+        };
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    throw new Error('Too many redirects while fetching SITATIB attachment');
+  }
+
+  public async proxyAuthenticatedAsset(rawUrl: string): Promise<{
+    status: number;
+    contentType: string;
+    filename: string;
+    buffer: Buffer;
+  }> {
+    const cfg = this.getConfig();
+    if (!cfg.configured) {
+      throw new Error('Kredensial SITATIB belum diatur di environment server.');
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(rawUrl, cfg.baseUrl);
+    } catch {
+      throw new Error('URL lampiran tidak valid.');
+    }
+
+    const baseOrigin = new URL(cfg.baseUrl).origin;
+    if (parsed.origin !== baseOrigin || !/^https?:$/i.test(parsed.protocol)) {
+      throw new Error('Origin lampiran tidak diizinkan.');
+    }
+
+    if (/^\/(?:login|logout|auth)\b/i.test(parsed.pathname)) {
+      throw new Error('Path lampiran tidak diizinkan.');
+    }
+
+    if (this.cookies.size === 0) {
+      const auth = await this.authenticate();
+      if (!auth.ok) {
+        throw new Error(auth.error || 'Autentikasi SITATIB gagal.');
+      }
+    }
+
+    let result = await this.fetchBinaryWithCookies(parsed.toString());
+    const looksLikeLoginHtml =
+      result.finalUrl.toLowerCase().includes('/login') ||
+      (result.contentType.includes('text/html') &&
+        isLoginPageHtml(result.buffer.subarray(0, 4096).toString('utf8'), result.finalUrl));
+
+    if (looksLikeLoginHtml || result.status === 401 || result.status === 403) {
+      const auth = await this.authenticate();
+      if (!auth.ok) {
+        throw new Error(auth.error || 'Sesi SITATIB gagal diperbarui.');
+      }
+      result = await this.fetchBinaryWithCookies(parsed.toString());
+    }
+
+    let filename = 'lampiran-sitatib';
+    const dispMatch = result.contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+    if (dispMatch && dispMatch[1]) {
+      try {
+        filename = decodeURIComponent(dispMatch[1]).replace(/[/\\?%*:|"<>]/g, '_');
+      } catch {
+        filename = dispMatch[1].replace(/[/\\?%*:|"<>]/g, '_');
+      }
+    } else {
+      const urlSeg = parsed.pathname.split('/').filter(Boolean).pop();
+      if (urlSeg) {
+        filename = urlSeg.replace(/[/\\?%*:|"<>]/g, '_');
+      }
+    }
+
+    if (result.contentType.includes('application/pdf') && !filename.toLowerCase().endsWith('.pdf')) {
+      filename = `${filename}.pdf`;
+    }
+
+    return {
+      status: result.status,
+      contentType: result.contentType,
+      filename,
+      buffer: result.buffer
+    };
+  }
+
   public async getOverview(forceFresh = false): Promise<SitatibOverviewPayload> {
     const cfg = this.getConfig();
     if (!cfg.configured) {
@@ -1004,6 +1462,35 @@ export class SitatibService {
           uniqueAnnouncements.push({ ...item, id: `ann_${uniqueAnnouncements.length + 1}` });
         }
       }
+
+      // Enrich /pengumuman/<id> items with detail page attachments, links, and full content
+      const detailTargets = uniqueAnnouncements
+        .filter(a => a.sourceUrl && /\/pengumuman\/\d+/i.test(a.sourceUrl))
+        .slice(0, 15);
+
+      await Promise.all(
+        detailTargets.map(async ann => {
+          if (!ann.sourceUrl) return;
+          try {
+            const detailPage = await this.fetchAuthenticatedPage(ann.sourceUrl);
+            if (!detailPage.contentType.includes('application/json')) {
+              const detail = extractAnnouncementDetailFromHtml(
+                detailPage.html,
+                detailPage.finalUrl,
+                cfg.baseUrl
+              );
+              if (detail.attachments.length > 0) {
+                ann.attachments = detail.attachments;
+              }
+              if (detail.fullContent && detail.fullContent.length > ann.content.length) {
+                ann.fullContent = detail.fullContent;
+              }
+            }
+          } catch (detailErr: any) {
+            console.warn(`[SITATIB] Skip announcement detail ${ann.sourceUrl}:`, detailErr?.message || detailErr);
+          }
+        })
+      );
 
       const uniqueRules: SitatibRuleItem[] = [];
       const seenRules = new Set<string>();

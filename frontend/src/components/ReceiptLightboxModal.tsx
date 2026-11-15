@@ -20,6 +20,7 @@ export interface ReceiptLightboxData {
   subtitle?: string;
   url: string;
   originalLink?: string;
+  kind?: 'pdf' | 'image' | 'file' | 'link';
 }
 
 interface ReceiptLightboxModalProps {
@@ -84,8 +85,14 @@ export const ReceiptLightboxModal: React.FC<ReceiptLightboxModalProps> = ({
   const parsed = parseReceiptUrl(data.url);
   const targetUrl = parsed?.previewUrl || data.url;
   const directLink = data.originalLink || parsed?.originalUrl || data.url;
-  const isPdf = parsed?.type === 'pdf';
-  const isLinkOnly = parsed?.type === 'link';
+  const isPdf = parsed?.type === 'pdf' || data.kind === 'pdf';
+  const isImgForced = data.kind === 'image';
+  const isLinkOnly = !isPdf && !isImgForced && parsed?.type === 'link';
+  const isGoogleDrive = /drive\.google\.com|docs\.google\.com/i.test(directLink) && !/docs\.google\.com\/forms/i.test(directLink);
+  const isGoogleForm = /forms\.gle|docs\.google\.com\/forms/i.test(directLink);
+  const downloadHref = targetUrl.startsWith('/api/sitatib/attachment')
+    ? `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}download=1`
+    : targetUrl;
 
   const handleZoomIn = () => setScale(s => Math.min(s + 0.25, 3));
   const handleZoomOut = () => setScale(s => Math.max(s - 0.25, 0.5));
@@ -100,7 +107,7 @@ export const ReceiptLightboxModal: React.FC<ReceiptLightboxModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="receipt-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-900/60 dark:bg-black/85 backdrop-blur-md animate-fade-in text-stone-900 dark:text-white"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-stone-900/60 dark:bg-black/85 backdrop-blur-md animate-fade-in text-stone-900 dark:text-white"
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -113,7 +120,7 @@ export const ReceiptLightboxModal: React.FC<ReceiptLightboxModalProps> = ({
         <div className="px-4 py-3 bg-stone-50/90 dark:bg-[#18191C] border-b border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-3 flex-shrink-0 z-20">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-600/25 dark:border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-              <FileImage className="w-4 h-4" />
+              {isPdf || isLinkOnly ? <FileText className="w-4 h-4" /> : <FileImage className="w-4 h-4" />}
             </div>
             <div className="min-w-0">
               <h3 id="receipt-modal-title" className="text-sm font-bold text-stone-900 dark:text-white truncate">
@@ -194,7 +201,7 @@ export const ReceiptLightboxModal: React.FC<ReceiptLightboxModalProps> = ({
 
             {!isLinkOnly && !notFoundError && (
               <a
-                href={targetUrl}
+                href={downloadHref}
                 download={`lampiran_${data.title.replace(/[^a-zA-Z0-9_-]/g, '_')}`}
                 title="Unduh File"
                 className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white transition cursor-pointer"
@@ -261,20 +268,45 @@ export const ReceiptLightboxModal: React.FC<ReceiptLightboxModalProps> = ({
               className="w-full h-full rounded-lg border border-stone-200 dark:border-stone-800 bg-white"
             />
           ) : isLinkOnly ? (
-            <div className="text-center p-8 max-w-md bg-white dark:bg-stone-900/80 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xl">
-              <FileText className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto mb-3" />
-              <h4 className="font-bold text-stone-900 dark:text-white text-base mb-1">Tautan Berkas Eksternal</h4>
-              <p className="text-xs text-stone-500 dark:text-stone-400 mb-4">
-                Berkas ini tersimpan dalam bentuk tautan luar (Google Drive atau dokumen cloud).
-              </p>
+            <div className="text-center p-6 sm:p-8 max-w-md w-full bg-white dark:bg-stone-900/80 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xl space-y-4">
+              <FileText className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto" />
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-stone-900 dark:text-white text-base">
+                  {data.kind === 'file'
+                    ? 'Lampiran Berkas'
+                    : isGoogleDrive
+                    ? 'Tautan Berkas Google Drive'
+                    : isGoogleForm
+                    ? 'Tautan Formulir Pendataan'
+                    : 'Tautan Lampiran Eksternal'}
+                </h4>
+                <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                  {data.kind === 'file'
+                    ? 'Berkas dokumen siap diunduh atau dibuka pada tab baru.'
+                    : isGoogleDrive
+                    ? 'Berkas ini tersimpan dalam bentuk tautan Google Drive / dokumen cloud.'
+                    : 'Tautan ini mengarah ke halaman eksternal terkait pengumuman.'}
+                </p>
+              </div>
+              <div className="px-3 py-2 rounded-lg bg-stone-100 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 text-[11px] font-mono text-stone-600 dark:text-stone-300 break-all select-all">
+                {directLink}
+              </div>
               <a
                 href={directLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-900/30 transition cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-900/30 transition cursor-pointer"
               >
                 <ExternalLink className="w-4 h-4" />
-                Buka Berkas di Google Drive
+                <span>
+                  {data.kind === 'file'
+                    ? 'Unduh / Buka Berkas'
+                    : isGoogleDrive
+                    ? 'Buka Berkas di Google Drive'
+                    : isGoogleForm
+                    ? 'Buka Formulir di Tab Baru'
+                    : 'Buka Tautan di Tab Baru'}
+                </span>
               </a>
             </div>
           ) : imgError ? (

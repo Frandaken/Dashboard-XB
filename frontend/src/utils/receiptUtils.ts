@@ -62,8 +62,32 @@ export function parseReceiptUrl(rawUrl: string): ParsedReceiptInfo | null {
     };
   }
 
-  // Check if it's a PDF
+  // Check proxied SITATIB attachments (/api/sitatib/attachment?url=...&kind=pdf|image|file)
   const cleanPath = trimmed.split('?')[0].toLowerCase();
+  if (cleanPath === '/api/sitatib/attachment' || trimmed.includes('/api/sitatib/attachment?')) {
+    const queryStr = trimmed.split('?')[1] || '';
+    const params = new URLSearchParams(queryStr);
+    const kind = (params.get('kind') || '').toLowerCase();
+    const innerUrl = (params.get('url') || '').toLowerCase();
+    if (kind === 'pdf' || innerUrl.includes('.pdf')) {
+      return {
+        type: 'pdf',
+        previewUrl: trimmed,
+        originalUrl: trimmed,
+        isDrive: false
+      };
+    }
+    if (kind === 'image' || /\.(jpe?g|png|webp|gif|svg|avif|bmp)(\?|$)/i.test(innerUrl)) {
+      return {
+        type: 'image',
+        previewUrl: trimmed,
+        originalUrl: trimmed,
+        isDrive: false
+      };
+    }
+  }
+
+  // Check if it's a PDF
   if (cleanPath.endsWith('.pdf')) {
     return {
       type: 'pdf',

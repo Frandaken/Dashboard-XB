@@ -164,14 +164,24 @@ export interface CalendarEventNotice {
   attachment?: TaskAttachment;
 }
 
+export interface SitatibAttachment {
+  id: string;
+  label: string;
+  kind: 'pdf' | 'image' | 'file' | 'link';
+  url: string;
+  sourceUrl?: string;
+}
+
 export interface SitatibAnnouncement {
   id: string;
   title: string;
   content: string;
+  fullContent?: string;
   publishedAt?: string;
   category?: string;
   isPinned?: boolean;
   sourceUrl?: string;
+  attachments?: SitatibAttachment[];
 }
 
 export interface SitatibRuleItem {

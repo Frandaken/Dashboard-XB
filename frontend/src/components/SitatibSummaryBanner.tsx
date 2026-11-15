@@ -1,15 +1,17 @@
 import React from 'react';
-import { Bell, CalendarDays, ChevronRight, Scale } from 'lucide-react';
-import { SitatibOverviewData } from '../types';
+import { Bell, CalendarDays, ChevronRight, Paperclip, Scale } from 'lucide-react';
+import { SitatibAttachment, SitatibOverviewData } from '../types';
 
 interface SitatibSummaryBannerProps {
   data?: SitatibOverviewData | null;
   onOpenModal: (initialTab?: 'announcements' | 'rules' | 'activities') => void;
+  onOpenAttachment?: (attachment: SitatibAttachment, announcementTitle?: string) => void;
 }
 
 export const SitatibSummaryBanner: React.FC<SitatibSummaryBannerProps> = ({
   data,
-  onOpenModal
+  onOpenModal,
+  onOpenAttachment
 }) => {
   // Only show the dashboard banner strip when there are real announcements from SITATIB.
   // Users can still access rules, sync status, and portal config anytime via Hamburger Menu.
@@ -74,37 +76,67 @@ export const SitatibSummaryBanner: React.FC<SitatibSummaryBannerProps> = ({
 
       {/* Hairline-divided announcement rows */}
       <div className="divide-y divide-stone-200/70 dark:divide-stone-800/70">
-        {topAnnouncements.map(item => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onOpenModal('announcements')}
-            className="w-full text-left px-3.5 py-2.5 hover:bg-stone-50 dark:hover:bg-[#1E2025] transition flex items-start justify-between gap-3 cursor-pointer"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-stone-400 font-medium flex-wrap">
-                {item.isPinned && (
-                  <span className="font-semibold text-amber-700 dark:text-amber-300">
-                    Disematkan ·
-                  </span>
-                )}
-                <span>{item.category || 'Informasi Sekolah'}</span>
-                {item.publishedAt && (
-                  <span className="font-mono tabular-nums">· {item.publishedAt}</span>
+        {topAnnouncements.map(item => {
+          const attachments = item.attachments || [];
+          const primaryAtt = attachments.find(a => a.kind === 'pdf') || attachments[0];
+          return (
+            <div
+              key={item.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenModal('announcements')}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpenModal('announcements');
+                }
+              }}
+              className="w-full text-left px-3.5 py-2.5 hover:bg-stone-50 dark:hover:bg-[#1E2025] transition flex items-start justify-between gap-3 cursor-pointer"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-stone-400 font-medium flex-wrap">
+                  {item.isPinned && (
+                    <span className="font-semibold text-amber-700 dark:text-amber-300">
+                      Disematkan ·
+                    </span>
+                  )}
+                  <span>{item.category || 'Informasi Sekolah'}</span>
+                  {item.publishedAt && (
+                    <span className="font-mono tabular-nums">· {item.publishedAt}</span>
+                  )}
+                  {primaryAtt && onOpenAttachment && (
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        onOpenAttachment(primaryAtt, item.title);
+                      }}
+                      className="inline-flex items-center gap-1 text-[#1E3A2F] dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                    >
+                      <Paperclip className="w-3 h-3" />
+                      <span>
+                        {attachments.length > 1
+                          ? `${attachments.length} Lampiran/Tautan`
+                          : primaryAtt.kind === 'pdf'
+                          ? 'Lihat PDF'
+                          : 'Lihat Lampiran'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 leading-snug mt-0.5 line-clamp-1">
+                  {item.title}
+                </p>
+                {item.content && (
+                  <p className="text-xs text-stone-600 dark:text-stone-400 line-clamp-1 mt-0.5">
+                    {item.content}
+                  </p>
                 )}
               </div>
-              <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 leading-snug mt-0.5 line-clamp-1">
-                {item.title}
-              </p>
-              {item.content && (
-                <p className="text-xs text-stone-600 dark:text-stone-400 line-clamp-1 mt-0.5">
-                  {item.content}
-                </p>
-              )}
+              <ChevronRight className="w-4 h-4 text-stone-400 self-center flex-shrink-0" />
             </div>
-            <ChevronRight className="w-4 h-4 text-stone-400 self-center flex-shrink-0" />
-          </button>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

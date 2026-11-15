@@ -369,6 +369,34 @@ app.get('/api/sitatib/activities', async (req, res) => {
   });
 });
 
+app.get('/api/sitatib/attachment', async (req, res) => {
+  const rawUrl = typeof req.query.url === 'string' ? req.query.url.trim() : '';
+  if (!rawUrl) {
+    return res.status(400).json({ error: 'Parameter url lampiran wajib diisi.' });
+  }
+
+  try {
+    const asset = await sitatibService.proxyAuthenticatedAsset(rawUrl);
+    if (asset.status >= 400) {
+      return res.status(asset.status).json({ error: `SITATIB mengembalikan status HTTP ${asset.status}` });
+    }
+    const isDownload = req.query.download === '1' || req.query.download === 'true';
+    const dispositionType = isDownload ? 'attachment' : 'inline';
+    res.setHeader('Content-Type', asset.contentType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `${dispositionType}; filename="${asset.filename}"`);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.status(200).send(asset.buffer);
+  } catch (err: any) {
+    const msg = err?.message || 'Gagal memuat lampiran SITATIB';
+    const status = /tidak diizinkan|origin|forbidden/i.test(msg)
+      ? 403
+      : /tidak valid/i.test(msg)
+      ? 400
+      : 502;
+    return res.status(status).json({ error: msg });
+  }
+});
+
 // Endpoint to persist generated kelompok CSV in exports folder
 app.post('/api/kelompok/export', (req, res) => {
   try {

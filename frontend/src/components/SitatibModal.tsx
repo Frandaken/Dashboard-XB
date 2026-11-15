@@ -17,9 +17,13 @@ import {
   CalendarDays,
   Clock,
   User,
-  ArrowRight
+  ArrowRight,
+  FileText,
+  FileImage,
+  Link2,
+  Paperclip
 } from 'lucide-react';
-import { SitatibOverviewData } from '../types';
+import { SitatibAttachment, SitatibOverviewData } from '../types';
 import { FormattedText } from './FormattedText';
 
 interface SitatibModalProps {
@@ -30,6 +34,8 @@ interface SitatibModalProps {
   onRefresh: () => void;
   initialTab?: 'announcements' | 'rules' | 'activities';
   onSelectDate?: (iso: string) => void;
+  onOpenAttachment?: (attachment: SitatibAttachment, announcementTitle?: string) => void;
+  disableEscapeClose?: boolean;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
 }
@@ -55,6 +61,8 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
   onRefresh,
   initialTab = 'announcements',
   onSelectDate,
+  onOpenAttachment,
+  disableEscapeClose = false,
   darkMode,
   onToggleDarkMode
 }) => {
@@ -75,13 +83,13 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !disableEscapeClose) {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, disableEscapeClose]);
 
   const announcements = data?.announcements ?? [];
   const rules = data?.rules ?? [];
@@ -101,7 +109,9 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
     return announcements.filter(a =>
       a.title.toLowerCase().includes(q) ||
       a.content.toLowerCase().includes(q) ||
-      (a.category || '').toLowerCase().includes(q)
+      (a.fullContent || '').toLowerCase().includes(q) ||
+      (a.category || '').toLowerCase().includes(q) ||
+      (a.attachments || []).some(att => att.label.toLowerCase().includes(q))
     );
   }, [announcements, searchQuery]);
 
@@ -426,10 +436,12 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
               <div className="rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] divide-y divide-stone-200/80 dark:divide-stone-800/80 overflow-hidden">
                 {filteredAnnouncements.map(item => {
                   const isExpanded = expandedAnnouncementId === item.id;
-                  const canExpand = item.content.length > 180;
+                  const displayBody = item.fullContent || item.content;
+                  const canExpand = displayBody.length > 180;
+                  const attachments = item.attachments || [];
 
                   return (
-                    <article key={item.id} className="p-4 space-y-1.5">
+                    <article key={item.id} className="p-4 space-y-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap text-[11px] text-stone-500 dark:text-stone-400 font-medium">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {item.isPinned && (
@@ -461,10 +473,10 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
                         {item.title}
                       </h3>
 
-                      {item.content && (
+                      {displayBody && (
                         <div className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
                           <div className={!isExpanded && canExpand ? 'line-clamp-3' : ''}>
-                            <FormattedText content={item.content} />
+                            <FormattedText content={displayBody} />
                           </div>
                           {canExpand && (
                             <button
@@ -487,6 +499,46 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
                               )}
                             </button>
                           )}
+                        </div>
+                      )}
+
+                      {attachments.length > 0 && (
+                        <div className="pt-1.5 flex items-center gap-2 flex-wrap">
+                          {attachments.map(att => {
+                            const isPdf = att.kind === 'pdf';
+                            const isImg = att.kind === 'image';
+                            const isLink = att.kind === 'link';
+                            return (
+                              <button
+                                key={att.id}
+                                type="button"
+                                onClick={() => onOpenAttachment?.(att, item.title)}
+                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer max-w-full ${
+                                  isPdf
+                                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:hover:bg-rose-950/80 dark:text-rose-200 dark:border-rose-800/70'
+                                    : isImg
+                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:hover:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-800/70'
+                                    : isLink
+                                    ? 'bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/50 dark:hover:bg-sky-950/80 dark:text-sky-200 dark:border-sky-800/70'
+                                    : 'bg-stone-100 hover:bg-stone-200 text-stone-800 border-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 dark:text-stone-200 dark:border-stone-700'
+                                }`}
+                              >
+                                {isPdf ? (
+                                  <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                                ) : isImg ? (
+                                  <FileImage className="w-3.5 h-3.5 flex-shrink-0" />
+                                ) : isLink ? (
+                                  <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
+                                ) : (
+                                  <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
+                                )}
+                                <span className="truncate">{att.label}</span>
+                                <span className="text-[10px] font-mono uppercase opacity-75 flex-shrink-0">
+                                  {isPdf ? 'PDF' : isImg ? 'IMG' : isLink ? 'Tautan' : 'Berkas'}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </article>

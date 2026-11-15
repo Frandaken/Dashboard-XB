@@ -38,7 +38,7 @@ import { usePushNotifications } from './hooks/usePushNotifications';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from './components/PullToRefreshIndicator';
 import { validateFirestoreConnection } from './firebase';
-import { ClassDataStore, SitatibOverviewData, TaskAttachment } from './types';
+import { ClassDataStore, SitatibAttachment, SitatibOverviewData, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { buildSitatibActivitiesByDate } from './utils/sitatibUtils';
@@ -332,6 +332,17 @@ export default function App() {
       title: subjectTitle ? `Lampiran: ${subjectTitle}` : (attachment.filename || 'Lampiran Tugas'),
       subtitle: attachment.filename || 'File Lampiran',
       originalLink: attachment.url
+    });
+  }, []);
+
+  const handleOpenSitatibAttachment = useCallback((attachment: SitatibAttachment, announcementTitle?: string) => {
+    setPreviewAttachment({
+      id: attachment.id,
+      url: attachment.url,
+      kind: attachment.kind,
+      title: announcementTitle || attachment.label,
+      subtitle: attachment.label,
+      originalLink: attachment.kind === 'link' ? (attachment.sourceUrl || attachment.url) : attachment.url
     });
   }, []);
 
@@ -1122,8 +1133,18 @@ export default function App() {
               isLoading={isSitatibLoading}
               onRefresh={() => fetchSitatibOverview(true)}
               initialTab={sitatibInitialTab}
+              onOpenAttachment={handleOpenSitatibAttachment}
+              disableEscapeClose={Boolean(previewAttachment)}
               darkMode={darkMode}
               onToggleDarkMode={toggleDarkMode}
+            />
+          )}
+          {previewAttachment && (
+            <ReceiptLightboxModal
+              isOpen={!!previewAttachment}
+              onClose={() => setPreviewAttachment(null)}
+              data={previewAttachment}
+              darkMode={darkMode}
             />
           )}
         </React.Suspense>
@@ -1405,6 +1426,7 @@ export default function App() {
                     <SitatibSummaryBanner
                       data={sitatibData}
                       onOpenModal={openSitatibModal}
+                      onOpenAttachment={handleOpenSitatibAttachment}
                     />
 
                     {/* Event Notice Banner (All-day / Multi-day events from iCal) */}
@@ -1733,6 +1755,8 @@ export default function App() {
               handleSelectDate(iso);
               setSelectedISO(iso);
             }}
+            onOpenAttachment={handleOpenSitatibAttachment}
+            disableEscapeClose={Boolean(previewAttachment)}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
           />
