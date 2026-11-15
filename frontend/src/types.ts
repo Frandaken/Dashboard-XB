@@ -176,7 +176,6 @@ export interface SitatibAnnouncement {
   id: string;
   title: string;
   content: string;
-  fullContent?: string;
   publishedAt?: string;
   category?: string;
   isPinned?: boolean;

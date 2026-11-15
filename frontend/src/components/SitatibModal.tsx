@@ -109,7 +109,6 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
     return announcements.filter(a =>
       a.title.toLowerCase().includes(q) ||
       a.content.toLowerCase().includes(q) ||
-      (a.fullContent || '').toLowerCase().includes(q) ||
       (a.category || '').toLowerCase().includes(q) ||
       (a.attachments || []).some(att => att.label.toLowerCase().includes(q))
     );
@@ -436,8 +435,12 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
               <div className="rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] divide-y divide-stone-200/80 dark:divide-stone-800/80 overflow-hidden">
                 {filteredAnnouncements.map(item => {
                   const isExpanded = expandedAnnouncementId === item.id;
-                  const displayBody = item.fullContent || item.content;
-                  const canExpand = displayBody.length > 180;
+                  const isScheduleReminder = item.title
+                    .trim()
+                    .toLowerCase()
+                    .startsWith('hai smaputnierz besok ada agenda terjadwal');
+                  const displayBody = item.content;
+                  const canExpand = !isScheduleReminder && displayBody.length > 180;
                   const attachments = item.attachments || [];
 
                   return (

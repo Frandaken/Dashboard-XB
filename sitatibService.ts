@@ -12,7 +12,6 @@ export interface SitatibAnnouncement {
   id: string;
   title: string;
   content: string;
-  fullContent?: string;
   publishedAt?: string;
   category?: string;
   isPinned?: boolean;
@@ -464,7 +463,7 @@ function extractAnnouncementDetailFromHtml(
   html: string,
   pageUrl: string,
   baseUrl: string
-): { fullContent?: string; attachments: SitatibAttachment[] } {
+): { attachments: SitatibAttachment[] } {
   const attachments: SitatibAttachment[] = [];
   const seenUrls = new Set<string>();
   let baseOrigin = '';
@@ -678,31 +677,12 @@ function extractAnnouncementDetailFromHtml(
     });
   }
 
-  // 4. Extract clean full body text and bare external URLs inside letter text
+  // 4. Also scan bare https:// URLs written directly as plain text in letter body
   const contentContainerMatch =
     mainHtml.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i) ||
     mainHtml.match(/<div\b[^>]*class=["'][^"']*(?:prose|card-body|announcement-content|isi-pengumuman|whitespace-pre-line)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
   const bodyHtml = contentContainerMatch ? contentContainerMatch[1] : mainHtml;
 
-  const paragraphBlocks: string[] = [];
-  const pRegex = /<(?:p|li|blockquote)\b[^>]*>([\s\S]*?)<\/(?:p|li|blockquote)>/gi;
-  let pMatch: RegExpExecArray | null;
-  while ((pMatch = pRegex.exec(bodyHtml)) !== null) {
-    if (/^\s*<a\b[^>]*class=["'][^"']*sitatib-link-button[^"']*["'][^>]*>[\s\S]*?<\/a>\s*$/i.test(pMatch[1])) {
-      continue;
-    }
-    const line = sanitizeText(stripTags(pMatch[1]));
-    if (!line || line.length < 3) continue;
-    if (/^(kembali|lihat pdf|unduh pdf|download|konfirmasi|tandai dibaca|pengumuman sekolah)$/i.test(line)) continue;
-    if (isLikelyPersonalRecord(line)) continue;
-    paragraphBlocks.push(line);
-  }
-
-  const fullContentText = paragraphBlocks.length > 0
-    ? Array.from(new Set(paragraphBlocks)).join('\n')
-    : '';
-
-  // Also scan bare https:// URLs written directly as plain text in bodyHtml
   const plainBodyText = stripTags(bodyHtml);
   const bareUrlRegex = /\bhttps?:\/\/[^\s<>"')\]}]+/gi;
   let bareMatch: RegExpExecArray | null;
@@ -725,7 +705,6 @@ function extractAnnouncementDetailFromHtml(
   }
 
   return {
-    fullContent: fullContentText || undefined,
     attachments: attachments.slice(0, 12)
   };
 }
@@ -1481,9 +1460,6 @@ export class SitatibService {
               );
               if (detail.attachments.length > 0) {
                 ann.attachments = detail.attachments;
-              }
-              if (detail.fullContent && detail.fullContent.length > ann.content.length) {
-                ann.fullContent = detail.fullContent;
               }
             }
           } catch (detailErr: any) {
