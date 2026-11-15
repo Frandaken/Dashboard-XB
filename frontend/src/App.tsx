@@ -53,6 +53,17 @@ export default function App() {
     return false; // Default to light mode as requested
   });
 
+  const [layoutMode, setLayoutMode] = useState<'dashboard' | 'scrollable'>(() => {
+    const saved = localStorage.getItem('layout_mode');
+    return saved === 'scrollable' ? 'scrollable' : 'dashboard';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('layout_mode', layoutMode);
+  }, [layoutMode]);
+
+  const isScrollableMode = layoutMode === 'scrollable';
+
   useEffect(() => {
     const root = document.documentElement;
     if (darkMode) {
@@ -978,6 +989,8 @@ export default function App() {
           hasNotificationActive={isNotificationActive}
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
+          layoutMode={layoutMode}
+          onChangeLayoutMode={setLayoutMode}
           onRefreshData={() => fetchData(true)}
           isRefreshing={isLoading}
         />
@@ -986,10 +999,14 @@ export default function App() {
   }
 
   return (
-    // 5. Overflow scrolling on mobile enabled (min-h-screen overflow-y-auto on mobile, desktop keeps clean full viewport)
+    // 5. Overflow scrolling on mobile enabled (or full page scrollable in User/Scrollable mode)
     <div
       ref={containerRef}
-      className="min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden bg-[#F8F9FA] dark:bg-[#111215] text-[#191B1F] dark:text-[#F1F3F5] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200 relative"
+      className={`${
+        isScrollableMode
+          ? 'min-h-screen overflow-y-auto'
+          : 'min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden'
+      } bg-[#F8F9FA] dark:bg-[#111215] text-[#191B1F] dark:text-[#F1F3F5] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200 relative`}
       style={{
         overscrollBehaviorY: 'contain'
       }}
@@ -1012,7 +1029,9 @@ export default function App() {
       />
 
       <div
-        className="max-w-[1600px] w-full mx-auto flex flex-col flex-1 min-h-0 gap-2.5 transition-transform duration-200 ease-out"
+        className={`max-w-[1600px] w-full mx-auto flex flex-col ${
+          isScrollableMode ? 'gap-3' : 'flex-1 min-h-0 gap-2.5'
+        } transition-transform duration-200 ease-out`}
         style={{
           transform: pullDistance > 0 ? `translateY(${Math.min(pullDistance * 0.45, 42)}px)` : undefined,
           willChange: pullDistance > 0 ? 'transform' : undefined
@@ -1044,11 +1063,21 @@ export default function App() {
         {isLoading ? (
           <DashboardSkeleton />
         ) : (
-          <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0 animate-fade-in">
+          <main
+            className={`grid grid-cols-1 lg:grid-cols-12 gap-3 ${
+              isScrollableMode
+                ? 'items-start overflow-visible pb-8'
+                : 'flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0'
+            } animate-fade-in`}
+          >
             {/* LEFT: TODAY DASHBOARD (Col Span 7-8) */}
             <section
               id="hero-today-section"
-              className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-hidden"
+              className={`lg:col-span-7 xl:col-span-8 flex flex-col h-auto ${
+                isScrollableMode
+                  ? 'gap-3 w-full overflow-visible'
+                  : 'lg:h-full min-h-0 gap-2.5 w-full overflow-hidden'
+              }`}
             >
               {/* Shortcut Grid: HANYA BERLAKU BILA SPACE HORIZONTAL KECIL (sm:hidden) */}
               <MobileQuickActions
@@ -1214,7 +1243,7 @@ export default function App() {
               </div>
 
               {/* Dynamic Day Content with tactile horizontal slide transition */}
-              <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+              <div className={isScrollableMode ? 'flex flex-col relative overflow-visible' : 'flex-1 flex flex-col min-h-0 relative overflow-hidden'}>
                 <AnimatePresence mode="wait" initial={false} custom={slideDirection}>
                   <motion.div
                     key={activeISO}
@@ -1223,7 +1252,7 @@ export default function App() {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    className="flex-1 flex flex-col gap-2.5 min-h-0 w-full"
+                    className={isScrollableMode ? 'flex flex-col gap-3 w-full' : 'flex-1 flex flex-col gap-2.5 min-h-0 w-full'}
                   >
                     {/* Smart Notice if displayed date differs from WIB date */}
                     {activeISO !== todayWIB.iso && !isManualDate && (
@@ -1267,6 +1296,7 @@ export default function App() {
                       onOpenAttachment={handleOpenAttachment}
                       isoDate={activeISO}
                       isToday={activeISO === todayWIB.iso}
+                      scrollableLayout={isScrollableMode}
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -1274,7 +1304,7 @@ export default function App() {
             </>
           ) : (
             /* Upcoming Deadlines Tab View */
-            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pr-0.5">
+            <div className={isScrollableMode ? 'flex flex-col overflow-visible' : 'flex-1 flex flex-col min-h-0 overflow-y-auto pr-0.5'}>
               <UpcomingDeadlinesTab
                 tasksByDate={dataStore.tasksByDate}
                 todayISO={todayWIB.iso}
@@ -1292,7 +1322,13 @@ export default function App() {
         </section>
 
             {/* RIGHT: CALENDAR, BIRTHDAYS & SONG SCHEDULE (Col Span 4-5) */}
-            <aside className="lg:col-span-5 xl:col-span-4 flex flex-col h-auto lg:h-full min-h-0 w-full justify-between gap-2.5 overflow-visible lg:overflow-hidden">
+            <aside
+              className={`lg:col-span-5 xl:col-span-4 flex flex-col h-auto w-full ${
+                isScrollableMode
+                  ? 'justify-start gap-3 overflow-visible'
+                  : 'lg:h-full min-h-0 justify-between gap-2.5 overflow-visible lg:overflow-hidden'
+              }`}
+            >
               <CalendarSection
                 viewYear={viewYear}
                 viewMonth={viewMonth}
@@ -1489,6 +1525,8 @@ export default function App() {
             hasNotificationActive={isNotificationActive}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
+            layoutMode={layoutMode}
+            onChangeLayoutMode={setLayoutMode}
             onRefreshData={() => fetchData(true)}
             isRefreshing={isLoading}
           />

@@ -13,9 +13,13 @@ import {
   CheckCircle2,
   Sparkles,
   ShieldCheck,
-  Share2
+  Share2,
+  Monitor,
+  ScrollText
 } from 'lucide-react';
 import { APP_VERSION, APP_RELEASE_STATUS } from '../utils/version';
+
+export type LayoutMode = 'dashboard' | 'scrollable';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,6 +30,8 @@ interface SettingsModalProps {
   hasNotificationActive?: boolean;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
+  layoutMode?: LayoutMode;
+  onChangeLayoutMode?: (mode: LayoutMode) => void;
   onRefreshData?: () => void;
   isRefreshing?: boolean;
 }
@@ -39,6 +45,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   hasNotificationActive,
   darkMode,
   onToggleDarkMode,
+  layoutMode = 'dashboard',
+  onChangeLayoutMode,
   onRefreshData,
   isRefreshing
 }) => {
@@ -204,7 +212,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Section 3: Tampilan Antarmuka */}
-          <div>
+          <div className="space-y-2.5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-2 px-1">
               Preferensi Tampilan
             </h3>
@@ -234,6 +242,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               )}
             </div>
+
+            {onChangeLayoutMode && (
+              <div className="p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] flex flex-col gap-3 shadow-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-[#13281E] text-emerald-700 dark:text-[#34D399] border border-emerald-600/20 dark:border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      {layoutMode === 'scrollable' ? (
+                        <ScrollText className="w-5 h-5" />
+                      ) : (
+                        <Monitor className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-sm font-bold text-stone-900 dark:text-stone-100 block">
+                        Mode Tata Letak Halaman
+                      </span>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
+                        {layoutMode === 'scrollable'
+                          ? 'Mode Gulir (User): seluruh konten scrollable tanpa tinggi fixed'
+                          : 'Dashboard: tampilan ringkas 1 layar penuh (fixed)'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  role="radiogroup"
+                  aria-label="Pilih mode tata letak halaman"
+                  className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-stone-100 dark:bg-[#121316] border border-stone-200/70 dark:border-stone-800/80"
+                >
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={layoutMode === 'dashboard'}
+                    onClick={() => onChangeLayoutMode('dashboard')}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                      layoutMode === 'dashboard'
+                        ? 'bg-white dark:bg-[#202227] text-stone-900 dark:text-stone-100 shadow-xs border border-stone-200/80 dark:border-stone-700/80'
+                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                    }`}
+                  >
+                    <Monitor className={`w-3.5 h-3.5 ${layoutMode === 'dashboard' ? 'text-emerald-700 dark:text-emerald-400' : ''}`} />
+                    <span>Dashboard</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={layoutMode === 'scrollable'}
+                    onClick={() => onChangeLayoutMode('scrollable')}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                      layoutMode === 'scrollable'
+                        ? 'bg-white dark:bg-[#202227] text-emerald-900 dark:text-emerald-300 shadow-xs border border-emerald-600/30 dark:border-emerald-500/40'
+                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                    }`}
+                  >
+                    <ScrollText className={`w-3.5 h-3.5 ${layoutMode === 'scrollable' ? 'text-emerald-700 dark:text-emerald-400' : ''}`} />
+                    <span>Mode Gulir (User)</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 4: Data & Sinkronisasi */}

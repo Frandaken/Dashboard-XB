@@ -17,6 +17,7 @@ interface ScheduleBlocksProps {
   onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
   isoDate?: string;
   isToday?: boolean;
+  scrollableLayout?: boolean;
 }
 
 export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
@@ -29,7 +30,8 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   compact = false,
   onOpenAttachment,
   isoDate,
-  isToday
+  isToday,
+  scrollableLayout = false
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
   const [isScheduleExpanded, setIsScheduleExpanded] = useState<boolean>(false);
@@ -388,7 +390,12 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   };
 
   return (
-    <div id="schedule-blocks-grid" className={`flex flex-col ${compact ? 'gap-2.5' : 'gap-3'} flex-1 min-h-0`}>
+    <div
+      id="schedule-blocks-grid"
+      className={`flex flex-col ${compact ? 'gap-2.5' : 'gap-3'} ${
+        scrollableLayout ? '' : 'flex-1 min-h-0'
+      }`}
+    >
       {/* ROW 1: (MBG or Priority 1 Ice Breaking or Priority 2 Doa) & PIKET KEBERSIHAN */}
       {(slot1Type !== null || piket) && (
         <div className={`grid ${slot1Type !== null && piket ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} ${compact ? 'gap-2.5' : 'gap-3'} flex-shrink-0`}>
@@ -411,7 +418,11 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
         id="card-pelajaran"
         className={`bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl ${
           compact ? 'p-3' : 'p-3.5 sm:p-4'
-        } flex-1 min-h-0 flex flex-col transition-colors overflow-hidden`}
+        } ${
+          scrollableLayout
+            ? 'flex flex-col transition-colors'
+            : 'flex-1 min-h-0 flex flex-col transition-colors overflow-hidden'
+        }`}
       >
         <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-stone-100 dark:border-stone-800/60 flex-shrink-0 flex-wrap">
           <div className="flex items-center gap-2">
@@ -451,6 +462,8 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
                   ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5'
                   : compact
                   ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto flex-1 pr-1'
+                  : scrollableLayout
+                  ? 'grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3'
                   : 'grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pr-1'
               }
             >
