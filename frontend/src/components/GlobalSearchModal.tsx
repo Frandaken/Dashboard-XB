@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   HeartHandshake,
   Utensils,
-  BookMarked
+  BookMarked,
+  Scale
 } from 'lucide-react';
 import { ClassDataStore, TaskAttachment, TaskItem } from '../types';
 import { Student, STUDENTS_DATA, PIKET_SCHEDULE_MAP } from '../constants/studentsData';
@@ -34,7 +35,7 @@ import { isTaskTimePassed } from '../utils/taskUtils';
 import { getCurrentWIBTimeHHMM } from '../utils/iceBreakingUtils';
 import { FormattedText } from './FormattedText';
 
-export type SearchCategory = 'all' | 'student' | 'subject' | 'task' | 'event';
+export type SearchCategory = 'all' | 'student' | 'subject' | 'task' | 'event' | 'sitatib';
 
 export interface SubjectScheduleSlot {
   dayName: string;
@@ -97,7 +98,7 @@ export interface StudentSummaryData {
 
 export interface SearchResultItem {
   id: string;
-  category: 'student' | 'subject' | 'task' | 'event';
+  category: 'student' | 'subject' | 'task' | 'event' | 'sitatib';
   title: string;
   subject?: string;
   subtitle?: string;
@@ -112,6 +113,7 @@ export interface SearchResultItem {
   score?: number;
   subjectData?: SubjectDetailData;
   studentData?: StudentSummaryData;
+  sitatibTab?: 'announcements' | 'rules';
 }
 
 interface GlobalSearchModalProps {
@@ -120,6 +122,7 @@ interface GlobalSearchModalProps {
   dataStore: ClassDataStore;
   onSelectDate: (isoDate: string) => void;
   onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
+  onOpenSitatib?: (tab: 'announcements' | 'rules') => void;
   darkMode?: boolean;
   todayISO?: string;
 }
@@ -178,6 +181,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   dataStore,
   onSelectDate,
   onOpenAttachment,
+  onOpenSitatib,
   darkMode: _darkMode,
   todayISO
 }) => {
@@ -540,6 +544,41 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
       });
     }
 
+    // ==========================================
+    // 5. Index SITATIB Announcements & Rules
+    // ==========================================
+    if (dataStore.sitatibData) {
+      (dataStore.sitatibData.announcements || []).forEach(a => {
+        list.push({
+          id: `sitatib_ann_${a.id}`,
+          category: 'sitatib',
+          title: a.title,
+          subtitle: a.category || 'Pengumuman SITATIB',
+          badgeText: 'SITATIB Info',
+          badgeColor: 'emerald',
+          isoDate: activeTodayISO,
+          formattedDate: a.publishedAt || 'Pengumuman Sekolah',
+          details: a.content,
+          sitatibTab: 'announcements'
+        });
+      });
+
+      (dataStore.sitatibData.rules || []).forEach(r => {
+        list.push({
+          id: `sitatib_rule_${r.id}`,
+          category: 'sitatib',
+          title: `${r.codeOrNumber} · ${r.title}`,
+          subtitle: r.category,
+          badgeText: typeof r.points === 'number' ? `${r.points} poin` : 'Tata Tertib',
+          badgeColor: r.pointType === 'pelanggaran' ? 'rose' : 'emerald',
+          isoDate: activeTodayISO,
+          formattedDate: 'Pasal Tata Tertib',
+          details: r.description,
+          sitatibTab: 'rules'
+        });
+      });
+    }
+
     return list;
   }, [dataStore, activeTodayISO]);
 
@@ -680,6 +719,9 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     } else if (item.category === 'student' && item.studentData) {
       // 4. Tampilkan ringkasan lengkap data siswa
       setSelectedStudent(item.studentData);
+    } else if (item.category === 'sitatib' && onOpenSitatib) {
+      onClose();
+      onOpenSitatib(item.sitatibTab || 'announcements');
     } else {
       // Task or Event notice -> jump to date
       onSelectDate(item.isoDate);
@@ -712,7 +754,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
       student: allItems.filter(i => i.category === 'student').length,
       subject: allItems.filter(i => i.category === 'subject').length,
       task: allItems.filter(i => i.category === 'task').length,
-      event: allItems.filter(i => i.category === 'event').length
+      event: allItems.filter(i => i.category === 'event').length,
+      sitatib: allItems.filter(i => i.category === 'sitatib').length
     };
   }, [allItems]);
 
@@ -1581,6 +1624,22 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 <span>Acara</span>
                 <span className="text-[10px] opacity-75">({counts.event})</span>
               </button>
+
+              {counts.sitatib > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCategory('sitatib')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap cursor-pointer flex-shrink-0 flex items-center gap-1.5 ${
+                    category === 'sitatib'
+                      ? 'bg-[#1E3A2F] text-white shadow-2xs font-bold'
+                      : 'bg-white dark:bg-[#1C1E23] text-stone-600 dark:text-stone-400 border border-stone-200/70 dark:border-stone-800 hover:bg-stone-50'
+                  }`}
+                >
+                  <Scale className="w-3 h-3 text-emerald-600" />
+                  <span>SITATIB</span>
+                  <span className="text-[10px] opacity-75">({counts.sitatib})</span>
+                </button>
+              )}
             </div>
 
             {/* Results List */}
@@ -1651,6 +1710,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                             <Users className="w-4 h-4" />
                           ) : item.category === 'subject' ? (
                             <BookOpen className="w-4 h-4" />
+                          ) : item.category === 'sitatib' ? (
+                            <Scale className="w-4 h-4" />
                           ) : item.badgeColor === 'rose' ? (
                             <AlertTriangle className="w-4 h-4" />
                           ) : item.category === 'task' ? (

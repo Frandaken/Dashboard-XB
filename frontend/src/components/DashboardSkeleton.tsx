@@ -1,14 +1,30 @@
 import React from 'react';
 
-export const DashboardSkeleton: React.FC = () => {
+interface DashboardSkeletonProps {
+  scrollableLayout?: boolean;
+}
+
+export const DashboardSkeleton: React.FC<DashboardSkeletonProps> = ({
+  scrollableLayout = false
+}) => {
   return (
     <div
       aria-busy="true"
       aria-label="Memuat data kelas..."
-      className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0 animate-pulse"
+      className={`grid grid-cols-1 lg:grid-cols-12 gap-3 ${
+        scrollableLayout
+          ? 'items-start overflow-visible pb-8'
+          : 'flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0'
+      } animate-pulse`}
     >
       {/* LEFT: HERO TODAY SCHEDULE SKELETON (Col Span 7-8) */}
-      <section className="lg:col-span-7 xl:col-span-8 flex flex-col h-auto lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden">
+      <section
+        className={`lg:col-span-7 xl:col-span-8 flex flex-col h-auto ${
+          scrollableLayout
+            ? 'gap-3 w-full overflow-visible'
+            : 'lg:h-full min-h-0 gap-2.5 w-full overflow-visible lg:overflow-hidden'
+        }`}
+      >
         {/* Date Title & Stepper Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-stone-200/80 dark:border-stone-800/80 flex-shrink-0">
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -81,14 +97,22 @@ export const DashboardSkeleton: React.FC = () => {
           </div>
 
           {/* ROW 3: JADWAL PELAJARAN (NEW RESPONSIVE MULTI-COLUMN GRID) */}
-          <div className="bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl p-3.5 sm:p-4 shadow-xs flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div
+            className={`bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col ${
+              scrollableLayout ? '' : 'flex-1 min-h-0 overflow-hidden'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-stone-100 dark:border-stone-800/60 flex-shrink-0">
               <div className="h-5 w-36 bg-stone-200/90 dark:bg-stone-800 rounded" />
               <div className="h-5 w-28 bg-stone-100 dark:bg-stone-800/70 rounded-md border border-stone-200/60 dark:border-stone-700/50" />
             </div>
 
             {/* Grid of session cards matching ScheduleBlocks.tsx */}
-            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 overflow-hidden flex-1 pt-1 pr-1">
+            <div
+              className={`grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 pt-1 pr-1 ${
+                scrollableLayout ? '' : 'overflow-hidden flex-1'
+              }`}
+            >
               {[1, 2, 3, 4, 5, 6].map(idx => (
                 <div
                   key={idx}
@@ -118,7 +142,13 @@ export const DashboardSkeleton: React.FC = () => {
       </section>
 
       {/* RIGHT: ASIDE SKELETON (Col Span 4-5) */}
-      <aside className="lg:col-span-5 xl:col-span-4 flex flex-col h-auto lg:h-full min-h-0 w-full justify-between gap-2.5 overflow-visible lg:overflow-hidden">
+      <aside
+        className={`lg:col-span-5 xl:col-span-4 flex flex-col h-auto w-full gap-2.5 ${
+          scrollableLayout
+            ? 'justify-start overflow-visible'
+            : 'lg:h-full min-h-0 justify-between overflow-visible lg:overflow-hidden'
+        }`}
+      >
         {/* Calendar Section Skeleton */}
         <div className="bg-white dark:bg-[#18191C] border border-stone-200/80 dark:border-stone-800/80 rounded-xl p-3 sm:p-3.5 shadow-xs flex flex-col justify-between transition-colors">
           <div>

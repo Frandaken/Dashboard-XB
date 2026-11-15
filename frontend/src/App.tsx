@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Copy, Check, Clock } from 'lucide-react';
 import { Header } from './components/Header';
@@ -27,15 +27,17 @@ const HamburgerMenuModal = React.lazy(() => import('./components/HamburgerMenuMo
 const NotificationModal = React.lazy(() => import('./components/NotificationModal').then(m => ({ default: m.NotificationModal })));
 const ReceiptLightboxModal = React.lazy(() => import('./components/ReceiptLightboxModal').then(m => ({ default: m.ReceiptLightboxModal })));
 const GlobalSearchModal = React.lazy(() => import('./components/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })));
+const SitatibModal = React.lazy(() => import('./components/SitatibModal').then(m => ({ default: m.SitatibModal })));
 import { MobileQuickActions } from './components/MobileQuickActions';
 import { EventNoticeBanner } from './components/EventNoticeBanner';
+import { SitatibSummaryBanner } from './components/SitatibSummaryBanner';
 import type { ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from './components/PullToRefreshIndicator';
 import { validateFirestoreConnection } from './firebase';
-import { ClassDataStore, TaskAttachment } from './types';
+import { ClassDataStore, SitatibOverviewData, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './constants/demoData';
@@ -256,6 +258,12 @@ export default function App() {
   // Active date displayed in the hero section (default to next active school day on weekend)
   const [activeISO, setActiveISO] = useState<string>(() => defaultSchoolISO);
   const [isManualDate, setIsManualDate] = useState<boolean>(false);
+  const isManualDateRef = useRef<boolean>(false);
+  useEffect(() => {
+    isManualDateRef.current = isManualDate;
+  }, [isManualDate]);
+  const inFlightFetchRef = useRef<Promise<void> | null>(null);
+
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [heroActiveTab, setHeroActiveTab] = useState<'schedule' | 'deadlines'>('schedule');
 
@@ -265,7 +273,53 @@ export default function App() {
   const [isWeeklyExportOpen, setIsWeeklyExportOpen] = useState<boolean>(false);
   const [isSiswaModalOpen, setIsSiswaModalOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [isSitatibModalOpen, setIsSitatibModalOpen] = useState<boolean>(false);
+  const [sitatibInitialTab, setSitatibInitialTab] = useState<'announcements' | 'rules'>('announcements');
+  const [sitatibData, setSitatibData] = useState<SitatibOverviewData | null>(null);
+  const [isSitatibLoading, setIsSitatibLoading] = useState<boolean>(false);
   const [previewAttachment, setPreviewAttachment] = useState<ReceiptLightboxData | null>(null);
+
+  const openSitatibModal = useCallback((tab: 'announcements' | 'rules' = 'announcements') => {
+    setSitatibInitialTab(tab);
+    setIsSitatibModalOpen(true);
+  }, []);
+
+  const fetchWithRetry = useCallback(async (url: string, init?: RequestInit, retries: number = 2): Promise<Response> => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await fetch(url, init);
+      } catch (err) {
+        lastError = err;
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        if (isOffline || attempt >= retries) {
+          throw err;
+        }
+        await new Promise(resolve => setTimeout(resolve, 450 * (attempt + 1)));
+      }
+    }
+    throw lastError;
+  }, []);
+
+  const fetchSitatibOverview = useCallback(async (forceFresh: boolean = false): Promise<SitatibOverviewData | null> => {
+    setIsSitatibLoading(true);
+    try {
+      const qs = forceFresh ? `?fresh=1&t=${Date.now()}` : `?t=${Date.now()}`;
+      const res = await fetchWithRetry(`/api/sitatib/overview${qs}`, { cache: 'no-cache' }, 1);
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        return null;
+      }
+      const json = (await res.json()) as SitatibOverviewData;
+      setSitatibData(json);
+      setDataStore(prev => ({ ...prev, sitatibData: json }));
+      return json;
+    } catch {
+      return null;
+    } finally {
+      setIsSitatibLoading(false);
+    }
+  }, [fetchWithRetry]);
 
   const handleOpenAttachment = useCallback((attachment: TaskAttachment, subjectTitle?: string) => {
     setPreviewAttachment({
@@ -368,7 +422,12 @@ export default function App() {
   }, [hasSchoolData]);
 
   // Fetch real data with fallback (isSilent prevents skeleton flashing during periodic 5-minute background sync)
-  const fetchData = useCallback(async (forceFresh: boolean = false, isSilent: boolean = false) => {
+  const fetchData = useCallback((forceFresh: boolean = false, isSilent: boolean = false): Promise<void> => {
+    if (inFlightFetchRef.current) {
+      return inFlightFetchRef.current;
+    }
+
+    const run = (async () => {
     const syncStartedAt = performance.now();
     const syncTag = `[Dashboard XB Sync @ ${new Date().toLocaleTimeString('id-ID')}]`;
     console.group(`${syncTag} Memulai sinkronisasi data (forceFresh=${forceFresh}, isSilent=${isSilent}, online=${typeof navigator !== 'undefined' ? navigator.onLine : 'unknown'}, origin=${typeof window !== 'undefined' ? window.location.origin : 'unknown'})`);
@@ -380,7 +439,7 @@ export default function App() {
 
     if (forceFresh) {
       try {
-        const refreshRes = await fetch('/api/refresh', { method: 'POST' });
+        const refreshRes = await fetchWithRetry('/api/refresh', { method: 'POST' }, 1);
         console.debug(`${syncTag} POST /api/refresh -> HTTP ${refreshRes.status}`);
       } catch (e: any) {
         console.warn(`${syncTag} POST /api/refresh gagal:`, e?.message || e);
@@ -403,30 +462,30 @@ export default function App() {
     const probeHealth = async () => {
       const t0 = performance.now();
       try {
-        const res = await fetch(`/api/health?t=${Date.now()}`, { cache: 'no-cache' });
+        const res = await fetchWithRetry(`/api/health?t=${Date.now()}`, { cache: 'no-cache' });
         const ms = Math.round(performance.now() - t0);
         const contentType = res.headers.get('content-type') || '';
         const bodyText = await res.text();
         if (!res.ok) {
-          console.error(`${syncTag} [HEALTH] Backend /api/health HTTP ${res.status} (${ms}ms):`, bodyText.slice(0, 300));
+          console.warn(`${syncTag} [HEALTH] Backend /api/health HTTP ${res.status} (${ms}ms):`, bodyText.slice(0, 300));
           return;
         }
         if (contentType.includes('text/html') || bodyText.trim().startsWith('<!doctype') || bodyText.trim().startsWith('<html')) {
-          console.error(`${syncTag} [HEALTH] /api/health mengembalikan HTML SPA (proxy /api/ ke backend kemungkinan belum tersambung)! Preview:`, bodyText.trim().slice(0, 200));
+          console.warn(`${syncTag} [HEALTH] /api/health mengembalikan HTML SPA (proxy /api/ ke backend kemungkinan belum tersambung)! Preview:`, bodyText.trim().slice(0, 200));
           return;
         }
         try {
           const json = JSON.parse(bodyText);
           console.info(`${syncTag} [HEALTH] OK (${ms}ms):`, json);
           if (json?.env && (!json.env.pelajaranConfigured || !json.env.birthdayConfigured)) {
-            console.error(`${syncTag} [HEALTH WARNING] Env kalender belum lengkap di server! pelajaranConfigured=${json.env.pelajaranConfigured}, birthdayConfigured=${json.env.birthdayConfigured}. Pastikan CALENDAR_FEED_PELAJARAN & CALENDAR_FEED_BIRTHDAY ada di .env dan diteruskan ke container backend.`);
+            console.warn(`${syncTag} [HEALTH WARNING] Env kalender belum lengkap di server! pelajaranConfigured=${json.env.pelajaranConfigured}, birthdayConfigured=${json.env.birthdayConfigured}.`);
           }
         } catch {
           console.warn(`${syncTag} [HEALTH] Response non-JSON (${ms}ms):`, bodyText.slice(0, 200));
         }
       } catch (err: any) {
         const ms = Math.round(performance.now() - t0);
-        console.error(`${syncTag} [HEALTH] Gagal menghubungi /api/health (${ms}ms):`, err?.name, err?.message, err);
+        console.warn(`${syncTag} [HEALTH] Tidak dapat menghubungi /api/health (${ms}ms):`, err?.message || err);
       }
     };
 
@@ -435,7 +494,7 @@ export default function App() {
       const sep = path.includes('?') ? '&' : '?';
       const url = `${path}${sep}fresh=1&t=${Date.now()}`;
       try {
-        const res = await fetch(url, {
+        const res = await fetchWithRetry(url, {
           cache: 'no-cache',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -481,7 +540,7 @@ export default function App() {
       } catch (err: any) {
         const ms = Math.round(performance.now() - t0);
         const errMsg = err?.message || String(err);
-        console.error(`${syncTag} [GAGAL] ${path} (${ms}ms) -> fallback=${fallbackKey ? 'DEMO_CSV' : 'EMPTY/KAS_DEMO'}:`, errMsg);
+        console.warn(`${syncTag} [FALLBACK] ${path} (${ms}ms) -> ${fallbackKey ? 'DEMO_CSV' : 'EMPTY/KAS_DEMO'}:`, errMsg);
         debugRows.push({
           endpoint: path,
           status: 'FAILED',
@@ -504,8 +563,9 @@ export default function App() {
       const rangeStart = new Date(curYear - 1, 0, 1);
       const rangeEnd = new Date(curYear + 1, 11, 31);
 
-      const [, doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
+      const [, sitatibPayload, doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
         probeHealth(),
+        fetchSitatibOverview(forceFresh),
         fetchEndpoint('/api/sheets/doa', 'doa'),
         fetchEndpoint('/api/sheets/mbg', 'mbg'),
         fetchEndpoint('/api/sheets/piket', 'piket'),
@@ -575,13 +635,14 @@ export default function App() {
         tasksByDate,
         eventNoticesByDate,
         birthdayByMonthDay,
-        kasData
+        kasData,
+        sitatibData: sitatibPayload ?? undefined
       };
 
       setDataStore(newStore);
 
       setActiveISO(prev => {
-        if (!isManualDate) {
+        if (!isManualDateRef.current) {
           if (hasSchoolData(prev, newStore)) {
             return prev;
           }
@@ -596,7 +657,7 @@ export default function App() {
       setStatus(null);
       setIsLoading(false);
     } catch (err: any) {
-      console.error(`${syncTag} Fatal error in fetchData:`, err);
+      console.warn(`${syncTag} Fatal error in fetchData:`, err?.message || err);
       if (!isSilent) {
         setStatus({
           type: 'error',
@@ -606,8 +667,13 @@ export default function App() {
       setIsLoading(false);
     } finally {
       console.groupEnd();
+      inFlightFetchRef.current = null;
     }
-  }, [defaultSchoolISO, findBestActiveDate, hasSchoolData, isManualDate]);
+    })();
+
+    inFlightFetchRef.current = run;
+    return run;
+  }, [defaultSchoolISO, fetchSitatibOverview, fetchWithRetry, findBestActiveDate, hasSchoolData]);
 
   useEffect(() => {
     // Initial load: show loader with fresh data
@@ -634,9 +700,20 @@ export default function App() {
     isWeeklyExportOpen ||
     isSiswaModalOpen ||
     isSettingsModalOpen ||
+    isSitatibModalOpen ||
     previewAttachment ||
     selectedISO
   );
+
+  const sitatibBadgeText = useMemo(() => {
+    if (!sitatibData) return 'Pasal & Pengumuman';
+    if (!sitatibData.configured) return 'Perlu Env Server';
+    const annCount = sitatibData.announcements?.length ?? 0;
+    const ruleCount = sitatibData.rules?.length ?? 0;
+    if (annCount > 0) return `${annCount} Pengumuman`;
+    if (ruleCount > 0) return `${ruleCount} Pasal`;
+    return 'Terhubung';
+  }, [sitatibData]);
 
   const handlePullRefresh = useCallback(async () => {
     await fetchData(true, true);
@@ -903,6 +980,16 @@ export default function App() {
           onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
           onOpenSiswa={() => setIsSiswaModalOpen(true)}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
+          onOpenSitatib={() =>
+            openSitatibModal(
+              sitatibData?.announcements?.length
+                ? 'announcements'
+                : sitatibData?.rules?.length
+                ? 'rules'
+                : 'announcements'
+            )
+          }
+          sitatibBadgeText={sitatibBadgeText}
         />
 
         {isWeeklyExportOpen && (
@@ -994,21 +1081,36 @@ export default function App() {
           onRefreshData={() => fetchData(true)}
           isRefreshing={isLoading}
         />
+
+        <React.Suspense fallback={null}>
+          {isSitatibModalOpen && (
+            <SitatibModal
+              isOpen={isSitatibModalOpen}
+              onClose={() => setIsSitatibModalOpen(false)}
+              data={sitatibData}
+              isLoading={isSitatibLoading}
+              onRefresh={() => fetchSitatibOverview(true)}
+              initialTab={sitatibInitialTab}
+              darkMode={darkMode}
+              onToggleDarkMode={toggleDarkMode}
+            />
+          )}
+        </React.Suspense>
       </>
     );
   }
 
   return (
-    // 5. Overflow scrolling on mobile enabled (or full page scrollable in User/Scrollable mode)
+    // 5. Overflow scrolling on mobile enabled (or full page scrollable without fixed containers in User/Scrollable mode)
     <div
       ref={containerRef}
       className={`${
         isScrollableMode
-          ? 'min-h-screen overflow-y-auto'
+          ? 'min-h-screen h-auto overflow-x-clip overflow-y-visible'
           : 'min-h-screen lg:h-screen lg:max-h-screen overflow-y-auto lg:overflow-hidden'
       } bg-[#F8F9FA] dark:bg-[#111215] text-[#191B1F] dark:text-[#F1F3F5] p-2.5 sm:p-3 lg:p-3.5 flex flex-col font-sans transition-colors duration-200 relative`}
       style={{
-        overscrollBehaviorY: 'contain'
+        overscrollBehaviorY: isScrollableMode ? 'auto' : 'contain'
       }}
     >
       {/* Mobile Pull-To-Refresh Visual Feedback Indicator */}
@@ -1061,12 +1163,12 @@ export default function App() {
 
         {/* Main Grid: Skeleton Loader during data loading, or actual Dashboard */}
         {isLoading ? (
-          <DashboardSkeleton />
+          <DashboardSkeleton scrollableLayout={isScrollableMode} />
         ) : (
           <main
             className={`grid grid-cols-1 lg:grid-cols-12 gap-3 ${
               isScrollableMode
-                ? 'items-start overflow-visible pb-8'
+                ? 'h-auto items-start overflow-visible pb-8'
                 : 'flex-1 min-h-0 items-stretch overflow-visible lg:overflow-hidden pb-4 lg:pb-0'
             } animate-fade-in`}
           >
@@ -1268,6 +1370,12 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* SITATIB Pengumuman Banner (Shown only when synced announcements exist) */}
+                    <SitatibSummaryBanner
+                      data={sitatibData}
+                      onOpenModal={openSitatibModal}
+                    />
+
                     {/* Event Notice Banner (All-day / Multi-day events like Camping, PJJ, Masuk Sekolah) */}
                     {activeEventNotices.length > 0 && (
                       <EventNoticeBanner
@@ -1390,6 +1498,16 @@ export default function App() {
             onOpenWeeklyExport={() => setIsWeeklyExportOpen(true)}
             onOpenSiswa={() => setIsSiswaModalOpen(true)}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
+            onOpenSitatib={() =>
+              openSitatibModal(
+                sitatibData?.announcements?.length
+                  ? 'announcements'
+                  : sitatibData?.rules?.length
+                  ? 'rules'
+                  : 'announcements'
+              )
+            }
+            sitatibBadgeText={sitatibBadgeText}
           />
         )}
         {/* Random Name Picker (Wheel of Names) Modal */}
@@ -1542,7 +1660,7 @@ export default function App() {
           />
         )}
 
-        {/* Global Search Bar Modal (Subjects, Tasks, Event Notices, Students) */}
+        {/* Global Search Bar Modal (Subjects, Tasks, Event Notices, Students, SITATIB) */}
         {isSearchOpen && (
           <GlobalSearchModal
             isOpen={isSearchOpen}
@@ -1553,8 +1671,23 @@ export default function App() {
               setSelectedISO(null);
             }}
             onOpenAttachment={handleOpenAttachment}
+            onOpenSitatib={openSitatibModal}
             darkMode={darkMode}
             todayISO={todayWIB.iso}
+          />
+        )}
+
+        {/* SITATIB Pengumuman & Tata Tertib Modal */}
+        {isSitatibModalOpen && (
+          <SitatibModal
+            isOpen={isSitatibModalOpen}
+            onClose={() => setIsSitatibModalOpen(false)}
+            data={sitatibData}
+            isLoading={isSitatibLoading}
+            onRefresh={() => fetchSitatibOverview(true)}
+            initialTab={sitatibInitialTab}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
           />
         )}
       </React.Suspense>

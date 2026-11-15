@@ -5,6 +5,7 @@ import fs from 'fs';
 import webpush from 'web-push';
 import { createServer as createViteServer } from 'vite';
 import { RoutineNotificationManager, buildTomorrowNotification } from './serverNotificationService';
+import { sitatibService } from './sitatibService';
 
 const app = express();
 const PORT = process.env.NODE_ENV === 'production' && process.env.PORT
@@ -156,7 +157,8 @@ app.get('/api/health', (req, res) => {
     time: new Date().toISOString(),
     env: {
       pelajaranConfigured: Boolean(CALENDAR_FEEDS.pelajaran),
-      birthdayConfigured: Boolean(CALENDAR_FEEDS.birthday)
+      birthdayConfigured: Boolean(CALENDAR_FEEDS.birthday),
+      sitatibConfigured: sitatibService.isConfigured()
     },
     sheetsConfigured: Object.keys(SHEET_FEEDS)
   });
@@ -321,7 +323,36 @@ app.get('/api/sheets/:key', async (req, res) => {
 // Force refresh endpoint to bust server cache
 app.post('/api/refresh', (req, res) => {
   cache.clear();
+  sitatibService.clearCache();
   res.json({ ok: true, message: 'Cache cleared' });
+});
+
+// ==========================================
+// SITATIB Integration Proxy Endpoints
+// ==========================================
+app.get('/api/sitatib/health', (_req, res) => {
+  res.json(sitatibService.getHealthStatus());
+});
+
+app.get('/api/sitatib/overview', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
+  const overview = await sitatibService.getOverview(forceFresh);
+  return res.json(overview);
+});
+
+app.get('/api/sitatib/rules', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
+  const overview = await sitatibService.getOverview(forceFresh);
+  return res.json({
+    configured: overview.configured,
+    authenticated: overview.authenticated,
+    syncedAt: overview.syncedAt,
+    academicYearLabel: overview.academicYearLabel,
+    rules: overview.rules,
+    error: overview.error
+  });
 });
 
 // Endpoint to persist generated kelompok CSV in exports folder

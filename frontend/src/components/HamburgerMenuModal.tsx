@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check, Settings, FerrisWheel } from 'lucide-react';
+import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check, Settings, FerrisWheel, Scale } from 'lucide-react';
 import { APP_VERSION, APP_RELEASE_STATUS } from '../utils/version';
 
 interface HamburgerMenuModalProps {
@@ -18,6 +18,8 @@ interface HamburgerMenuModalProps {
   onOpenWeeklyExport?: () => void;
   onOpenSiswa?: () => void;
   onOpenSettings?: () => void;
+  onOpenSitatib?: () => void;
+  sitatibBadgeText?: string;
 }
 
 export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
@@ -34,7 +36,9 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onToggleDarkMode,
   onOpenWeeklyExport,
   onOpenSiswa,
-  onOpenSettings
+  onOpenSettings,
+  onOpenSitatib,
+  sitatibBadgeText
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -169,6 +173,38 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
                   </div>
                   <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
                     Data penunggakan iuran Rp 3.000/minggu, pengeluaran, saldo kas, &amp; rekap siswa.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
+            </button>
+          )}
+
+          {/* Action: SITATIB Pengumuman & Tata Tertib */}
+          {onOpenSitatib && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenSitatib();
+              }}
+              className="w-full text-left p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-emerald-600/40 dark:hover:border-emerald-500/40 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-[#13281E] text-[#1E3A2F] dark:text-emerald-300 border border-emerald-600/20 dark:border-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Scale className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                      SITATIB &amp; Tata Tertib
+                    </span>
+                    <span className="text-[11px] font-medium text-emerald-900 dark:text-emerald-300 bg-emerald-50 dark:bg-[#13281E] px-2 py-0.5 rounded-md border border-emerald-600/20 dark:border-emerald-500/20">
+                      {sitatibBadgeText || 'Pasal & Pengumuman'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
+                    Pengumuman sekolah dan daftar pasal tata tertib SMA Putra Nirmala.
                   </p>
                 </div>
               </div>
@@ -327,6 +363,38 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
             </div>
             <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
           </button>
+
+          {/* Action 5: Pengaturan, Ekspor & Mode Tampilan */}
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenSettings();
+              }}
+              className="w-full text-left p-3.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] hover:bg-stone-50 dark:hover:bg-[#1E2024] hover:border-stone-400/60 dark:hover:border-stone-600/60 transition group cursor-pointer flex items-center justify-between gap-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1E3A2F]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-stone-100 dark:bg-[#202227] text-stone-700 dark:text-stone-200 border border-stone-200/80 dark:border-stone-800/80 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Settings className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                      Pengaturan &amp; Tampilan
+                    </span>
+                    <span className="text-[11px] font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-[#202227] px-2 py-0.5 rounded-md border border-stone-200/80 dark:border-stone-700/60">
+                      Dashboard / Gulir
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 font-normal mt-0.5">
+                    Ubah mode tampilan (Dashboard vs Mode Gulir), tema, notifikasi, &amp; ekspor WhatsApp.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-200 transition-transform group-hover:translate-x-0.5 flex-shrink-0" />
+            </button>
+          )}
 
           {/* Action 6: Sinkronisasi Otomatis (Klik untuk Refresh Halaman & Data) */}
           <div

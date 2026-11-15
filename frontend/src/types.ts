@@ -164,6 +164,42 @@ export interface CalendarEventNotice {
   attachment?: TaskAttachment;
 }
 
+export interface SitatibAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  publishedAt?: string;
+  category?: string;
+  isPinned?: boolean;
+  sourceUrl?: string;
+}
+
+export interface SitatibRuleItem {
+  id: string;
+  codeOrNumber: string;
+  category: string;
+  title: string;
+  description: string;
+  points?: number;
+  pointType?: 'pelanggaran' | 'penghargaan' | 'info';
+}
+
+export interface SitatibDiscoveredSection {
+  label: string;
+  path: string;
+}
+
+export interface SitatibOverviewData {
+  configured: boolean;
+  authenticated: boolean;
+  syncedAt: string;
+  academicYearLabel?: string;
+  announcements: SitatibAnnouncement[];
+  rules: SitatibRuleItem[];
+  discoveredSections?: SitatibDiscoveredSection[];
+  error?: string;
+}
+
 export interface ClassDataStore {
   doaByDate: Record<string, DoaSchedule>;
   mbgByDate: Record<string, MbgSchedule>;
@@ -174,5 +210,6 @@ export interface ClassDataStore {
   eventNoticesByDate: Record<string, CalendarEventNotice[]>;
   birthdayByMonthDay: Record<string, string[]>;
   kasData?: KasDataStore;
+  sitatibData?: SitatibOverviewData;
 }
 
