@@ -1,10 +1,10 @@
 import React from 'react';
-import { Bell, ChevronRight, Scale } from 'lucide-react';
+import { Bell, CalendarDays, ChevronRight, Scale } from 'lucide-react';
 import { SitatibOverviewData } from '../types';
 
 interface SitatibSummaryBannerProps {
   data?: SitatibOverviewData | null;
-  onOpenModal: (initialTab?: 'announcements' | 'rules') => void;
+  onOpenModal: (initialTab?: 'announcements' | 'rules' | 'activities') => void;
 }
 
 export const SitatibSummaryBanner: React.FC<SitatibSummaryBannerProps> = ({
@@ -19,6 +19,7 @@ export const SitatibSummaryBanner: React.FC<SitatibSummaryBannerProps> = ({
 
   const topAnnouncements = data.announcements.slice(0, 2);
   const rulesCount = data.rules?.length ?? 0;
+  const activitiesCount = data.activities?.length ?? 0;
 
   return (
     <section
@@ -40,6 +41,16 @@ export const SitatibSummaryBanner: React.FC<SitatibSummaryBannerProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          {activitiesCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onOpenModal('activities')}
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-violet-800 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/40 transition whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <CalendarDays className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+              <span>Kegiatan ({activitiesCount})</span>
+            </button>
+          )}
           {rulesCount > 0 && (
             <button
               type="button"

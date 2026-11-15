@@ -13,7 +13,11 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
-  Inbox
+  Inbox,
+  CalendarDays,
+  Clock,
+  User,
+  ArrowRight
 } from 'lucide-react';
 import { SitatibOverviewData } from '../types';
 import { FormattedText } from './FormattedText';
@@ -24,7 +28,8 @@ interface SitatibModalProps {
   data?: SitatibOverviewData | null;
   isLoading: boolean;
   onRefresh: () => void;
-  initialTab?: 'announcements' | 'rules';
+  initialTab?: 'announcements' | 'rules' | 'activities';
+  onSelectDate?: (iso: string) => void;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
 }
@@ -49,10 +54,11 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
   isLoading,
   onRefresh,
   initialTab = 'announcements',
+  onSelectDate,
   darkMode,
   onToggleDarkMode
 }) => {
-  const [activeTab, setActiveTab] = useState<'announcements' | 'rules'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'announcements' | 'rules' | 'activities'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRuleCategory, setSelectedRuleCategory] = useState<string>('Semua');
   const [expandedAnnouncementId, setExpandedAnnouncementId] = useState<string | null>(null);
@@ -79,6 +85,7 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
 
   const announcements = data?.announcements ?? [];
   const rules = data?.rules ?? [];
+  const activities = data?.activities ?? [];
 
   const ruleCategories = useMemo(() => {
     const set = new Set<string>();
@@ -97,6 +104,17 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
       (a.category || '').toLowerCase().includes(q)
     );
   }, [announcements, searchQuery]);
+
+  const filteredActivities = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return activities;
+    return activities.filter(act =>
+      act.title.toLowerCase().includes(q) ||
+      act.dateLabel.toLowerCase().includes(q) ||
+      (act.organizer || '').toLowerCase().includes(q) ||
+      (act.description || '').toLowerCase().includes(q)
+    );
+  }, [activities, searchQuery]);
 
   const filteredRules = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -192,7 +210,7 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
         <div className="px-4 sm:px-5 pt-3 pb-3 border-b border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] space-y-3 flex-shrink-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div
-              className="inline-flex items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-[#131417] border border-stone-200/80 dark:border-stone-800/80"
+              className="inline-flex items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-[#131417] border border-stone-200/80 dark:border-stone-800/80 overflow-x-auto no-scrollbar max-w-full"
               role="tablist"
               aria-label="Tab Informasi SITATIB"
             >
@@ -211,6 +229,24 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
                 <span>Pengumuman</span>
                 <span className="font-mono tabular-nums text-[11px] opacity-75">
                   ({announcements.length})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'activities'}
+                onClick={() => setActiveTab('activities')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap shrink-0 cursor-pointer ${
+                  activeTab === 'activities'
+                    ? 'bg-white dark:bg-[#202227] text-stone-900 dark:text-stone-100 shadow-2xs border border-stone-200/70 dark:border-stone-700/80 font-bold'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                }`}
+              >
+                <CalendarDays className="w-3.5 h-3.5 text-violet-700 dark:text-violet-400" />
+                <span>Kegiatan Kelas</span>
+                <span className="font-mono tabular-nums text-[11px] opacity-75">
+                  ({activities.length})
                 </span>
               </button>
 
@@ -255,6 +291,8 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
                 placeholder={
                   activeTab === 'announcements'
                     ? 'Cari pengumuman atau informasi SITATIB...'
+                    : activeTab === 'activities'
+                    ? 'Cari jadwal kegiatan kelas, tanggal, atau penyelenggara...'
                     : 'Cari pasal, nomor aturan, kata kunci tata tertib, atau poin...'
                 }
                 className="w-full pl-9 pr-8 py-2 rounded-lg border border-stone-200/80 dark:border-stone-800/80 bg-[#F8F9FA] dark:bg-[#121317] text-xs sm:text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-hidden focus:ring-2 focus:ring-[#1E3A2F]/40"
@@ -456,7 +494,100 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
                 })}
               </div>
             )
-          ) : /* 4B. Rules & Tata Tertib List */
+          ) : activeTab === 'activities' ? (
+            /* 4B. Class Activities Schedule List (Strictly separate from iCal) */
+            filteredActivities.length === 0 ? (
+              <div className="rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] py-10 px-4 text-center space-y-2">
+                <CalendarDays className="w-8 h-8 text-stone-300 dark:text-stone-600 mx-auto stroke-1.5" />
+                <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+                  {searchQuery
+                    ? 'Tidak ada jadwal kegiatan kelas yang cocok'
+                    : 'Belum ada jadwal kegiatan kelas di SITATIB'}
+                </p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 max-w-md mx-auto">
+                  {searchQuery
+                    ? 'Coba kata kunci lain atau hapus pencarian untuk melihat seluruh daftar.'
+                    : 'Portal SITATIB terhubung, namun belum ada jadwal kegiatan kelas yang dipublikasikan.'}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] divide-y divide-stone-200/80 dark:divide-stone-800/80 overflow-hidden">
+                {filteredActivities.map(act => (
+                  <article key={act.id} className="p-4 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap text-[11px] text-stone-500 dark:text-stone-400 font-medium">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-violet-700 dark:text-violet-400 font-semibold">
+                          SITATIB · Kegiatan Kelas
+                        </span>
+                        <span className="font-mono tabular-nums">· {act.dateLabel}</span>
+                        {act.isPast && (
+                          <span className="font-semibold text-stone-500 dark:text-stone-400">
+                            · Sudah Berlalu
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {onSelectDate && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectDate(act.startDate);
+                              onClose();
+                            }}
+                            className="inline-flex items-center gap-1 text-violet-700 dark:text-violet-400 font-semibold hover:underline whitespace-nowrap shrink-0 cursor-pointer"
+                          >
+                            <span>Lihat di Kalender</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        )}
+                        {act.sourceUrl && (
+                          <a
+                            href={act.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-stone-500 hover:text-[#1E3A2F] dark:hover:text-emerald-400 transition whitespace-nowrap shrink-0"
+                          >
+                            <span>Sumber</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <h3 className="font-editorial font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100 leading-snug">
+                      {act.title}
+                    </h3>
+
+                    {(act.timeLabel || act.className || act.organizer) && (
+                      <div className="flex items-center gap-3 flex-wrap text-xs text-stone-600 dark:text-stone-400">
+                        {act.timeLabel && (
+                          <span className="inline-flex items-center gap-1 font-mono tabular-nums text-violet-800 dark:text-violet-300 font-semibold">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{act.timeLabel}</span>
+                          </span>
+                        )}
+                        {(act.className || act.organizer) && (
+                          <span className="inline-flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 opacity-75" />
+                            <span>
+                              {[act.className, act.organizer].filter(Boolean).join(' · ')}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {act.description && (
+                      <div className="pt-1 text-xs sm:text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
+                        <FormattedText content={act.description} />
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )
+          ) : /* 4C. Rules & Tata Tertib List */
           filteredRules.length === 0 ? (
             <div className="rounded-xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#18191C] py-10 px-4 text-center space-y-2">
               <Scale className="w-8 h-8 text-stone-300 dark:text-stone-600 mx-auto stroke-1.5" />

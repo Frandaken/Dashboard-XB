@@ -189,6 +189,20 @@ export interface SitatibDiscoveredSection {
   path: string;
 }
 
+export interface SitatibClassActivity {
+  id: string;
+  title: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD (inclusive)
+  dateLabel: string;
+  timeLabel?: string;
+  className?: string;
+  organizer?: string;
+  description?: string;
+  isPast?: boolean;
+  sourceUrl?: string;
+}
+
 export interface SitatibOverviewData {
   configured: boolean;
   authenticated: boolean;
@@ -196,6 +210,7 @@ export interface SitatibOverviewData {
   academicYearLabel?: string;
   announcements: SitatibAnnouncement[];
   rules: SitatibRuleItem[];
+  activities?: SitatibClassActivity[];
   discoveredSections?: SitatibDiscoveredSection[];
   error?: string;
 }
@@ -208,6 +223,7 @@ export interface ClassDataStore {
   pelajaranByDate: Record<string, PeriodItem[]>;
   tasksByDate: Record<string, TaskItem[]>;
   eventNoticesByDate: Record<string, CalendarEventNotice[]>;
+  sitatibActivitiesByDate?: Record<string, SitatibClassActivity[]>;
   birthdayByMonthDay: Record<string, string[]>;
   kasData?: KasDataStore;
   sitatibData?: SitatibOverviewData;

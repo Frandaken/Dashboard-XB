@@ -113,7 +113,8 @@ export interface SearchResultItem {
   score?: number;
   subjectData?: SubjectDetailData;
   studentData?: StudentSummaryData;
-  sitatibTab?: 'announcements' | 'rules';
+  sitatibTab?: 'announcements' | 'rules' | 'activities';
+  isSitatibActivity?: boolean;
 }
 
 interface GlobalSearchModalProps {
@@ -122,7 +123,7 @@ interface GlobalSearchModalProps {
   dataStore: ClassDataStore;
   onSelectDate: (isoDate: string) => void;
   onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
-  onOpenSitatib?: (tab: 'announcements' | 'rules') => void;
+  onOpenSitatib?: (tab: 'announcements' | 'rules' | 'activities') => void;
   darkMode?: boolean;
   todayISO?: string;
 }
@@ -545,9 +546,27 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     }
 
     // ==========================================
-    // 5. Index SITATIB Announcements & Rules
+    // 5. Index SITATIB Announcements, Class Activities & Rules
     // ==========================================
     if (dataStore.sitatibData) {
+      (dataStore.sitatibData.activities || []).forEach(act => {
+        const dateInfo = parseISODateParts(act.startDate);
+        list.push({
+          id: `sitatib_act_${act.id}`,
+          category: 'sitatib',
+          title: act.title,
+          subtitle: [act.className, act.organizer].filter(Boolean).join(' · ') || 'Jadwal Kegiatan Kelas (SITATIB)',
+          badgeText: 'SITATIB Kegiatan',
+          badgeColor: 'purple',
+          isoDate: act.startDate,
+          formattedDate: act.dateLabel || dateInfo.formattedDate,
+          time: act.timeLabel,
+          details: act.description || (act.isPast ? 'Kegiatan telah berlalu' : 'Agenda kelas dari SITATIB'),
+          sitatibTab: 'activities',
+          isSitatibActivity: true
+        });
+      });
+
       (dataStore.sitatibData.announcements || []).forEach(a => {
         list.push({
           id: `sitatib_ann_${a.id}`,
@@ -719,6 +738,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     } else if (item.category === 'student' && item.studentData) {
       // 4. Tampilkan ringkasan lengkap data siswa
       setSelectedStudent(item.studentData);
+    } else if (item.category === 'sitatib' && item.isSitatibActivity) {
+      // Jump straight to the calendar date of the SITATIB class activity
+      onSelectDate(item.isoDate);
+      onClose();
     } else if (item.category === 'sitatib' && onOpenSitatib) {
       onClose();
       onOpenSitatib(item.sitatibTab || 'announcements');

@@ -287,6 +287,20 @@ app.get('/api/sitatib/rules', async (req, res) => {
   });
 });
 
+app.get('/api/sitatib/activities', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
+  const overview = await sitatibService.getOverview(forceFresh);
+  return res.json({
+    configured: overview.configured,
+    authenticated: overview.authenticated,
+    syncedAt: overview.syncedAt,
+    academicYearLabel: overview.academicYearLabel,
+    activities: overview.activities || [],
+    error: overview.error
+  });
+});
+
 // Endpoint to persist generated kelompok CSV in exports folder
 app.post('/api/kelompok/export', (req, res) => {
   try {

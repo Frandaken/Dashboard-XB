@@ -1,4 +1,4 @@
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, ClassDataStore, CalendarEventNotice } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, ClassDataStore, CalendarEventNotice, SitatibClassActivity } from '../types';
 import { MONTH_ID } from '../constants/demoData';
 import { parseISODateParts, stepISODate } from './dateUtils';
 import { getSongForDate, SONG_LYRICS_DB } from '../constants/songSchedule';
@@ -20,6 +20,7 @@ export interface DailySummaryParams {
   pelajaran?: PeriodItem[];
   tasks?: TaskItem[];
   eventNotices?: CalendarEventNotice[];
+  sitatibActivities?: SitatibClassActivity[];
   piket?: PiketSchedule;
   mbg?: MbgSchedule;
   iceBreaking?: IceBreakingSchedule;
@@ -69,6 +70,7 @@ export function formatDailySummary(params: DailySummaryParams): string {
     pelajaran = [],
     tasks = [],
     eventNotices = [],
+    sitatibActivities = [],
     piket,
     mbg,
     iceBreaking,
@@ -97,7 +99,7 @@ export function formatDailySummary(params: DailySummaryParams): string {
     lines.push('');
   }
 
-  // Notice / All-day or Multi-day events
+  // Notice / All-day or Multi-day events (iCal)
   if (eventNotices && eventNotices.length > 0) {
     lines.push('📢 *PENGUMUMAN / KEGIATAN KHUSUS*');
     eventNotices.forEach(n => {
@@ -106,6 +108,18 @@ export function formatDailySummary(params: DailySummaryParams): string {
       const cleanDesc = n.description ? stripHtmlToPlainText(n.description) : '';
       const desc = cleanDesc ? `\n  ℹ️ ${cleanDesc}` : '';
       lines.push(`• *${n.title}*${dayLabel}${loc}${desc}`);
+    });
+    lines.push('');
+  }
+
+  // SITATIB Class Activities (Separate from iCal)
+  if (sitatibActivities && sitatibActivities.length > 0) {
+    lines.push('🗓️ *KEGIATAN KELAS (SITATIB)*');
+    sitatibActivities.forEach(act => {
+      const timeNote = act.timeLabel ? ` · ${act.timeLabel}` : '';
+      const orgNote = act.organizer ? ` (${act.organizer})` : '';
+      const descNote = act.description ? `\n  ℹ️ ${act.description.replace(/\n+/g, ' / ')}` : '';
+      lines.push(`• *${act.title}*${timeNote}${orgNote}${descNote}`);
     });
     lines.push('');
   }
@@ -356,7 +370,7 @@ export function formatCustomRangeSummary(
 
     lines.push(`*${dayNameUpper}, ${dayParts.day} ${monthUpper} ${dayParts.year}*`);
 
-    // Notices / Events for this day
+    // Notices / Events for this day (iCal)
     const dayNotices = store.eventNoticesByDate ? (store.eventNoticesByDate[dayIso] || []) : [];
     if (dayNotices.length > 0) {
       const noticeStr = dayNotices.map(n => {
@@ -365,6 +379,16 @@ export function formatCustomRangeSummary(
         return `📢 *${n.title}*${dayLabel}${loc}`;
       }).join('; ');
       lines.push(`• *Kegiatan:* ${noticeStr}`);
+    }
+
+    // SITATIB Class Activities (Separate from iCal)
+    const daySitatib = store.sitatibActivitiesByDate ? (store.sitatibActivitiesByDate[dayIso] || []) : [];
+    if (daySitatib.length > 0) {
+      const sitatibStr = daySitatib.map(act => {
+        const t = act.timeLabel ? ` (${act.timeLabel})` : '';
+        return `🗓️ *${act.title}*${t}`;
+      }).join('; ');
+      lines.push(`• *Kegiatan SITATIB:* ${sitatibStr}`);
     }
 
     // Lessons

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon, Copy, Check } from 'lucide-react';
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment, CalendarEventNotice } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment, CalendarEventNotice, SitatibClassActivity } from '../types';
 import { DOW_ID, MONTH_ID } from '../constants/demoData';
 import { parseISODateParts, getWIBDateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../constants/songSchedule';
@@ -8,6 +8,7 @@ import { getFirstLessonSession } from '../utils/iceBreakingUtils';
 import { formatDailySummary, copyTextToClipboard } from '../utils/summaryFormatter';
 import { TaskBanner } from './TaskBanner';
 import { EventNoticeBanner } from './EventNoticeBanner';
+import { SitatibActivityBanner } from './SitatibActivityBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
 import { SongLyricsModal } from './SongLyricsModal';
 import { AllSongsModal } from './AllSongsModal';
@@ -22,11 +23,13 @@ interface DayDetailModalProps {
   pelajaran?: PeriodItem[];
   tasks?: TaskItem[];
   eventNotices?: CalendarEventNotice[];
+  sitatibActivities?: SitatibClassActivity[];
   birthdays?: string[];
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
   onOpenAllSongs?: () => void;
   onOpenAttachment?: (attachment: TaskAttachment, subjectTitle?: string) => void;
+  onOpenSitatibActivities?: () => void;
 }
 
 export const DayDetailModal: React.FC<DayDetailModalProps> = ({
@@ -39,11 +42,13 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   pelajaran = [],
   tasks = [],
   eventNotices = [],
+  sitatibActivities = [],
   birthdays = [],
   darkMode,
   onToggleDarkMode,
   onOpenAllSongs,
-  onOpenAttachment
+  onOpenAttachment,
+  onOpenSitatibActivities
 }) => {
   const [showLyricsModal, setShowLyricsModal] = useState(false);
   const [showAllSongsModal, setShowAllSongsModal] = useState(false);
@@ -57,6 +62,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       pelajaran,
       tasks,
       eventNotices,
+      sitatibActivities,
       piket,
       mbg,
       iceBreaking,
@@ -67,7 +73,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [isoDate, doa, pelajaran, tasks, eventNotices, piket, mbg, iceBreaking, birthdays]);
+  }, [isoDate, doa, pelajaran, tasks, eventNotices, sitatibActivities, piket, mbg, iceBreaking, birthdays]);
 
   // Real-time tracking of app theme (Light mode / OLED black)
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -202,9 +208,25 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
         {/* Modal Content with smooth touch scrolling */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 min-h-0">
-          {/* Event Notice Banner for full-day / multi-day events */}
+          {/* Event Notice Banner for full-day / multi-day events (iCal) */}
           {eventNotices && eventNotices.length > 0 && (
             <EventNoticeBanner notices={eventNotices} onOpenAttachment={onOpenAttachment} />
+          )}
+
+          {/* SITATIB Class Activity Banner (Strictly separate from iCal) */}
+          {sitatibActivities && sitatibActivities.length > 0 && (
+            <SitatibActivityBanner
+              activities={sitatibActivities}
+              todayISO={getWIBDateParts().iso}
+              onOpenSitatibActivities={
+                onOpenSitatibActivities
+                  ? () => {
+                      onClose();
+                      onOpenSitatibActivities();
+                    }
+                  : undefined
+              }
+            />
           )}
 
           {/* Lagu Wajib Minggu Ini */}

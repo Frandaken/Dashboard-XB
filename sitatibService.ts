@@ -25,6 +25,20 @@ export interface SitatibDiscoveredSection {
   path: string;
 }
 
+export interface SitatibClassActivity {
+  id: string;
+  title: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD (inclusive)
+  dateLabel: string;
+  timeLabel?: string;
+  className?: string;
+  organizer?: string;
+  description?: string;
+  isPast?: boolean;
+  sourceUrl?: string;
+}
+
 export interface SitatibOverviewPayload {
   configured: boolean;
   authenticated: boolean;
@@ -32,6 +46,7 @@ export interface SitatibOverviewPayload {
   academicYearLabel?: string;
   announcements: SitatibAnnouncement[];
   rules: SitatibRuleItem[];
+  activities: SitatibClassActivity[];
   discoveredSections?: SitatibDiscoveredSection[];
   error?: string;
 }
@@ -396,6 +411,161 @@ function extractAnnouncementsFromHtml(html: string, sourceUrl?: string): Sitatib
   return announcements.slice(0, 50);
 }
 
+const INDONESIAN_MONTH_MAP: Record<string, string> = {
+  januari: '01', jan: '01', january: '01',
+  februari: '02', feb: '02', pebruari: '02', february: '02',
+  maret: '03', mar: '03', march: '03',
+  april: '04', apr: '04',
+  mei: '05', may: '05',
+  juni: '06', jun: '06', june: '06',
+  juli: '07', jul: '07', july: '07',
+  agustus: '08', agu: '08', agt: '08', aug: '08', august: '08',
+  september: '09', sep: '09', sept: '09',
+  oktober: '10', okt: '10', oct: '10', october: '10',
+  november: '11', nov: '11', nopember: '11', nop: '11',
+  desember: '12', des: '12', dec: '12', december: '12'
+};
+
+function getTodayWIBISO(): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const d = parts.find(p => p.type === 'day')?.value;
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function parseIndonesianDateToISO(dateStr: string): string | null {
+  const clean = (dateStr || '').trim();
+  const isoMatch = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+  const dmyMatch = clean.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  if (!dmyMatch) return null;
+
+  const day = dmyMatch[1].padStart(2, '0');
+  const monthKey = dmyMatch[2].toLowerCase();
+  const month = INDONESIAN_MONTH_MAP[monthKey];
+  const year = dmyMatch[3];
+  if (!month) return null;
+
+  return `${year}-${month}-${day}`;
+}
+
+function extractClassActivitiesFromHtml(html: string, baseUrl: string, sourceUrl: string): SitatibClassActivity[] {
+  const activities: SitatibClassActivity[] = [];
+  const seen = new Set<string>();
+  const todayISO = getTodayWIBISO();
+
+  const articleRegex = /<article\b([^>]*)>([\s\S]*?)<\/article>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = articleRegex.exec(html)) !== null) {
+    const attrs = match[1] || '';
+    const innerHtml = match[2] || '';
+    const fullText = stripTags(innerHtml);
+
+    if (!fullText || isLikelyPersonalRecord(fullText)) continue;
+
+    const idMatch = attrs.match(/\bid=["']([^"']+)["']/i);
+    const articleId = idMatch ? idMatch[1].trim() : '';
+
+    const hMatch = innerHtml.match(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/i);
+    const title = sanitizeText(stripTags(hMatch ? hMatch[1] : ''));
+    if (!title || title.length < 2) continue;
+
+    const paragraphs: string[] = [];
+    const pRegex = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+    let pMatch: RegExpExecArray | null;
+    while ((pMatch = pRegex.exec(innerHtml)) !== null) {
+      const pText = sanitizeText(stripTags(pMatch[1]));
+      if (pText) paragraphs.push(pText);
+    }
+
+    // Paragraph 1 usually holds date and time: "25 November 2026 · Mulai 07:00 WIB" or "7 November 2026 – 11 November 2026 · 10:00–15:00 WIB"
+    let dateParagraph = paragraphs.find(p => /\d{1,2}\s+[A-Za-z]+\s+\d{4}|\d{4}-\d{2}-\d{2}/.test(p)) || '';
+    let dateLabel = '';
+    let timeLabel: string | undefined;
+
+    if (dateParagraph) {
+      const dotParts = dateParagraph.split(/\s*[·•]\s*/);
+      dateLabel = dotParts[0]?.trim() || dateParagraph;
+      if (dotParts.length > 1) {
+        timeLabel = dotParts.slice(1).join(' · ').trim() || undefined;
+      }
+    }
+
+    const foundDates: string[] = [];
+    const dateTokenRegex = /(\d{1,2}\s+[A-Za-z]+\s+\d{4}|\d{4}-\d{2}-\d{2})/g;
+    let dMatch: RegExpExecArray | null;
+    const dateSearchTarget = dateParagraph || fullText;
+    while ((dMatch = dateTokenRegex.exec(dateSearchTarget)) !== null) {
+      const parsedIso = parseIndonesianDateToISO(dMatch[1]);
+      if (parsedIso) foundDates.push(parsedIso);
+    }
+
+    if (foundDates.length === 0) continue;
+
+    const startDate = foundDates[0];
+    const endDate = foundDates.length > 1 && foundDates[foundDates.length - 1] >= startDate
+      ? foundDates[foundDates.length - 1]
+      : startDate;
+
+    // Look for class & organizer metadata paragraph (e.g. "X-B · Admin Sekolah")
+    let className: string | undefined;
+    let organizer: string | undefined;
+    let description: string | undefined;
+
+    const remainingParagraphs = paragraphs.filter(p => p !== dateParagraph);
+    if (remainingParagraphs.length > 0) {
+      const metaCandidate = remainingParagraphs[0];
+      if (!metaCandidate.includes('\n') && metaCandidate.length <= 120 && metaCandidate.includes('·')) {
+        const metaParts = metaCandidate.split(/\s*[·•]\s*/).map(s => s.trim()).filter(Boolean);
+        className = metaParts[0] || undefined;
+        organizer = metaParts.slice(1).join(' · ') || undefined;
+        if (remainingParagraphs.length > 1) {
+          description = remainingParagraphs.slice(1).join('\n').trim() || undefined;
+        }
+      } else {
+        description = remainingParagraphs.join('\n').trim() || undefined;
+      }
+    }
+
+    const hasPastBadge = /\b(?:sudah berlalu|selesai|berakhir)\b/i.test(innerHtml);
+    const isPast = hasPastBadge || endDate < todayISO;
+    const itemSourceUrl = articleId
+      ? `${sourceUrl.split('#')[0]}#${articleId}`
+      : `${baseUrl}/jadwal-kegiatan-kelas`;
+
+    const dedupeKey = articleId || `${startDate}::${endDate}::${title.toLowerCase()}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    activities.push({
+      id: articleId || `sitatib_act_${activities.length + 1}`,
+      title,
+      startDate,
+      endDate,
+      dateLabel: dateLabel || startDate,
+      timeLabel,
+      className,
+      organizer,
+      description,
+      isPast,
+      sourceUrl: itemSourceUrl
+    });
+  }
+
+  return activities.slice(0, 150);
+}
+
 function discoverInternalLinks(html: string, baseUrl: string): SitatibDiscoveredSection[] {
   const sections: SitatibDiscoveredSection[] = [];
   const seen = new Set<string>();
@@ -419,7 +589,7 @@ function discoverInternalLinks(html: string, baseUrl: string): SitatibDiscovered
     }
 
     if (
-      /(pengumuman|notifikasi|notif|berita|informasi|tata.?tertib|peraturan|pasal|aturan|kategori|poin|dashboard|beranda)/i.test(
+      /(pengumuman|notifikasi|notif|berita|informasi|tata.?tertib|peraturan|pasal|aturan|kategori|poin|dashboard|beranda|jadwal|kegiatan|agenda|kalender)/i.test(
         `${resolvedPath} ${label}`
       )
     ) {
@@ -430,7 +600,7 @@ function discoverInternalLinks(html: string, baseUrl: string): SitatibDiscovered
     }
   }
 
-  return sections.slice(0, 20);
+  return sections.slice(0, 25);
 }
 
 export class SitatibService {
@@ -635,6 +805,7 @@ export class SitatibService {
         syncedAt: new Date().toISOString(),
         announcements: [],
         rules: [],
+        activities: [],
         error: 'SITATIB_USERNAME dan SITATIB_PASSWORD belum diatur di environment server.'
       };
     }
@@ -654,6 +825,7 @@ export class SitatibService {
           academicYearLabel: auth.academicYearLabel,
           announcements: [],
           rules: [],
+          activities: [],
           error: this.lastError
         };
       }
@@ -663,6 +835,7 @@ export class SitatibService {
       );
       const allAnnouncements: SitatibAnnouncement[] = [];
       const allRules: SitatibRuleItem[] = [];
+      const allActivities: SitatibClassActivity[] = [];
 
       const announcementUrls = new Set<string>([
         `${cfg.baseUrl}/pengumuman`,
@@ -670,6 +843,9 @@ export class SitatibService {
       ]);
       const rulesUrls = new Set<string>([
         `${cfg.baseUrl}/tata-tertib`
+      ]);
+      const activityUrls = new Set<string>([
+        `${cfg.baseUrl}/jadwal-kegiatan-kelas`
       ]);
 
       if (cfg.announcementsUrl) {
@@ -685,7 +861,9 @@ export class SitatibService {
         if (/\/(pelanggaran|penghargaan|dashboard|profil)/i.test(lowerPath)) continue;
 
         const fullSecUrl = new URL(sec.path, cfg.baseUrl).toString();
-        if (/(pengumuman|notifikasi|notif|surat|berita|informasi)/i.test(`${sec.label} ${sec.path}`)) {
+        if (/(jadwal.?kegiatan|kegiatan.?kelas|kalender.?kegiatan)/i.test(`${sec.label} ${sec.path}`)) {
+          activityUrls.add(fullSecUrl);
+        } else if (/(pengumuman|notifikasi|notif|surat|berita|informasi)/i.test(`${sec.label} ${sec.path}`)) {
           announcementUrls.add(fullSecUrl);
         } else if (/(tata.?tertib|peraturan|pasal|aturan)/i.test(`${sec.label} ${sec.path}`)) {
           rulesUrls.add(fullSecUrl);
@@ -764,7 +942,58 @@ export class SitatibService {
         }
       }
 
-      // Deduplicate announcements & rules
+      // Fetch class activity schedules from /jadwal-kegiatan-kelas (following pagination if any)
+      const visitedActivityUrls = new Set<string>();
+      const activityQueue = Array.from(activityUrls).slice(0, 4);
+
+      while (activityQueue.length > 0 && visitedActivityUrls.size < 8) {
+        const url = activityQueue.shift()!;
+        if (visitedActivityUrls.has(url)) continue;
+        visitedActivityUrls.add(url);
+
+        try {
+          const page = await this.fetchAuthenticatedPage(url);
+          if (page.contentType.includes('application/json')) {
+            const parsedJson = JSON.parse(page.html);
+            if (Array.isArray(parsedJson?.activities)) {
+              for (const act of parsedJson.activities) {
+                const start = parseIndonesianDateToISO(String(act.startDate || act.tanggal || ''));
+                if (!start) continue;
+                allActivities.push({
+                  id: String(act.id || `sitatib_act_${allActivities.length + 1}`),
+                  title: sanitizeText(String(act.title || act.judul || 'Kegiatan SITATIB')),
+                  startDate: start,
+                  endDate: parseIndonesianDateToISO(String(act.endDate || '')) || start,
+                  dateLabel: String(act.dateLabel || start),
+                  timeLabel: act.timeLabel ? sanitizeText(String(act.timeLabel)) : undefined,
+                  className: act.className ? sanitizeText(String(act.className)) : undefined,
+                  organizer: act.organizer ? sanitizeText(String(act.organizer)) : undefined,
+                  description: act.description ? sanitizeText(String(act.description)) : undefined,
+                  isPast: Boolean(act.isPast),
+                  sourceUrl: url
+                });
+              }
+            }
+          } else {
+            allActivities.push(...extractClassActivitiesFromHtml(page.html, cfg.baseUrl, page.finalUrl));
+
+            const pageLinkRegex = /<a\b[^>]*href=["']([^"']*jadwal-kegiatan[^"']*[?&](?:page|hal)=[^"']*)["'][^>]*>/gi;
+            let pMatch: RegExpExecArray | null;
+            while ((pMatch = pageLinkRegex.exec(page.html)) !== null) {
+              try {
+                const nextUrl = new URL(decodeHtmlEntities(pMatch[1]), page.finalUrl).toString();
+                if (nextUrl.startsWith(cfg.baseUrl) && nextUrl.includes('jadwal-kegiatan') && !visitedActivityUrls.has(nextUrl)) {
+                  activityQueue.push(nextUrl);
+                }
+              } catch {}
+            }
+          }
+        } catch (pageErr: any) {
+          console.warn(`[SITATIB] Skip activity page ${url}:`, pageErr?.message || pageErr);
+        }
+      }
+
+      // Deduplicate announcements, rules & activities
       const uniqueAnnouncements: SitatibAnnouncement[] = [];
       const seenAnn = new Set<string>();
       for (const item of allAnnouncements) {
@@ -786,6 +1015,24 @@ export class SitatibService {
         }
       }
 
+      const uniqueActivities: SitatibClassActivity[] = [];
+      const seenActivities = new Set<string>();
+      for (const act of allActivities) {
+        const key = `${act.id}::${act.startDate}::${act.title.toLowerCase()}`;
+        if (!seenActivities.has(key) && act.title && act.startDate) {
+          seenActivities.add(key);
+          uniqueActivities.push(act);
+        }
+      }
+
+      uniqueActivities.sort((a, b) => {
+        const aPast = Boolean(a.isPast);
+        const bPast = Boolean(b.isPast);
+        if (aPast !== bPast) return aPast ? 1 : -1;
+        if (!aPast) return a.startDate.localeCompare(b.startDate);
+        return b.startDate.localeCompare(a.startDate);
+      });
+
       this.lastError = null;
       const payload: SitatibOverviewPayload = {
         configured: true,
@@ -794,6 +1041,7 @@ export class SitatibService {
         academicYearLabel: auth.academicYearLabel,
         announcements: uniqueAnnouncements,
         rules: uniqueRules,
+        activities: uniqueActivities,
         discoveredSections
       };
       this.cachedOverview = { data: payload, timestamp: Date.now() };
@@ -814,6 +1062,7 @@ export class SitatibService {
         syncedAt: new Date().toISOString(),
         announcements: [],
         rules: [],
+        activities: [],
         error: msg
       };
     }

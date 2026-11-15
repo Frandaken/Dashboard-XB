@@ -16,6 +16,7 @@ interface CalendarSectionProps {
   hasDataFn: (iso: string) => boolean;
   hasTaskFn: (iso: string) => boolean;
   hasEventNoticeFn?: (iso: string) => boolean;
+  hasSitatibActivityFn?: (iso: string) => boolean;
   hasBirthdayFn: (iso: string) => string[];
   birthdaysToday: string[];
 }
@@ -32,6 +33,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
   hasDataFn,
   hasTaskFn,
   hasEventNoticeFn,
+  hasSitatibActivityFn,
   hasBirthdayFn,
   birthdaysToday
 }) => {
@@ -117,6 +119,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             const hasData = hasDataFn(iso);
             const hasTask = hasTaskFn(iso);
             const hasNotice = hasEventNoticeFn ? hasEventNoticeFn(iso) : false;
+            const hasSitatib = hasSitatibActivityFn ? hasSitatibActivityFn(iso) : false;
             const birthdays = hasBirthdayFn(iso);
             const hasBday = birthdays.length > 0;
 
@@ -134,8 +137,8 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             else if (isPreview) {
               cellClass += 'bg-stone-200 dark:bg-stone-700/80 text-stone-900 dark:text-stone-100 font-semibold ring-1 ring-stone-400 dark:ring-stone-500 z-10 shadow-xs';
             }
-            // Condition 4: Has data (school schedule, notice, doa, mbg, piket)
-            else if (hasData || hasNotice) {
+            // Condition 4: Has data (school schedule, notice, sitatib activity, doa, mbg, piket)
+            else if (hasData || hasNotice || hasSitatib) {
               cellClass += 'bg-stone-50/80 dark:bg-[#141518] text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-[#1D1E22] hover:border-emerald-500/30 font-medium';
             }
             // Condition 5: Normal empty day
@@ -159,19 +162,28 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
                 onClick={() => onSelectDate(iso)}
                 className={cellClass}
                 aria-label={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel}`}
-                title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasNotice ? ' (Ada Acara/Kegiatan)' : ''}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}
+                title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasNotice ? ' (Ada Acara/Kegiatan iCal)' : ''}${hasSitatib ? ' (Ada Kegiatan Kelas SITATIB)' : ''}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}
               >
                 <span className="leading-none text-xs tabular-nums">{day}</span>
 
                 {/* Status indicator dots */}
                 <div className="flex items-center gap-0.5 mt-0.5 h-1">
-                  {/* Event Notice dot */}
+                  {/* iCal Event Notice dot */}
                   {hasNotice && (
                     <span
                       className={`w-1 h-1 rounded-full ${
                         isToday && isPreview ? 'bg-sky-200' : 'bg-sky-500 dark:bg-sky-400'
                       }`}
-                      title="Ada Acara/Kegiatan"
+                      title="Ada Acara/Kegiatan (iCal)"
+                    />
+                  )}
+                  {/* SITATIB Class Activity dot (separate from iCal) */}
+                  {hasSitatib && (
+                    <span
+                      className={`w-1 h-1 rounded-full ${
+                        isToday && isPreview ? 'bg-violet-200' : 'bg-violet-500 dark:bg-violet-400'
+                      }`}
+                      title="Ada Kegiatan Kelas (SITATIB)"
                     />
                   )}
                   {/* Task indicator dot */}
@@ -205,9 +217,14 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             <span>Hari Ini</span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" title="Jadwal acara dari kalender iCal">
             <span className="w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400" />
             <span>Kegiatan</span>
+          </div>
+
+          <div className="flex items-center gap-1.5" title="Jadwal kegiatan kelas dari SITATIB (terpisah dari iCal)">
+            <span className="w-2 h-2 rounded-full bg-violet-500 dark:bg-violet-400" />
+            <span>SITATIB</span>
           </div>
 
           <div className="flex items-center gap-1.5">

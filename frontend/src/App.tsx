@@ -31,6 +31,7 @@ const SitatibModal = React.lazy(() => import('./components/SitatibModal').then(m
 import { MobileQuickActions } from './components/MobileQuickActions';
 import { EventNoticeBanner } from './components/EventNoticeBanner';
 import { SitatibSummaryBanner } from './components/SitatibSummaryBanner';
+import { SitatibActivityBanner } from './components/SitatibActivityBanner';
 import type { ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -40,6 +41,7 @@ import { validateFirestoreConnection } from './firebase';
 import { ClassDataStore, SitatibOverviewData, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
+import { buildSitatibActivitiesByDate } from './utils/sitatibUtils';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './constants/demoData';
 import { KAS_DEMO_CSV } from './constants/kasDemoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
@@ -142,6 +144,7 @@ export default function App() {
         pelajaranByDate: {},
         tasksByDate: {},
         eventNoticesByDate: {},
+        sitatibActivitiesByDate: {},
         birthdayByMonthDay: {},
         kasData
       };
@@ -154,6 +157,7 @@ export default function App() {
         pelajaranByDate: {},
         tasksByDate: {},
         eventNoticesByDate: {},
+        sitatibActivitiesByDate: {},
         birthdayByMonthDay: {}
       };
     }
@@ -274,12 +278,12 @@ export default function App() {
   const [isSiswaModalOpen, setIsSiswaModalOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isSitatibModalOpen, setIsSitatibModalOpen] = useState<boolean>(false);
-  const [sitatibInitialTab, setSitatibInitialTab] = useState<'announcements' | 'rules'>('announcements');
+  const [sitatibInitialTab, setSitatibInitialTab] = useState<'announcements' | 'rules' | 'activities'>('announcements');
   const [sitatibData, setSitatibData] = useState<SitatibOverviewData | null>(null);
   const [isSitatibLoading, setIsSitatibLoading] = useState<boolean>(false);
   const [previewAttachment, setPreviewAttachment] = useState<ReceiptLightboxData | null>(null);
 
-  const openSitatibModal = useCallback((tab: 'announcements' | 'rules' = 'announcements') => {
+  const openSitatibModal = useCallback((tab: 'announcements' | 'rules' | 'activities' = 'announcements') => {
     setSitatibInitialTab(tab);
     setIsSitatibModalOpen(true);
   }, []);
@@ -311,8 +315,9 @@ export default function App() {
         return null;
       }
       const json = (await res.json()) as SitatibOverviewData;
+      const sitatibActivitiesByDate = buildSitatibActivitiesByDate(json.activities);
       setSitatibData(json);
-      setDataStore(prev => ({ ...prev, sitatibData: json }));
+      setDataStore(prev => ({ ...prev, sitatibData: json, sitatibActivitiesByDate }));
       return json;
     } catch {
       return null;
@@ -372,7 +377,8 @@ export default function App() {
       store.mbgByDate[iso] ||
       store.iceBreakingByDate[iso] ||
       (store.pelajaranByDate[iso] && store.pelajaranByDate[iso].length > 0) ||
-      (store.eventNoticesByDate && store.eventNoticesByDate[iso] && store.eventNoticesByDate[iso].length > 0)
+      (store.eventNoticesByDate && store.eventNoticesByDate[iso] && store.eventNoticesByDate[iso].length > 0) ||
+      (store.sitatibActivitiesByDate && store.sitatibActivitiesByDate[iso] && store.sitatibActivitiesByDate[iso].length > 0)
     );
   }, []);
 
@@ -389,6 +395,9 @@ export default function App() {
     });
     Object.keys(store.eventNoticesByDate || {}).forEach(d => {
       if (store.eventNoticesByDate[d]?.length) availableDates.add(d);
+    });
+    Object.keys(store.sitatibActivitiesByDate || {}).forEach(d => {
+      if (store.sitatibActivitiesByDate?.[d]?.length) availableDates.add(d);
     });
 
     const sortedDates = Array.from(availableDates).sort();
@@ -610,12 +619,16 @@ export default function App() {
         kasRekapText
       );
 
+      // Parse SITATIB class activities into a dedicated map strictly separate from iCal
+      const sitatibActivitiesByDate = buildSitatibActivitiesByDate(sitatibPayload?.activities);
+
       const failedCount = debugRows.filter(r => r.status === 'FAILED').length;
       const totalBirthdayNames = Object.values(birthdayByMonthDay).reduce((acc, list) => acc + list.length, 0);
       console.info(`${syncTag} Ringkasan Parsing (${Math.round(performance.now() - syncStartedAt)}ms, failed=${failedCount}/${debugRows.length}):`, {
         pelajaranDates: Object.keys(pelajaranByDate).length,
         tasksDates: Object.keys(tasksByDate).length,
         eventNoticesDates: Object.keys(eventNoticesByDate).length,
+        sitatibActivityDates: Object.keys(sitatibActivitiesByDate).length,
         birthdayMonthDays: Object.keys(birthdayByMonthDay).length,
         birthdayTotalNames: totalBirthdayNames,
         doaDates: Object.keys(doaByDate).length,
@@ -634,6 +647,7 @@ export default function App() {
         pelajaranByDate,
         tasksByDate,
         eventNoticesByDate,
+        sitatibActivitiesByDate,
         birthdayByMonthDay,
         kasData,
         sitatibData: sitatibPayload ?? undefined
@@ -706,10 +720,13 @@ export default function App() {
   );
 
   const sitatibBadgeText = useMemo(() => {
-    if (!sitatibData) return 'Pasal & Pengumuman';
+    if (!sitatibData) return 'Pasal, Agenda & Info';
     if (!sitatibData.configured) return 'Perlu Env Server';
     const annCount = sitatibData.announcements?.length ?? 0;
+    const actCount = sitatibData.activities?.length ?? 0;
     const ruleCount = sitatibData.rules?.length ?? 0;
+    if (actCount > 0 && annCount > 0) return `${annCount} Info · ${actCount} Kegiatan`;
+    if (actCount > 0) return `${actCount} Kegiatan`;
     if (annCount > 0) return `${annCount} Pengumuman`;
     if (ruleCount > 0) return `${ruleCount} Pasal`;
     return 'Terhubung';
@@ -753,6 +770,10 @@ export default function App() {
     });
   }, [dataStore.eventNoticesByDate, activeISO, todayWIB.iso]);
 
+  const activeSitatibActivities = useMemo(() => {
+    return dataStore.sitatibActivitiesByDate?.[activeISO] || [];
+  }, [dataStore.sitatibActivitiesByDate, activeISO]);
+
   const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
 
@@ -772,6 +793,10 @@ export default function App() {
     return Boolean(dataStore.eventNoticesByDate?.[iso]?.length);
   };
 
+  const hasSitatibActivityForISO = (iso: string): boolean => {
+    return Boolean(dataStore.sitatibActivitiesByDate?.[iso]?.length);
+  };
+
   const hasDataForISO = (iso: string): boolean => {
     const info = parseISODateParts(iso);
     const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
@@ -782,6 +807,7 @@ export default function App() {
       !!dataStore.piketByDow[info.dowName] ||
       (dataStore.pelajaranByDate[iso] && dataStore.pelajaranByDate[iso].length > 0) ||
       hasEventNoticeForISO(iso) ||
+      hasSitatibActivityForISO(iso) ||
       hasTasksForISO(iso) ||
       (dataStore.birthdayByMonthDay[md] && dataStore.birthdayByMonthDay[md].length > 0)
     );
@@ -811,6 +837,7 @@ export default function App() {
         t => t.taskType !== 'agenda' && !isTaskTimePassed(t, selectedISO, todayWIB.iso, currentWIBTime)
       ),
       eventNotices: dataStore.eventNoticesByDate?.[selectedISO] || [],
+      sitatibActivities: dataStore.sitatibActivitiesByDate?.[selectedISO] || [],
       birthdays: dataStore.birthdayByMonthDay[md] || []
     };
   }, [selectedISO, dataStore, todayWIB.iso, currentWIBTime]);
@@ -855,6 +882,9 @@ export default function App() {
   };
 
   const handleSelectDate = (newIso: string) => {
+    const parts = parseISODateParts(newIso);
+    setViewYear(parts.year);
+    setViewMonth(parts.month);
     if (newIso !== activeISO) {
       setSlideDirection(newIso >= activeISO ? 1 : -1);
       setActiveISO(newIso);
@@ -922,6 +952,7 @@ export default function App() {
       pelajaran: activePelajaran,
       tasks: dataStore.tasksByDate[activeISO] || [],
       eventNotices: activeEventNotices,
+      sitatibActivities: activeSitatibActivities,
       piket: activePiket,
       mbg: activeMbg,
       iceBreaking: activeIceBreaking,
@@ -933,7 +964,7 @@ export default function App() {
       setTimeout(() => setDailyCopied(false), 2000);
     }
     return ok;
-  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activeEventNotices, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
+  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activeEventNotices, activeSitatibActivities, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
 
   const handleCopyWeeklySummary = useCallback(async () => {
     const text = formatWeeklySummary({
@@ -1376,12 +1407,21 @@ export default function App() {
                       onOpenModal={openSitatibModal}
                     />
 
-                    {/* Event Notice Banner (All-day / Multi-day events like Camping, PJJ, Masuk Sekolah) */}
+                    {/* Event Notice Banner (All-day / Multi-day events from iCal) */}
                     {activeEventNotices.length > 0 && (
                       <EventNoticeBanner
                         notices={activeEventNotices}
                         onOpenAttachment={handleOpenAttachment}
                         todayISO={todayWIB.iso}
+                      />
+                    )}
+
+                    {/* SITATIB Class Activity Banner (Strictly separate from iCal) */}
+                    {activeSitatibActivities.length > 0 && (
+                      <SitatibActivityBanner
+                        activities={activeSitatibActivities}
+                        todayISO={todayWIB.iso}
+                        onOpenSitatibActivities={() => openSitatibModal('activities')}
                       />
                     )}
 
@@ -1453,6 +1493,7 @@ export default function App() {
                 hasDataFn={hasDataForISO}
                 hasTaskFn={hasTasksForISO}
                 hasEventNoticeFn={hasEventNoticeForISO}
+                hasSitatibActivityFn={hasSitatibActivityForISO}
                 hasBirthdayFn={getBirthdaysForISO}
                 birthdaysToday={activeBirthdays}
               />
@@ -1583,11 +1624,13 @@ export default function App() {
             pelajaran={selectedDetails.pelajaran}
             tasks={selectedDetails.tasks}
             eventNotices={selectedDetails.eventNotices}
+            sitatibActivities={selectedDetails.sitatibActivities}
             birthdays={selectedDetails.birthdays}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
             onOpenAllSongs={() => setIsAllSongsOpen(true)}
             onOpenAttachment={handleOpenAttachment}
+            onOpenSitatibActivities={() => openSitatibModal('activities')}
           />
         )}
 
@@ -1677,7 +1720,7 @@ export default function App() {
           />
         )}
 
-        {/* SITATIB Pengumuman & Tata Tertib Modal */}
+        {/* SITATIB Pengumuman, Kegiatan Kelas & Tata Tertib Modal */}
         {isSitatibModalOpen && (
           <SitatibModal
             isOpen={isSitatibModalOpen}
@@ -1686,6 +1729,10 @@ export default function App() {
             isLoading={isSitatibLoading}
             onRefresh={() => fetchSitatibOverview(true)}
             initialTab={sitatibInitialTab}
+            onSelectDate={iso => {
+              handleSelectDate(iso);
+              setSelectedISO(iso);
+            }}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
           />
