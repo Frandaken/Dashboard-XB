@@ -27,6 +27,7 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
 
@@ -212,11 +213,9 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
         ) : (
           <button
             type="button"
-            onClick={() => {
-              if (onOpenNotifications) onOpenNotifications();
-            }}
-            aria-label="Aplikasi Kelas XB"
-            title="Aplikasi Siap Digunakan"
+            onClick={() => setShowInstallGuide(true)}
+            aria-label="Panduan Pasang Aplikasi Kelas XB"
+            title="Pasang Aplikasi ke Layar Utama"
             className="h-10 px-1.5 py-1 rounded-lg border border-stone-200/80 dark:border-stone-700/80 bg-white dark:bg-[#1D1E22] hover:bg-stone-50 dark:hover:bg-[#25272D] hover:-translate-y-0.5 hover:shadow-xs active:scale-95 text-stone-700 dark:text-stone-200 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 cursor-pointer group"
           >
             <Download className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400 group-hover:scale-110 transition-transform duration-200" />
@@ -227,7 +226,11 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
 
       {/* iOS Safari Installation Guide Modal */}
       {showIOSGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop-tint transition-colors duration-200 p-4">
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md transition-colors duration-200 p-4 ${
+            darkMode ? 'bg-black/75 dark:bg-black/75' : 'bg-[#F8F9FA]/70'
+          }`}
+        >
           <div className="w-full max-w-sm rounded-2xl bg-[#FAF8F5] dark:bg-[#0A0A0A] border border-[#E4DDCE] dark:border-[#222222] p-5 shadow-xl text-stone-800 dark:text-stone-100 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-[#E4DDCE] dark:border-[#222222]">
               <div className="flex items-center gap-2">
@@ -261,6 +264,58 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
 
             <button
               onClick={() => setShowIOSGuide(false)}
+              className="mt-5 w-full rounded-xl bg-[#3F6E52] dark:bg-[#34D399] py-2 text-xs font-semibold text-white dark:text-[#0A0A0A] hover:bg-[#325841] dark:hover:bg-[#2EB882] transition shadow-xs cursor-pointer"
+            >
+              Mengerti
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Generic Browser PWA Installation Guide Modal */}
+      {showInstallGuide && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md transition-colors duration-200 p-4 ${
+            darkMode ? 'bg-black/75 dark:bg-black/75' : 'bg-[#F8F9FA]/70'
+          }`}
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowInstallGuide(false);
+          }}
+        >
+          <div className="w-full max-w-sm rounded-2xl bg-[#FAF8F5] dark:bg-[#0A0A0A] border border-[#E4DDCE] dark:border-[#222222] p-5 shadow-xl text-stone-800 dark:text-stone-100 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4DDCE] dark:border-[#222222]">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#3F6E52] dark:bg-[#34D399] text-white dark:text-[#0A0A0A] flex items-center justify-center">
+                  <Download className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-sm text-[#2B2A28] dark:text-white">Pasang Aplikasi Kelas XB</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInstallGuide(false)}
+                className="p-1 rounded-md text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-[#1A1A1A] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-3.5 space-y-2.5 text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+              <p className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] dark:bg-[#222222] font-bold text-[11px] text-[#2B2A28] dark:text-stone-200 flex items-center justify-center">1</span>
+                <span>Buka menu browser (ikon <strong>⋮</strong> di pojok kanan atas pada Android Chrome atau bilah alamat pada desktop).</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] dark:bg-[#222222] font-bold text-[11px] text-[#2B2A28] dark:text-stone-200 flex items-center justify-center">2</span>
+                <span>Pilih <strong>&quot;Install aplikasi&quot;</strong> atau <strong>&quot;Tambahkan ke Layar Utama&quot;</strong>.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#E4DDCE] dark:bg-[#222222] font-bold text-[11px] text-[#2B2A28] dark:text-stone-200 flex items-center justify-center">3</span>
+                <span>Jika opsi belum muncul, pastikan dashboard dibuka langsung di tab browser utama (bukan pratinjau tersemat).</span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowInstallGuide(false)}
               className="mt-5 w-full rounded-xl bg-[#3F6E52] dark:bg-[#34D399] py-2 text-xs font-semibold text-white dark:text-[#0A0A0A] hover:bg-[#325841] dark:hover:bg-[#2EB882] transition shadow-xs cursor-pointer"
             >
               Mengerti

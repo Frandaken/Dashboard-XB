@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon } from 'lucide-react';
 import { MONTH_ID } from '../constants/demoData';
 import { getWeekOfMonth, getSongForWeek } from '../constants/songSchedule';
+import { triggerHaptic } from '../utils/haptics';
 
 interface CalendarSectionProps {
   viewYear: number;
@@ -159,7 +160,10 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
                 key={iso}
                 id={`cal-day-${iso}`}
                 type="button"
-                onClick={() => onSelectDate(iso)}
+                onClick={() => {
+                  triggerHaptic('light');
+                  onSelectDate(iso);
+                }}
                 className={cellClass}
                 aria-label={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel}`}
                 title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasNotice ? ' (Ada Acara/Kegiatan iCal)' : ''}${hasSitatib ? ' (Ada Kegiatan Kelas SITATIB)' : ''}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}

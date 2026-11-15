@@ -48,6 +48,7 @@ import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUti
 import { getCurrentWIBTimeHHMM } from './utils/iceBreakingUtils';
 import { isTaskTimePassed, getUpcomingDeadlines } from './utils/taskUtils';
 import { formatWeeklySummary, formatDailySummary, copyTextToClipboard } from './utils/summaryFormatter';
+import { triggerHaptic } from './utils/haptics';
 
 export default function App() {
   // 1. Default to light mode (false unless explicitly saved as 'dark' in localStorage)
@@ -84,7 +85,10 @@ export default function App() {
     validateFirestoreConnection().catch(() => {});
   }, []);
 
-  const toggleDarkMode = () => setDarkMode(prev => !prev);
+  const toggleDarkMode = () => {
+    triggerHaptic('toggle');
+    setDarkMode(prev => !prev);
+  };
 
   // Hamburger modal state (Menu navigasi)
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);

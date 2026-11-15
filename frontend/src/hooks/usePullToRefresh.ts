@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, RefObject } from 'react';
+import { triggerHaptic } from '../utils/haptics';
 
 export interface UsePullToRefreshOptions {
   onRefresh: () => Promise<void> | void;
@@ -59,6 +60,7 @@ export function usePullToRefresh({
   const triggerRefresh = useCallback(async () => {
     if (stateRef.current.isRefreshing) return;
 
+    triggerHaptic('trigger');
     setIsRefreshing(true);
     setIsPulling(false);
     setIsThresholdReached(false);
@@ -76,11 +78,7 @@ export function usePullToRefresh({
 
       setTimeout(() => {
         setIsSuccess(true);
-        if ('vibrate' in navigator) {
-          try {
-            navigator.vibrate?.(10);
-          } catch {}
-        }
+        triggerHaptic('success');
 
         setTimeout(() => {
           setIsSuccess(false);
@@ -173,11 +171,7 @@ export function usePullToRefresh({
         if (reached && !tState.wasThresholdReached) {
           tState.wasThresholdReached = true;
           setIsThresholdReached(true);
-          if ('vibrate' in navigator) {
-            try {
-              navigator.vibrate?.(12);
-            } catch {}
-          }
+          triggerHaptic('threshold');
         } else if (!reached && tState.wasThresholdReached) {
           tState.wasThresholdReached = false;
           setIsThresholdReached(false);
