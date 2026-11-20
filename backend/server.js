@@ -1,10 +1,18 @@
 import "dotenv/config";
+import dns from "dns";
+import http from "http";
+import https from "https";
+import zlib from "zlib";
 import express from "express";
 import fs from "fs";
 import path from "path";
 import webpush from "web-push";
 import { RoutineNotificationManager, buildTomorrowNotification } from "./serverNotificationService.js";
 import { sitatibService } from "./sitatibService.js";
+
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {}
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -85,41 +93,160 @@ const SHEET_FEEDS = {
 };
 
 const cache = new Map();
+const inFlightFetches = new Map();
 const CACHE_TTL_MS = 60 * 1000;
+const FEED_CACHE_FILE = path.join(dataDir, 'feed-cache.json');
+let persistCacheTimer = null;
 
-async function fetchWithRetry(url, headers = {}, timeoutMs = 12000) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+function hydrateFeedCacheFromDisk() {
+  try {
+    if (!fs.existsSync(FEED_CACHE_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(FEED_CACHE_FILE, 'utf-8'));
+    if (raw && typeof raw === 'object') {
+      for (const [k, v] of Object.entries(raw)) {
+        if (v && typeof v.data === 'string' && typeof v.contentType === 'string') {
+          cache.set(k, { data: v.data, contentType: v.contentType, timestamp: 0 });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Cache] Failed to hydrate feed-cache.json:', err?.message || err);
+  }
+}
+
+function schedulePersistFeedCache() {
+  if (persistCacheTimer) return;
+  persistCacheTimer = setTimeout(() => {
+    persistCacheTimer = null;
     try {
-      const res = await fetch(url, {
-        signal: controller.signal,
-        redirect: 'follow',
+      const serialized = {};
+      for (const [k, v] of cache.entries()) {
+        serialized[k] = v;
+      }
+      fs.writeFileSync(FEED_CACHE_FILE, JSON.stringify(serialized), 'utf-8');
+    } catch (err) {
+      console.warn('[Cache] Failed to persist feed-cache.json:', err?.message || err);
+    }
+  }, 1500);
+}
+
+hydrateFeedCacheFromDisk();
+
+function fetchTextViaNodeHttp(targetUrl, headers = {}, timeoutMs = 20000, family = 4, redirectsLeft = 6) {
+  return new Promise((resolve, reject) => {
+    let parsed;
+    try {
+      parsed = new URL(targetUrl);
+    } catch (err) {
+      return reject(err);
+    }
+
+    const mod = parsed.protocol === 'http:' ? http : https;
+    const req = mod.request(
+      parsed,
+      {
+        method: 'GET',
+        ...(family ? { family } : {}),
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/csv,text/plain,text/calendar,*/*;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
           ...headers
         }
-      });
-      if (!res.ok) {
-        const err = new Error(`Upstream returned HTTP ${res.status} ${res.statusText}`);
-        err.status = res.status;
-        throw err;
-      }
-      return await res.text();
-    } catch (err) {
-      const causeCode = err?.cause?.code || err?.code || '';
-      if (attempt === 1) {
-        if (causeCode && !err.message.includes(causeCode)) {
-          err.message = `${err.message} (${causeCode})`;
+      },
+      res => {
+        const status = res.statusCode || 0;
+        if ([301, 302, 303, 307, 308].includes(status) && res.headers.location && redirectsLeft > 0) {
+          res.resume();
+          try {
+            const nextUrl = new URL(res.headers.location, targetUrl).toString();
+            return resolve(fetchTextViaNodeHttp(nextUrl, headers, timeoutMs, family, redirectsLeft - 1));
+          } catch (redirectErr) {
+            return reject(redirectErr);
+          }
         }
-        throw err;
+
+        if (status < 200 || status >= 300) {
+          res.resume();
+          const err = new Error(`Upstream returned HTTP ${status} ${res.statusMessage || ''}`.trim());
+          err.status = status;
+          return reject(err);
+        }
+
+        const encoding = String(res.headers['content-encoding'] || '').toLowerCase();
+        let stream = res;
+        if (encoding === 'gzip') {
+          stream = res.pipe(zlib.createGunzip());
+        } else if (encoding === 'deflate') {
+          stream = res.pipe(zlib.createInflate());
+        } else if (encoding === 'br') {
+          stream = res.pipe(zlib.createBrotliDecompress());
+        }
+
+        const chunks = [];
+        stream.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+        stream.on('error', reject);
       }
-      await new Promise(r => setTimeout(r, 400));
-    } finally {
-      clearTimeout(timeoutId);
+    );
+
+    const timer = setTimeout(() => {
+      const timeoutErr = new Error(`Request timed out after ${timeoutMs}ms`);
+      timeoutErr.code = 'ETIMEDOUT';
+      req.destroy(timeoutErr);
+    }, timeoutMs);
+
+    req.on('close', () => clearTimeout(timer));
+    req.on('error', err => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    req.end();
+  });
+}
+
+async function fetchWithRetry(url, headers = {}, timeoutMs = 20000, fallbackUrl) {
+  let lastError;
+
+  // Attempt 0: Native Node HTTP/HTTPS with explicit IPv4 (avoids Docker/Alpine IPv6 blackholes & undici 10s connectTimeout)
+  try {
+    return await fetchTextViaNodeHttp(url, headers, timeoutMs, 4);
+  } catch (err) {
+    lastError = err;
+    if (err?.status && err.status >= 400 && err.status < 500 && err.status !== 429) {
+      throw err;
     }
+    await new Promise(r => setTimeout(r, 350));
   }
-  throw new Error('Failed to fetch after retry');
+
+  // Attempt 1: Fallback via standard fetch (supports IPv6-only networks) using clean fallbackUrl if provided
+  const retryUrl = fallbackUrl || url;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(retryUrl, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        ...headers
+      }
+    });
+    if (!res.ok) {
+      const err = new Error(`Upstream returned HTTP ${res.status} ${res.statusText}`);
+      err.status = res.status;
+      throw err;
+    }
+    return await res.text();
+  } catch (err) {
+    const causeCode = err?.cause?.code || err?.code || lastError?.code || '';
+    if (causeCode && !String(err?.message || '').includes(causeCode)) {
+      err.message = `${err.message} (${causeCode})`;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // Health check endpoint (tanpa membocorkan URL private kalender)
@@ -159,28 +286,44 @@ app.get('/api/calendar/:feed', async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
-  const cached = cache.get(`cal:${feed}`);
-  if (!forceFresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
+  const cacheKey = `cal:${feed}`;
+  const cached = cache.get(cacheKey);
+  if (!forceFresh && cached && cached.timestamp > 0 && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     res.setHeader('Content-Type', cached.contentType);
     res.setHeader('X-Cache', 'HIT');
     return res.send(cached.data);
   }
 
   try {
-    const sep = url.includes('?') ? '&' : '?';
-    const upstreamUrl = `${url}${sep}_cb=${Date.now()}`;
-    const icsText = await fetchWithRetry(upstreamUrl, {
-      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-      'Pragma': 'no-cache'
-    });
-    if (!icsText || !icsText.includes('BEGIN:VCALENDAR')) {
-      const preview = (icsText || '').trim().slice(0, 120).replace(/\s+/g, ' ');
-      throw new Error(`Invalid iCal payload from Google Calendar (preview: "${preview}")`);
+    let inflight = !forceFresh ? inFlightFetches.get(cacheKey) : undefined;
+    if (!inflight) {
+      const sep = url.includes('?') ? '&' : '?';
+      const upstreamUrl = forceFresh ? `${url}${sep}_cb=${Date.now()}` : url;
+      inflight = (async () => {
+        const icsText = await fetchWithRetry(upstreamUrl, {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache'
+        }, 20000, url);
+        if (!icsText || !icsText.includes('BEGIN:VCALENDAR')) {
+          const preview = (icsText || '').trim().slice(0, 120).replace(/\s+/g, ' ');
+          throw new Error(`Invalid iCal payload from Google Calendar (preview: "${preview}")`);
+        }
+        const contentType = 'text/calendar; charset=utf-8';
+        cache.set(cacheKey, { data: icsText, contentType, timestamp: Date.now() });
+        schedulePersistFeedCache();
+        return icsText;
+      })();
+      inFlightFetches.set(cacheKey, inflight);
+      inflight.finally(() => {
+        if (inFlightFetches.get(cacheKey) === inflight) {
+          inFlightFetches.delete(cacheKey);
+        }
+      });
     }
-    const contentType = 'text/calendar; charset=utf-8';
-    cache.set(`cal:${feed}`, { data: icsText, contentType, timestamp: Date.now() });
-    res.setHeader('Content-Type', contentType);
+
+    const icsText = await inflight;
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('X-Cache', 'MISS');
     return res.send(icsText);
   } catch (err) {
@@ -211,29 +354,45 @@ app.get('/api/sheets/:key', async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
-  const cached = cache.get(`sheet:${key}`);
-  if (!forceFresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
+  const cacheKey = `sheet:${key}`;
+  const cached = cache.get(cacheKey);
+  if (!forceFresh && cached && cached.timestamp > 0 && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     res.setHeader('Content-Type', cached.contentType);
     res.setHeader('X-Cache', 'HIT');
     return res.send(cached.data);
   }
 
   try {
-    const sep = url.includes('?') ? '&' : '?';
-    const upstreamUrl = `${url}${sep}_cb=${Date.now()}`;
-    const csvText = await fetchWithRetry(upstreamUrl, {
-      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-      'Pragma': 'no-cache'
-    });
-    const trimmed = (csvText || '').trim();
-    if (!trimmed || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.startsWith('<HTML')) {
-      const preview = trimmed.slice(0, 120).replace(/\s+/g, ' ');
-      throw new Error(`Google Sheets returned HTML instead of CSV (preview: "${preview}")`);
+    let inflight = !forceFresh ? inFlightFetches.get(cacheKey) : undefined;
+    if (!inflight) {
+      const sep = url.includes('?') ? '&' : '?';
+      const upstreamUrl = forceFresh ? `${url}${sep}_cb=${Date.now()}` : url;
+      inflight = (async () => {
+        const csvText = await fetchWithRetry(upstreamUrl, {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache'
+        }, 20000, url);
+        const trimmed = (csvText || '').trim();
+        if (!trimmed || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.startsWith('<HTML')) {
+          const preview = trimmed.slice(0, 120).replace(/\s+/g, ' ');
+          throw new Error(`Google Sheets returned HTML instead of CSV (preview: "${preview}")`);
+        }
+        const contentType = 'text/plain; charset=utf-8';
+        cache.set(cacheKey, { data: csvText, contentType, timestamp: Date.now() });
+        schedulePersistFeedCache();
+        return csvText;
+      })();
+      inFlightFetches.set(cacheKey, inflight);
+      inflight.finally(() => {
+        if (inFlightFetches.get(cacheKey) === inflight) {
+          inFlightFetches.delete(cacheKey);
+        }
+      });
     }
-    const contentType = 'text/plain; charset=utf-8';
-    cache.set(`sheet:${key}`, { data: csvText, contentType, timestamp: Date.now() });
-    res.setHeader('Content-Type', contentType);
+
+    const csvText = await inflight;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('X-Cache', 'MISS');
     return res.send(csvText);
   } catch (err) {
@@ -252,11 +411,13 @@ app.get('/api/sheets/:key', async (req, res) => {
   }
 });
 
-// Force refresh endpoint
+// Force refresh endpoint: mark cache stale without deleting fallback payloads
 app.post('/api/refresh', (req, res) => {
-  cache.clear();
+  for (const entry of cache.values()) {
+    entry.timestamp = 0;
+  }
   sitatibService.clearCache();
-  res.json({ ok: true, message: 'Cache cleared' });
+  res.json({ ok: true, message: 'Cache marked stale for refresh' });
 });
 
 // ==========================================

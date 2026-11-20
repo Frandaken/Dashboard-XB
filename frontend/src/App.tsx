@@ -292,18 +292,30 @@ export default function App() {
     setIsSitatibModalOpen(true);
   }, []);
 
-  const fetchWithRetry = useCallback(async (url: string, init?: RequestInit, retries: number = 2): Promise<Response> => {
+  const fetchWithRetry = useCallback(async (url: string, init?: RequestInit, retries: number = 2, timeoutMs: number = 25000): Promise<Response> => {
     let lastError: unknown;
     for (let attempt = 0; attempt <= retries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        return await fetch(url, init);
+        const res = await fetch(url, {
+          ...init,
+          signal: init?.signal || controller.signal
+        });
+        clearTimeout(timeoutId);
+        if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)));
+          continue;
+        }
+        return res;
       } catch (err) {
+        clearTimeout(timeoutId);
         lastError = err;
         const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
         if (isOffline || attempt >= retries) {
           throw err;
         }
-        await new Promise(resolve => setTimeout(resolve, 450 * (attempt + 1)));
+        await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)));
       }
     }
     throw lastError;
@@ -516,7 +528,9 @@ export default function App() {
     const fetchEndpoint = async (path: string, fallbackKey?: keyof typeof DEMO_CSV) => {
       const t0 = performance.now();
       const sep = path.includes('?') ? '&' : '?';
-      const url = `${path}${sep}fresh=1&t=${Date.now()}`;
+      const url = forceFresh
+        ? `${path}${sep}fresh=1&t=${Date.now()}`
+        : `${path}${sep}t=${Date.now()}`;
       try {
         const res = await fetchWithRetry(url, {
           cache: 'no-cache',
@@ -654,7 +668,35 @@ export default function App() {
         kasPengeluaranRows: kasData?.pengeluaranList?.length ?? 0
       });
 
-      const newStore: ClassDataStore = {
+      const kasAllFailed =
+        penunggakanRes.isFallback &&
+        pengeluaranRes.isFallback &&
+        pendapatanLainRes.isFallback &&
+        rekapRes.isFallback;
+
+      let mergedStore!: ClassDataStore;
+      setDataStore(prev => {
+        const hasPrevLive =
+          Object.keys(prev.doaByDate).length > 0 ||
+          Object.keys(prev.pelajaranByDate).length > 0;
+
+        mergedStore = {
+          doaByDate: doaRes.isFallback && hasPrevLive && Object.keys(prev.doaByDate).length > 0 ? prev.doaByDate : doaByDate,
+          mbgByDate: mbgRes.isFallback && hasPrevLive && Object.keys(prev.mbgByDate).length > 0 ? prev.mbgByDate : mbgByDate,
+          piketByDow: piketRes.isFallback && hasPrevLive && Object.keys(prev.piketByDow).length > 0 ? prev.piketByDow : piketByDow,
+          iceBreakingByDate: iceBreakingRes.isFallback && hasPrevLive && Object.keys(prev.iceBreakingByDate).length > 0 ? prev.iceBreakingByDate : iceBreakingByDate,
+          pelajaranByDate: pelajaranRes.isFallback && hasPrevLive && Object.keys(prev.pelajaranByDate).length > 0 ? prev.pelajaranByDate : pelajaranByDate,
+          tasksByDate: pelajaranRes.isFallback && hasPrevLive && Object.keys(prev.tasksByDate).length > 0 ? prev.tasksByDate : tasksByDate,
+          eventNoticesByDate: pelajaranRes.isFallback && hasPrevLive && Object.keys(prev.eventNoticesByDate || {}).length > 0 ? prev.eventNoticesByDate : eventNoticesByDate,
+          sitatibActivitiesByDate: sitatibPayload ? sitatibActivitiesByDate : (prev.sitatibActivitiesByDate || sitatibActivitiesByDate),
+          birthdayByMonthDay: birthdayRes.isFallback && hasPrevLive && Object.keys(prev.birthdayByMonthDay).length > 0 ? prev.birthdayByMonthDay : birthdayByMonthDay,
+          kasData: kasAllFailed && prev.kasData ? prev.kasData : kasData,
+          sitatibData: sitatibPayload ?? prev.sitatibData
+        };
+        return mergedStore;
+      });
+
+      const newStore: ClassDataStore = mergedStore || {
         doaByDate,
         mbgByDate,
         piketByDow,
@@ -667,8 +709,6 @@ export default function App() {
         kasData,
         sitatibData: sitatibPayload ?? undefined
       };
-
-      setDataStore(newStore);
 
       setActiveISO(prev => {
         if (!isManualDateRef.current) {
@@ -705,12 +745,12 @@ export default function App() {
   }, [defaultSchoolISO, fetchSitatibOverview, fetchWithRetry, findBestActiveDate, hasSchoolData]);
 
   useEffect(() => {
-    // Initial load: show loader with fresh data
-    fetchData(true, false);
+    // Initial load: use server 60s cache / deduplication to avoid hammering Google Sheets
+    fetchData(false, false);
 
     // Periodic 5-minute background sync: runs silently without screen refresh or skeleton unmounting
     const interval = setInterval(() => {
-      fetchData(true, true);
+      fetchData(false, true);
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
