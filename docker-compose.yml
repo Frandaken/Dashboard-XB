@@ -1,11 +1,6 @@
 services:
   frontend-xb:
-    build:
-      context: https://github.com/Frandaken/Dashboard-XB.git
-      dockerfile: frontend/Dockerfile
-      no_cache: true
-      args:
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-}
+    image: ghcr.io/frandaken/dashboard-xb-frontend:latest
     container_name: dashboard-xb-frontend
     ports:
       - 8101:80
@@ -15,15 +10,14 @@ services:
         condition: service_healthy
     networks:
       - dashboard-net
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
 
   backend-xb:
-    build:
-      context: https://github.com/Frandaken/Dashboard-XB.git
-      dockerfile: backend/Dockerfile
-      no_cache: true
+    image: ghcr.io/frandaken/dashboard-xb-backend:latest
     container_name: dashboard-xb-backend
     ports:
-      - 3003:3003 # Backend communication & health check
+      - 3003:3003
     environment:
       - PORT=3003
       - NODE_ENV=production
@@ -39,9 +33,13 @@ services:
       - SITATIB_PASSWORD=${SITATIB_PASSWORD:-}
       - SITATIB_ACADEMIC_YEAR_ID=${SITATIB_ACADEMIC_YEAR_ID:-3}
     volumes:
-      - ./data:/app/data
+      - /mnt/nas-pool/Share/Franda/SEKOLAH:/app/data
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3003/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
       interval: 10s
       timeout: 5s
       retries: 5
@@ -53,7 +51,9 @@ services:
           - backend-xb
           - backend
           - dashboard-xb-backend
-          
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
 networks:
   dashboard-net:
     driver: bridge

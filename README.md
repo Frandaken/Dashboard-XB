@@ -63,8 +63,7 @@ Dashboard-XB/
 │       ├── constants/              # Data fallback & konstanta (demoData, studentsData, songSchedule, kasDemoData)
 │       ├── utils/                  # Utilitas (version, csvParser, icalParser, dateUtils, audioEffects)
 │       └── App.tsx                 # Root komponen dashboard utama
-├── docker-bake.hcl             # Konfigurasi Docker Buildx Bake (build paralel multi-target)
-├── docker-compose.yml              # Konfigurasi Docker Compose utama (Git context)
+├── docker-compose.yml              # Konfigurasi Docker Compose utama (GHCR prebuilt images)
 ├── docker-compose.local.yml        # Konfigurasi Docker Compose untuk build lokal (Local context)
 ├── server.ts                       # Server Express full-stack lokal (dev server & production SSR)
 ├── .env.example                    # Template environment variables
@@ -102,48 +101,20 @@ docker compose -f docker-compose.local.yml up -d --build
 - **Frontend Dashboard:** [http://localhost:8202](http://localhost:8202)
 - **Backend API & Health Check:** [http://localhost:3003/api/health](http://localhost:3003/api/health)
 
-#### 2. Menggunakan Konfigurasi Remote Git (`docker-compose.yml`)
-Gunakan opsi ini untuk deploy server yang mengambil kode langsung dari repository GitHub:
+#### 2. Menggunakan Konfigurasi Produksi GHCR (`docker-compose.yml`)
+Gunakan opsi ini untuk deploy server menggunakan image prebuilt dari GitHub Container Registry (`ghcr.io`):
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 - **Frontend Dashboard:** [http://localhost:8101](http://localhost:8101)
 - **Backend API & Health Check:** [http://localhost:3003/api/health](http://localhost:3003/api/health)
 
-> **Opsional (Build Paralel dengan Bake):** Jika plugin `docker-buildx-plugin` sudah terpasang di server (`sudo apt install docker-buildx-plugin`), jalankan dengan `COMPOSE_BAKE=true docker compose up -d --build` atau aktifkan `# COMPOSE_BAKE=true` di `.env`.
-
 #### Menghentikan atau Me-restart Kontainer:
 ```bash
 docker compose down
-docker compose up -d --build --no-cache
+docker compose up -d
 ```
-
----
-
-### Opsi C: Build Cepat Paralel dengan Docker Buildx Bake (`docker-bake.hcl`)
-
-Jika `docker-buildx-plugin` sudah terpasang, Docker Buildx Bake mengorkestrasi kompilasi image frontend dan backend secara simultan (paralel murni) dengan arsitektur `linux/amd64`.
-
-1. **Build Semua Image Secara Simultan (Paralel):**
-   ```bash
-   docker buildx bake
-   ```
-
-2. **Build dengan Tag Versi Khusus:**
-   ```bash
-   TAG=v1.0.0 docker buildx bake
-   ```
-
-3. **Build Target Tertentu Saja:**
-   ```bash
-   docker buildx bake frontend   # Hanya build frontend
-   docker buildx bake backend    # Hanya build backend
-   ```
-
-4. **Jalankan Kontainer Setelah Image Selesai di-Bake:**
-   ```bash
-   docker compose up -d
-   ```
 
 ---
 
@@ -162,7 +133,6 @@ Salin `.env.example` ke `.env` untuk mengatur konfigurasi server:
 | `VAPID_PUBLIC_KEY` | Public key untuk Web Push Notifications | *(Auto-generated jika kosong)* |
 | `VAPID_PRIVATE_KEY` | Private key untuk Web Push Notifications | *(Auto-generated jika kosong)* |
 | `VITE_APP_VERSION` | Nomor versi dashboard (diatur di `frontend/.env`) | `v1.0.0` |
-| `COMPOSE_BAKE` | Mengaktifkan Buildx Bake untuk `docker compose build` | `true` |
 
 ---
 
