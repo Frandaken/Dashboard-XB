@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { SitatibAttachment, SitatibOverviewData } from '../types';
 import { FormattedText } from './FormattedText';
+import { sortSitatibAnnouncementsByNearestDate } from '../utils/sitatibUtils';
 
 interface SitatibModalProps {
   isOpen: boolean;
@@ -91,7 +92,10 @@ export const SitatibModal: React.FC<SitatibModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose, disableEscapeClose]);
 
-  const announcements = data?.announcements ?? [];
+  const announcements = useMemo(
+    () => sortSitatibAnnouncementsByNearestDate(data?.announcements),
+    [data?.announcements]
+  );
   const rules = data?.rules ?? [];
   const activities = data?.activities ?? [];
 

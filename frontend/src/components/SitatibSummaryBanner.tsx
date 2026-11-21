@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Bell, CalendarDays, ChevronRight, Paperclip, Scale } from 'lucide-react';
 import { SitatibAttachment, SitatibOverviewData } from '../types';
+import { sortSitatibAnnouncementsByNearestDate } from '../utils/sitatibUtils';
 
 interface SitatibSummaryBannerProps {
   data?: SitatibOverviewData | null;
@@ -13,13 +14,18 @@ export const SitatibSummaryBanner: React.FC<SitatibSummaryBannerProps> = ({
   onOpenModal,
   onOpenAttachment
 }) => {
+  const sortedAnnouncements = useMemo(
+    () => sortSitatibAnnouncementsByNearestDate(data?.announcements),
+    [data?.announcements]
+  );
+
   // Only show the dashboard banner strip when there are real announcements from SITATIB.
   // Users can still access rules, sync status, and portal config anytime via Hamburger Menu.
-  if (!data || !data.announcements || data.announcements.length === 0) {
+  if (!data || sortedAnnouncements.length === 0) {
     return null;
   }
 
-  const topAnnouncements = data.announcements.slice(0, 2);
+  const topAnnouncements = sortedAnnouncements.slice(0, 2);
   const rulesCount = data.rules?.length ?? 0;
   const activitiesCount = data.activities?.length ?? 0;
 

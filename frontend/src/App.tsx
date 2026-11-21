@@ -41,7 +41,7 @@ import { validateFirestoreConnection } from './firebase';
 import { ClassDataStore, SitatibAttachment, SitatibOverviewData, TaskAttachment } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
-import { buildSitatibActivitiesByDate } from './utils/sitatibUtils';
+import { buildSitatibActivitiesByDate, sortSitatibAnnouncementsByNearestDate } from './utils/sitatibUtils';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './constants/demoData';
 import { KAS_DEMO_CSV } from './constants/kasDemoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
@@ -286,11 +286,8 @@ export default function App() {
   const [sitatibData, setSitatibData] = useState<SitatibOverviewData | null>(null);
   const [isSitatibLoading, setIsSitatibLoading] = useState<boolean>(false);
   const [previewAttachment, setPreviewAttachment] = useState<ReceiptLightboxData | null>(null);
-
-  const openSitatibModal = useCallback((tab: 'announcements' | 'rules' | 'activities' = 'announcements') => {
-    setSitatibInitialTab(tab);
-    setIsSitatibModalOpen(true);
-  }, []);
+  const inFlightSitatibRef = useRef<Promise<SitatibOverviewData | null> | null>(null);
+  const lastSitatibSyncRef = useRef<number>(0);
 
   const fetchWithRetry = useCallback(async (url: string, init?: RequestInit, retries: number = 2, timeoutMs: number = 25000): Promise<Response> => {
     let lastError: unknown;
@@ -321,26 +318,65 @@ export default function App() {
     throw lastError;
   }, []);
 
-  const fetchSitatibOverview = useCallback(async (forceFresh: boolean = false): Promise<SitatibOverviewData | null> => {
-    setIsSitatibLoading(true);
-    try {
-      const qs = forceFresh ? `?fresh=1&t=${Date.now()}` : `?t=${Date.now()}`;
-      const res = await fetchWithRetry(`/api/sitatib/overview${qs}`, { cache: 'no-cache' }, 1);
-      const contentType = res.headers.get('content-type') || '';
-      if (!res.ok || contentType.includes('text/html')) {
-        return null;
-      }
-      const json = (await res.json()) as SitatibOverviewData;
-      const sitatibActivitiesByDate = buildSitatibActivitiesByDate(json.activities);
-      setSitatibData(json);
-      setDataStore(prev => ({ ...prev, sitatibData: json, sitatibActivitiesByDate }));
-      return json;
-    } catch {
-      return null;
-    } finally {
-      setIsSitatibLoading(false);
+  const fetchSitatibOverview = useCallback(async (
+    forceFresh: boolean = false,
+    silent: boolean = false
+  ): Promise<SitatibOverviewData | null> => {
+    if (inFlightSitatibRef.current && !forceFresh) {
+      return inFlightSitatibRef.current;
     }
+
+    const run = (async () => {
+      if (!silent) {
+        setIsSitatibLoading(true);
+      }
+      try {
+        const qs = forceFresh ? `?fresh=1&t=${Date.now()}` : `?t=${Date.now()}`;
+        const res = await fetchWithRetry(
+          `/api/sitatib/overview${qs}`,
+          {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          },
+          1
+        );
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || contentType.includes('text/html')) {
+          return null;
+        }
+        const rawJson = (await res.json()) as SitatibOverviewData;
+        const normalizedJson: SitatibOverviewData = {
+          ...rawJson,
+          announcements: sortSitatibAnnouncementsByNearestDate(rawJson.announcements)
+        };
+        const sitatibActivitiesByDate = buildSitatibActivitiesByDate(normalizedJson.activities);
+        lastSitatibSyncRef.current = Date.now();
+        setSitatibData(normalizedJson);
+        setDataStore(prev => ({ ...prev, sitatibData: normalizedJson, sitatibActivitiesByDate }));
+        return normalizedJson;
+      } catch {
+        return null;
+      } finally {
+        if (!silent) {
+          setIsSitatibLoading(false);
+        }
+        inFlightSitatibRef.current = null;
+      }
+    })();
+
+    inFlightSitatibRef.current = run;
+    return run;
   }, [fetchWithRetry]);
+
+  const openSitatibModal = useCallback((tab: 'announcements' | 'rules' | 'activities' = 'announcements') => {
+    setSitatibInitialTab(tab);
+    setIsSitatibModalOpen(true);
+    // Segera sinkronkan pengumuman SITATIB terbaru saat panel dibuka
+    void fetchSitatibOverview(true, true);
+  }, [fetchSitatibOverview]);
 
   const handleOpenAttachment = useCallback((attachment: TaskAttachment, subjectTitle?: string) => {
     setPreviewAttachment({
@@ -603,7 +639,7 @@ export default function App() {
 
       const [, sitatibPayload, doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
         probeHealth(),
-        fetchSitatibOverview(forceFresh),
+        fetchSitatibOverview(true, isSilent),
         fetchEndpoint('/api/sheets/doa', 'doa'),
         fetchEndpoint('/api/sheets/mbg', 'mbg'),
         fetchEndpoint('/api/sheets/piket', 'piket'),
@@ -755,6 +791,41 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Automatic real-time SITATIB announcement refresh:
+  // 1) Poll every 60s while tab is visible
+  // 2) Refresh on tab visibility return, window focus, or network reconnect (15s cooldown)
+  useEffect(() => {
+    const refreshIfStale = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      if (Date.now() - lastSitatibSyncRef.current < 15_000) return;
+      void fetchSitatibOverview(true, true);
+    };
+
+    const sitatibInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      void fetchSitatibOverview(true, true);
+    }, 60 * 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshIfStale();
+      }
+    };
+
+    window.addEventListener('focus', refreshIfStale);
+    window.addEventListener('online', refreshIfStale);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(sitatibInterval);
+      window.removeEventListener('focus', refreshIfStale);
+      window.removeEventListener('online', refreshIfStale);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchSitatibOverview]);
 
   // Disable pull-to-refresh gesture when any modal is open or when in 404 state
   const isAnyModalOpen = Boolean(

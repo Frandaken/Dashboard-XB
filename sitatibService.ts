@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { URL } from 'url';
 
 export interface SitatibAttachment {
@@ -61,7 +63,7 @@ export interface SitatibOverviewPayload {
 }
 
 const DEFAULT_BASE_URL = 'https://sitatib.sma.putranirmala.sch.id';
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 30 * 1000; // 30 seconds so newly posted announcements appear automatically without stale 5-minute cache
 
 const normalizeEnv = (val?: string) => (val || '').trim().replace(/^["']|["']$/g, '');
 
@@ -757,6 +759,85 @@ function parseIndonesianDateToISO(dateStr: string): string | null {
   return `${year}-${month}-${day}`;
 }
 
+function parseAnnouncementTimestamp(publishedAt?: string): number | null {
+  const raw = (publishedAt || '').trim();
+  if (!raw) return null;
+
+  // 1. DD Mon YYYY [HH:mm[:ss]] (English or Indonesian month names, WIB +07:00)
+  const dmyMatch = raw.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})(?:[\s,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = INDONESIAN_MONTH_MAP[dmyMatch[2].toLowerCase()];
+    const year = dmyMatch[3];
+    if (month) {
+      const hh = (dmyMatch[4] || '12').padStart(2, '0');
+      const mm = (dmyMatch[5] || '00').padStart(2, '0');
+      const ss = (dmyMatch[6] || '00').padStart(2, '0');
+      const ts = Date.parse(`${year}-${month}-${day}T${hh}:${mm}:${ss}+07:00`);
+      if (Number.isFinite(ts)) return ts;
+    }
+  }
+
+  // 2. YYYY-MM-DD [HH:mm[:ss]] or ISO-8601
+  const isoDateTimeMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?(Z|[+-]\d{2}:?\d{2})?)?$/);
+  if (isoDateTimeMatch) {
+    const [, y, m, d, hh, mm, ss, tz] = isoDateTimeMatch;
+    const hStr = (hh || '12').padStart(2, '0');
+    const mStr = (mm || '00').padStart(2, '0');
+    const sStr = (ss || '00').padStart(2, '0');
+    const ts = Date.parse(`${y}-${m}-${d}T${hStr}:${mStr}:${sStr}${tz || '+07:00'}`);
+    if (Number.isFinite(ts)) return ts;
+  }
+
+  // 3. DD/MM/YYYY [HH:mm] or DD-MM-YYYY [HH:mm]
+  const slashMatch = raw.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[\s,]+(\d{1,2}):(\d{2}))?/);
+  if (slashMatch) {
+    const day = slashMatch[1].padStart(2, '0');
+    const month = slashMatch[2].padStart(2, '0');
+    const year = slashMatch[3];
+    const hh = (slashMatch[4] || '12').padStart(2, '0');
+    const mm = (slashMatch[5] || '00').padStart(2, '0');
+    const ts = Date.parse(`${year}-${month}-${day}T${hh}:${mm}:00+07:00`);
+    if (Number.isFinite(ts)) return ts;
+  }
+
+  // 4. Relative Indonesian timestamps
+  const lower = raw.toLowerCase();
+  const now = Date.now();
+  if (/baru\s+saja|just\s+now/i.test(lower)) return now;
+  const minsMatch = lower.match(/(\d+)\s*(?:menit|min)/);
+  if (minsMatch) return now - parseInt(minsMatch[1], 10) * 60 * 1000;
+  const hrsMatch = lower.match(/(\d+)\s*(?:jam|hour|hr)/);
+  if (hrsMatch) return now - parseInt(hrsMatch[1], 10) * 60 * 60 * 1000;
+  const daysMatch = lower.match(/(\d+)\s*(?:hari|day)/);
+  if (daysMatch) return now - parseInt(daysMatch[1], 10) * 24 * 60 * 60 * 1000;
+  if (/hari\s+ini|today/.test(lower)) return now;
+  if (/kemarin|yesterday/.test(lower)) return now - 24 * 60 * 60 * 1000;
+
+  const fallback = Date.parse(raw);
+  return Number.isFinite(fallback) ? fallback : null;
+}
+
+function sortAnnouncementsByNearestDate(items: SitatibAnnouncement[], nowMs = Date.now()): SitatibAnnouncement[] {
+  return [...items]
+    .map((item, idx) => ({
+      item,
+      idx,
+      ts: parseAnnouncementTimestamp(item.publishedAt)
+    }))
+    .sort((a, b) => {
+      if (a.ts === null && b.ts === null) return a.idx - b.idx;
+      if (a.ts === null) return 1;
+      if (b.ts === null) return -1;
+      const distA = Math.abs(a.ts - nowMs);
+      const distB = Math.abs(b.ts - nowMs);
+      if (distA !== distB) return distA - distB;
+      if (a.ts !== b.ts) return b.ts - a.ts;
+      return a.idx - b.idx;
+    })
+    .map(entry => entry.item);
+}
+
 function extractClassActivitiesFromHtml(html: string, baseUrl: string, sourceUrl: string): SitatibClassActivity[] {
   const activities: SitatibClassActivity[] = [];
   const seen = new Set<string>();
@@ -904,7 +985,12 @@ function discoverInternalLinks(html: string, baseUrl: string): SitatibDiscovered
 export class SitatibService {
   private cookies = new Map<string, string>();
   private cachedOverview: { data: SitatibOverviewPayload; timestamp: number } | null = null;
+  private inFlightOverview: Promise<SitatibOverviewPayload> | null = null;
+  private inFlightAuth: Promise<{ ok: boolean; dashboardHtml: string; dashboardUrl: string; academicYearLabel?: string; error?: string }> | null = null;
+  private sessionLoaded = false;
+  private academicYearLabel?: string;
   private lastSessionAt: string | null = null;
+  private loginCount = 0;
   private lastError: string | null = null;
 
   private getConfig() {
@@ -926,19 +1012,94 @@ export class SitatibService {
     };
   }
 
+  private getSessionFilePath(): string {
+    const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
+    return path.join(dataDir, 'sitatib-session.json');
+  }
+
+  private loadPersistedSession(cfg: ReturnType<SitatibService['getConfig']>): void {
+    if (this.sessionLoaded) return;
+    this.sessionLoaded = true;
+    try {
+      const filePath = this.getSessionFilePath();
+      if (!fs.existsSync(filePath)) return;
+      const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (
+        !raw ||
+        raw.baseUrl !== cfg.baseUrl ||
+        raw.username !== cfg.username ||
+        raw.academicYearId !== cfg.academicYearId ||
+        !raw.cookies ||
+        typeof raw.cookies !== 'object'
+      ) {
+        return;
+      }
+      for (const [k, v] of Object.entries(raw.cookies)) {
+        if (k && typeof v === 'string' && v.length > 0) {
+          this.cookies.set(k, v);
+        }
+      }
+      if (typeof raw.academicYearLabel === 'string' && raw.academicYearLabel) {
+        this.academicYearLabel = raw.academicYearLabel;
+      }
+      if (typeof raw.lastSessionAt === 'string' && raw.lastSessionAt) {
+        this.lastSessionAt = raw.lastSessionAt;
+      }
+    } catch {
+      // Ignore corrupt/unreadable session cache; will re-authenticate cleanly
+    }
+  }
+
+  private persistSession(cfg: ReturnType<SitatibService['getConfig']>): void {
+    try {
+      const filePath = this.getSessionFilePath();
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const payload = {
+        baseUrl: cfg.baseUrl,
+        username: cfg.username,
+        academicYearId: cfg.academicYearId,
+        academicYearLabel: this.academicYearLabel || null,
+        lastSessionAt: this.lastSessionAt,
+        updatedAt: new Date().toISOString(),
+        cookies: Object.fromEntries(this.cookies.entries())
+      };
+      fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), { encoding: 'utf8', mode: 0o600 });
+    } catch {
+      // Non-fatal if filesystem is read-only
+    }
+  }
+
+  private clearPersistedSession(): void {
+    try {
+      const filePath = this.getSessionFilePath();
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch {}
+  }
+
   public isConfigured(): boolean {
     return this.getConfig().configured;
   }
 
   public clearCache(): void {
-    this.cachedOverview = null;
+    if (this.cachedOverview) {
+      this.cachedOverview.timestamp = 0;
+    }
   }
 
   public getHealthStatus() {
     const cfg = this.getConfig();
+    this.loadPersistedSession(cfg);
     return {
       configured: cfg.configured,
       hasSession: this.cookies.size > 0,
+      rememberDevice: true,
+      cookieCount: this.cookies.size,
+      loginCount: this.loginCount,
       lastSessionAt: this.lastSessionAt,
       lastSyncedAt: this.cachedOverview?.data.syncedAt || null,
       lastError: this.lastError
@@ -951,15 +1112,33 @@ export class SitatibService {
       ? getSetCookie.call(headers)
       : (headers.get('set-cookie') ? [headers.get('set-cookie') as string] : []);
 
+    let changed = false;
     for (const entry of rawCookies) {
-      const pair = entry.split(';')[0];
+      const parts = entry.split(';');
+      const pair = parts[0];
       const eqIdx = pair.indexOf('=');
       if (eqIdx > 0) {
         const name = pair.slice(0, eqIdx).trim();
         const value = pair.slice(eqIdx + 1).trim();
+        const isDeleted =
+          !value ||
+          value.toLowerCase() === 'deleted' ||
+          parts.slice(1).some(attr => /^max-age\s*=\s*0$/i.test(attr.trim()));
         if (name) {
-          this.cookies.set(name, value);
+          if (isDeleted) {
+            if (this.cookies.delete(name)) changed = true;
+          } else if (this.cookies.get(name) !== value) {
+            this.cookies.set(name, value);
+            changed = true;
+          }
         }
+      }
+    }
+
+    if (changed && this.lastSessionAt) {
+      const cfg = this.getConfig();
+      if (cfg.configured) {
+        this.persistSession(cfg);
       }
     }
   }
@@ -989,6 +1168,8 @@ export class SitatibService {
           headers: {
             'User-Agent': 'DashboardXB-SITATIB-Proxy/1.0',
             Accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
             ...(cookieHeader ? { Cookie: cookieHeader } : {}),
             ...extraHeaders
           }
@@ -1019,6 +1200,20 @@ export class SitatibService {
   }
 
   private async authenticate(): Promise<{ ok: boolean; dashboardHtml: string; dashboardUrl: string; academicYearLabel?: string; error?: string }> {
+    if (this.inFlightAuth) {
+      return this.inFlightAuth;
+    }
+
+    const run = this.performAuthenticate().finally(() => {
+      if (this.inFlightAuth === run) {
+        this.inFlightAuth = null;
+      }
+    });
+    this.inFlightAuth = run;
+    return run;
+  }
+
+  private async performAuthenticate(): Promise<{ ok: boolean; dashboardHtml: string; dashboardUrl: string; academicYearLabel?: string; error?: string }> {
     const cfg = this.getConfig();
     if (!cfg.configured) {
       return {
@@ -1044,6 +1239,13 @@ export class SitatibService {
     const yearMatch = loginPage.html.match(new RegExp(`<option[^>]*value=["']${cfg.academicYearId}["'][^>]*>([^<]+)</option>`, 'i'));
     const academicYearLabel = yearMatch ? stripTags(yearMatch[1]).replace(/\s*·\s*Aktif/i, '').trim() : undefined;
 
+    // Detect "Ingat perangkat ini" checkbox (<input type="checkbox" name="remember_device" value="1">)
+    const rememberInputMatch = loginPage.html.match(/<input\b[^>]*type=["']checkbox["'][^>]*name=["']([^"']*remember[^"']*)["'][^>]*>/i)
+      || loginPage.html.match(/<input\b[^>]*name=["']([^"']*remember[^"']*)["'][^>]*type=["']checkbox["'][^>]*>/i);
+    const rememberFieldName = rememberInputMatch ? rememberInputMatch[1] : 'remember_device';
+    const rememberValueMatch = rememberInputMatch ? rememberInputMatch[0].match(/value=["']([^"']+)["']/i) : null;
+    const rememberFieldValue = rememberValueMatch ? rememberValueMatch[1] : '1';
+
     const form = new URLSearchParams();
     if (csrfValue) {
       form.set(csrfName, csrfValue);
@@ -1051,6 +1253,7 @@ export class SitatibService {
     form.set('identity', cfg.username);
     form.set('password', cfg.password);
     form.set('academic_year_id', cfg.academicYearId);
+    form.set(rememberFieldName, rememberFieldValue);
 
     const postRes = await this.requestWithCookies(postUrl, {
       method: 'POST',
@@ -1064,6 +1267,7 @@ export class SitatibService {
 
     if (isLoginPageHtml(postRes.html, postRes.finalUrl)) {
       this.cookies.clear();
+      this.clearPersistedSession();
       return {
         ok: false,
         dashboardHtml: '',
@@ -1073,13 +1277,41 @@ export class SitatibService {
       };
     }
 
+    this.loginCount += 1;
+    this.academicYearLabel = academicYearLabel || this.academicYearLabel;
     this.lastSessionAt = new Date().toISOString();
+    this.persistSession(cfg);
     return {
       ok: true,
       dashboardHtml: postRes.html,
       dashboardUrl: postRes.finalUrl,
-      academicYearLabel
+      academicYearLabel: this.academicYearLabel
     };
+  }
+
+  private async ensureAuthenticatedSession(
+    cfg: ReturnType<SitatibService['getConfig']>
+  ): Promise<{ ok: boolean; dashboardHtml: string; dashboardUrl: string; academicYearLabel?: string; error?: string }> {
+    this.loadPersistedSession(cfg);
+
+    if (this.cookies.size > 0) {
+      try {
+        const probe = await this.requestWithCookies(`${cfg.baseUrl}/dashboard`);
+        if (!isLoginPageHtml(probe.html, probe.finalUrl) && probe.status < 400) {
+          this.persistSession(cfg);
+          return {
+            ok: true,
+            dashboardHtml: probe.html,
+            dashboardUrl: probe.finalUrl,
+            academicYearLabel: this.academicYearLabel
+          };
+        }
+      } catch {
+        // Fall back to fresh authentication below
+      }
+    }
+
+    return this.authenticate();
   }
 
   private async fetchAuthenticatedPage(targetUrl: string): Promise<{ html: string; finalUrl: string; contentType: string }> {
@@ -1185,6 +1417,7 @@ export class SitatibService {
       throw new Error('Path lampiran tidak diizinkan.');
     }
 
+    this.loadPersistedSession(cfg);
     if (this.cookies.size === 0) {
       const auth = await this.authenticate();
       if (!auth.ok) {
@@ -1247,12 +1480,29 @@ export class SitatibService {
       };
     }
 
-    if (!forceFresh && this.cachedOverview && Date.now() - this.cachedOverview.timestamp < CACHE_TTL_MS) {
-      return this.cachedOverview.data;
+    if (!forceFresh && this.cachedOverview && this.cachedOverview.timestamp > 0 && Date.now() - this.cachedOverview.timestamp < CACHE_TTL_MS) {
+      return {
+        ...this.cachedOverview.data,
+        announcements: sortAnnouncementsByNearestDate(this.cachedOverview.data.announcements)
+      };
     }
 
+    if (this.inFlightOverview) {
+      return this.inFlightOverview;
+    }
+
+    const run = this.syncOverview(cfg).finally(() => {
+      if (this.inFlightOverview === run) {
+        this.inFlightOverview = null;
+      }
+    });
+    this.inFlightOverview = run;
+    return run;
+  }
+
+  private async syncOverview(cfg: ReturnType<SitatibService['getConfig']>): Promise<SitatibOverviewPayload> {
     try {
-      const auth = await this.authenticate();
+      const auth = await this.ensureAuthenticatedSession(cfg);
       if (!auth.ok) {
         this.lastError = auth.error || 'Login SITATIB gagal';
         return {
@@ -1431,16 +1681,22 @@ export class SitatibService {
       }
 
       // Deduplicate announcements, rules & activities
-      const uniqueAnnouncements: SitatibAnnouncement[] = [];
+      const dedupedAnnouncements: SitatibAnnouncement[] = [];
       const seenAnn = new Set<string>();
       for (const item of allAnnouncements) {
         if (isIgnoredAnnouncementTitle(item.title)) continue;
         const key = `${item.title.toLowerCase()}::${item.content.slice(0, 60).toLowerCase()}`;
         if (!seenAnn.has(key) && item.content) {
           seenAnn.add(key);
-          uniqueAnnouncements.push({ ...item, id: `ann_${uniqueAnnouncements.length + 1}` });
+          dedupedAnnouncements.push(item);
         }
       }
+
+      // Sort announcements by nearest date before enriching detail pages & assigning IDs
+      const uniqueAnnouncements = sortAnnouncementsByNearestDate(dedupedAnnouncements).map((item, idx) => ({
+        ...item,
+        id: `ann_${idx + 1}`
+      }));
 
       // Enrich /pengumuman/<id> items with detail page attachments, links, and full content
       const detailTargets = uniqueAnnouncements

@@ -429,15 +429,25 @@ app.get('/api/sitatib/health', (_req, res) => {
 
 app.get('/api/sitatib/overview', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
   const overview = await sitatibService.getOverview(forceFresh);
+  if (overview.syncedAt) {
+    res.setHeader('X-Sitatib-Synced-At', overview.syncedAt);
+  }
   return res.json(overview);
 });
 
 app.get('/api/sitatib/rules', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
   const overview = await sitatibService.getOverview(forceFresh);
+  if (overview.syncedAt) {
+    res.setHeader('X-Sitatib-Synced-At', overview.syncedAt);
+  }
   return res.json({
     configured: overview.configured,
     authenticated: overview.authenticated,
@@ -450,8 +460,13 @@ app.get('/api/sitatib/rules', async (req, res) => {
 
 app.get('/api/sitatib/activities', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1' || !!req.query.t;
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
   const overview = await sitatibService.getOverview(forceFresh);
+  if (overview.syncedAt) {
+    res.setHeader('X-Sitatib-Synced-At', overview.syncedAt);
+  }
   return res.json({
     configured: overview.configured,
     authenticated: overview.authenticated,
