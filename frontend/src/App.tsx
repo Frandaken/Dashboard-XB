@@ -12,6 +12,7 @@ import { StatusBanner } from './components/StatusBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardSkeleton } from './components/DashboardSkeleton';
 import { NotFoundUI } from './components/NotFoundUI';
+import { TopLoadingBar } from './components/TopLoadingBar';
 
 // Code-split modals to minimize main JS bundle
 const DayDetailModal = React.lazy(() => import('./components/DayDetailModal').then(m => ({ default: m.DayDetailModal })));
@@ -179,6 +180,8 @@ export default function App() {
 
   const [status, setStatus] = useState<{ type: 'loading' | 'error' | 'success'; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncProgress, setSyncProgress] = useState<number>(0);
 
   // Compute today's date strictly in Western Indonesia Time (WIB / Asia/Jakarta, UTC+7)
   const todayWIB = useMemo(() => {
@@ -504,6 +507,17 @@ export default function App() {
     const syncTag = `[Dashboard XB Sync @ ${new Date().toLocaleTimeString('id-ID')}]`;
     console.group(`${syncTag} Memulai sinkronisasi data (forceFresh=${forceFresh}, isSilent=${isSilent}, online=${typeof navigator !== 'undefined' ? navigator.onLine : 'unknown'}, origin=${typeof window !== 'undefined' ? window.location.origin : 'unknown'})`);
 
+    const totalSteps = (forceFresh ? 1 : 0) + 12;
+    let completedSteps = 0;
+    const reportSyncStep = () => {
+      completedSteps += 1;
+      const nextProgress = Math.min(90, Math.round(10 + (completedSteps / totalSteps) * 80));
+      setSyncProgress(prev => (nextProgress > prev ? nextProgress : prev));
+    };
+
+    setSyncProgress(8);
+    setIsSyncing(true);
+
     if (!isSilent) {
       setIsLoading(true);
       setStatus({ type: 'loading', message: 'Memperbarui data kelas...' });
@@ -515,6 +529,8 @@ export default function App() {
         console.debug(`${syncTag} POST /api/refresh -> HTTP ${refreshRes.status}`);
       } catch (e: any) {
         console.warn(`${syncTag} POST /api/refresh gagal:`, e?.message || e);
+      } finally {
+        reportSyncStep();
       }
     }
 
@@ -638,19 +654,21 @@ export default function App() {
       const rangeEnd = new Date(curYear + 1, 11, 31);
 
       const [, sitatibPayload, doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
-        probeHealth(),
-        fetchSitatibOverview(true, isSilent),
-        fetchEndpoint('/api/sheets/doa', 'doa'),
-        fetchEndpoint('/api/sheets/mbg', 'mbg'),
-        fetchEndpoint('/api/sheets/piket', 'piket'),
-        fetchEndpoint('/api/sheets/icebreaking', 'icebreaking'),
-        fetchEndpoint('/api/calendar/pelajaran'),
-        fetchEndpoint('/api/calendar/birthday'),
-        fetchEndpoint('/api/sheets/penunggakan'),
-        fetchEndpoint('/api/sheets/pengeluaran'),
-        fetchEndpoint('/api/sheets/pendapatan_lain'),
-        fetchEndpoint('/api/sheets/rekap')
+        probeHealth().finally(reportSyncStep),
+        fetchSitatibOverview(true, isSilent).finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/doa', 'doa').finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/mbg', 'mbg').finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/piket', 'piket').finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/icebreaking', 'icebreaking').finally(reportSyncStep),
+        fetchEndpoint('/api/calendar/pelajaran').finally(reportSyncStep),
+        fetchEndpoint('/api/calendar/birthday').finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/penunggakan').finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/pengeluaran').finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/pendapatan_lain').finally(reportSyncStep),
+        fetchEndpoint('/api/sheets/rekap').finally(reportSyncStep)
       ]);
+
+      setSyncProgress(prev => Math.max(prev, 95));
 
       console.table(debugRows);
 
@@ -772,6 +790,8 @@ export default function App() {
       setIsLoading(false);
     } finally {
       console.groupEnd();
+      setSyncProgress(100);
+      setIsSyncing(false);
       inFlightFetchRef.current = null;
     }
     })();
@@ -1103,6 +1123,8 @@ export default function App() {
   if (is404) {
     return (
       <>
+        <TopLoadingBar isLoading={isSyncing} progress={syncProgress} />
+
         {/* 5-minute pre-lesson in-app toast popup (auto closes after 5 seconds) */}
         <NextLessonToast
           info={nextLessonNotice}
@@ -1280,6 +1302,9 @@ export default function App() {
         overscrollBehaviorY: isScrollableMode ? 'auto' : 'contain'
       }}
     >
+      {/* Subtle Top Data-Sync Loading Bar */}
+      <TopLoadingBar isLoading={isSyncing} progress={syncProgress} />
+
       {/* Mobile Pull-To-Refresh Visual Feedback Indicator */}
       <PullToRefreshIndicator
         pullDistance={pullDistance}
@@ -1521,7 +1546,7 @@ export default function App() {
               </div>
 
               {/* Dynamic Day Content with tactile horizontal slide transition */}
-              <div className={isScrollableMode ? 'flex flex-col relative overflow-visible' : 'flex-1 flex flex-col min-h-0 relative overflow-hidden'}>
+              <div className={isScrollableMode ? 'flex flex-col relative overflow-x-clip' : 'flex-1 flex flex-col min-h-0 relative overflow-hidden'}>
                 <AnimatePresence mode="wait" initial={false} custom={slideDirection}>
                   <motion.div
                     key={activeISO}
@@ -1591,6 +1616,8 @@ export default function App() {
                       isoDate={activeISO}
                       isToday={activeISO === todayWIB.iso}
                       scrollableLayout={isScrollableMode}
+                      onSwipePrevDay={() => handleStepDay(-1)}
+                      onSwipeNextDay={() => handleStepDay(1)}
                     />
                   </motion.div>
                 </AnimatePresence>

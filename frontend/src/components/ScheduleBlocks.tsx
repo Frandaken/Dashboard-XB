@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, PartyPopper, FileImage, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, PartyPopper, FileImage, Maximize2, Minimize2 } from 'lucide-react';
 import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, IceBreakingSchedule, TaskAttachment } from '../types';
 import { getWIBDateParts } from '../utils/dateUtils';
 import { isTaskTimePassed } from '../utils/taskUtils';
+import { triggerHaptic } from '../utils/haptics';
 import { FormattedText } from './FormattedText';
 
 interface ScheduleBlocksProps {
@@ -18,6 +19,8 @@ interface ScheduleBlocksProps {
   isoDate?: string;
   isToday?: boolean;
   scrollableLayout?: boolean;
+  onSwipePrevDay?: () => void;
+  onSwipeNextDay?: () => void;
 }
 
 export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
@@ -31,10 +34,26 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
   onOpenAttachment,
   isoDate,
   isToday,
-  scrollableLayout = true
+  scrollableLayout = true,
+  onSwipePrevDay,
+  onSwipeNextDay
 }) => {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
   const [isScheduleExpanded, setIsScheduleExpanded] = useState<boolean>(false);
+  const [swipeOffsetX, setSwipeOffsetX] = useState<number>(0);
+  const [isSwipingHorizontally, setIsSwipingHorizontally] = useState<boolean>(false);
+  const [swipeHintDirection, setSwipeHintDirection] = useState<'prev' | 'next' | null>(null);
+  const [swipeReadyDirection, setSwipeReadyDirection] = useState<'prev' | 'next' | null>(null);
+
+  const swipeEnabled = Boolean(onSwipePrevDay || onSwipeNextDay);
+  const swipeStateRef = useRef<{
+    startX: number;
+    startY: number;
+    lastX: number;
+    startTime: number;
+    axis: 'horizontal' | 'vertical' | null;
+    thresholdHapticFired: boolean;
+  } | null>(null);
 
   // Live timer for smooth real-time progress & countdown
   const [nowWIB, setNowWIB] = useState<Date>(() => new Date());
@@ -56,6 +75,14 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isScheduleExpanded]);
+
+  useEffect(() => {
+    swipeStateRef.current = null;
+    setIsSwipingHorizontally(false);
+    setSwipeOffsetX(0);
+    setSwipeHintDirection(null);
+    setSwipeReadyDirection(null);
+  }, [isoDate]);
 
   const wibInfo = getWIBDateParts(nowWIB);
   const [nowH, nowM, nowS] = wibInfo.timeStr.split(':').map(Number);
@@ -389,13 +416,177 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({
     );
   };
 
+  const isInsideHorizontalScroller = (target: EventTarget | null, boundary: HTMLElement): boolean => {
+    let el = target instanceof HTMLElement ? target : null;
+    while (el && el !== boundary) {
+      const style = window.getComputedStyle(el);
+      const canScrollX =
+        (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+        el.scrollWidth > el.clientWidth + 2;
+      if (canScrollX) return true;
+      el = el.parentElement;
+    }
+    return false;
+  };
+
+  const resetSwipeState = () => {
+    swipeStateRef.current = null;
+    setIsSwipingHorizontally(false);
+    setSwipeOffsetX(0);
+    setSwipeHintDirection(null);
+    setSwipeReadyDirection(null);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!swipeEnabled || isScheduleExpanded || e.touches.length !== 1) return;
+    if (isInsideHorizontalScroller(e.target, e.currentTarget)) return;
+
+    const touch = e.touches[0];
+    swipeStateRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastX: touch.clientX,
+      startTime: Date.now(),
+      axis: null,
+      thresholdHapticFired: false
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const state = swipeStateRef.current;
+    if (!state || !swipeEnabled || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - state.startX;
+    const dy = touch.clientY - state.startY;
+    state.lastX = touch.clientX;
+
+    if (state.axis === null) {
+      const distance = Math.hypot(dx, dy);
+      if (distance < 12) return;
+
+      if (Math.abs(dx) > Math.abs(dy) * 1.25) {
+        const wantsPrev = dx > 0 && Boolean(onSwipePrevDay);
+        const wantsNext = dx < 0 && Boolean(onSwipeNextDay);
+        if (!wantsPrev && !wantsNext) {
+          state.axis = 'vertical';
+          return;
+        }
+        state.axis = 'horizontal';
+        setIsSwipingHorizontally(true);
+      } else {
+        state.axis = 'vertical';
+        return;
+      }
+    }
+
+    if (state.axis !== 'horizontal') return;
+
+    const canMoveInDirection = (dx > 0 && Boolean(onSwipePrevDay)) || (dx < 0 && Boolean(onSwipeNextDay));
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+    const damped =
+      prefersReducedMotion || !canMoveInDirection
+        ? 0
+        : Math.sign(dx) * Math.min(48, Math.pow(Math.abs(dx), 0.82) * 1.35);
+    setSwipeOffsetX(damped);
+
+    const hintDir: 'prev' | 'next' | null =
+      dx >= 16 && onSwipePrevDay
+        ? 'prev'
+        : dx <= -16 && onSwipeNextDay
+        ? 'next'
+        : null;
+    setSwipeHintDirection(hintDir);
+
+    const readyDir: 'prev' | 'next' | null =
+      dx >= 56 && onSwipePrevDay
+        ? 'prev'
+        : dx <= -56 && onSwipeNextDay
+        ? 'next'
+        : null;
+
+    setSwipeReadyDirection(readyDir);
+    if (readyDir && !state.thresholdHapticFired) {
+      state.thresholdHapticFired = true;
+      triggerHaptic('threshold');
+    } else if (!readyDir && state.thresholdHapticFired) {
+      state.thresholdHapticFired = false;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    const state = swipeStateRef.current;
+    if (!state) return;
+
+    if (state.axis === 'horizontal') {
+      const dx = state.lastX - state.startX;
+      const elapsed = Math.max(1, Date.now() - state.startTime);
+      const velocity = Math.abs(dx) / elapsed;
+      const shouldCommit = Math.abs(dx) >= 56 || (Math.abs(dx) >= 32 && velocity >= 0.35);
+
+      if (shouldCommit) {
+        if (dx < 0 && onSwipeNextDay) {
+          if (!state.thresholdHapticFired) triggerHaptic('light');
+          onSwipeNextDay();
+        } else if (dx > 0 && onSwipePrevDay) {
+          if (!state.thresholdHapticFired) triggerHaptic('light');
+          onSwipePrevDay();
+        }
+      }
+    }
+
+    resetSwipeState();
+  };
+
   return (
     <div
       id="schedule-blocks-grid"
-      className={`flex flex-col ${compact ? 'gap-2.5' : 'gap-3'} ${
+      onTouchStart={swipeEnabled ? handleTouchStart : undefined}
+      onTouchMove={swipeEnabled ? handleTouchMove : undefined}
+      onTouchEnd={swipeEnabled ? handleTouchEnd : undefined}
+      onTouchCancel={swipeEnabled ? resetSwipeState : undefined}
+      className={`relative flex flex-col ${compact ? 'gap-2.5' : 'gap-3'} ${
         scrollableLayout ? '' : 'flex-1 min-h-0'
-      }`}
+      } ${swipeEnabled ? 'touch-pan-y select-none sm:select-auto' : ''}`}
+      style={
+        swipeEnabled && (isSwipingHorizontally || swipeOffsetX !== 0)
+          ? {
+              transform: `translate3d(${swipeOffsetX}px, 0, 0)`,
+              transition: isSwipingHorizontally ? 'none' : 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)'
+            }
+          : undefined
+      }
     >
+      {/* Subtle directional edge hint while actively swiping (portaled so fixed positioning ignores container transform) */}
+      {swipeEnabled && isSwipingHorizontally && swipeHintDirection && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            className={`pointer-events-none fixed top-1/2 -translate-y-1/2 z-40 flex items-center gap-1 px-2.5 py-1.5 rounded-full border shadow-md backdrop-blur-xs text-xs font-semibold transition-colors ${
+              swipeHintDirection === 'prev' ? 'left-3' : 'right-3'
+            } ${
+              swipeReadyDirection
+                ? 'bg-[#1E3A2F] text-white border-emerald-500/50 dark:bg-emerald-700 dark:border-emerald-400/50'
+                : 'bg-white/90 dark:bg-[#18191C]/90 text-stone-700 dark:text-stone-200 border-stone-200 dark:border-stone-700'
+            }`}
+          >
+            {swipeHintDirection === 'prev' ? (
+              <>
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Sebelumnya</span>
+              </>
+            ) : (
+              <>
+                <span>Berikutnya</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </>
+            )}
+          </div>,
+          document.body
+        )}
       {/* ROW 1: (MBG or Priority 1 Ice Breaking or Priority 2 Doa) & PIKET KEBERSIHAN */}
       {(slot1Type !== null || piket) && (
         <div className={`grid ${slot1Type !== null && piket ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} ${compact ? 'gap-2.5' : 'gap-3'} flex-shrink-0`}>
