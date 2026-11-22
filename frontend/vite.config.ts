@@ -10,7 +10,7 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         includeAssets: [
           'favicon.ico',
           'icon.png',
@@ -53,9 +53,14 @@ export default defineConfig(() => {
         },
         workbox: {
           importScripts: ['/push-worker.js'],
-          navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+          navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/env-config\.js$/],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          globIgnores: ['env-config.js'],
           runtimeCaching: [
+            {
+              urlPattern: /\/env-config\.js$/i,
+              handler: 'NetworkOnly'
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',

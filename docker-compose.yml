@@ -4,6 +4,8 @@ services:
     container_name: dashboard-xb-frontend
     ports:
       - 8101:80
+    environment:
+      - VITE_APP_VERSION=${VITE_APP_VERSION:-}
     restart: unless-stopped
     depends_on:
       backend-xb:

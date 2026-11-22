@@ -100,6 +100,16 @@ app.get(['/img/og', '/img/og.jpg', '/og-image', '/og-image.jpg', '/og-image.png'
 
 const normalizeEnvUrl = (val?: string) => (val || '').trim().replace(/^["']|["']$/g, '');
 
+// Runtime frontend environment config (dibaca dari .env server tanpa perlu rebuild)
+app.get('/env-config.js', (_req, res) => {
+  const version = normalizeEnvUrl(process.env.VITE_APP_VERSION);
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  return res.send(`window.__APP_ENV__ = ${JSON.stringify({ VITE_APP_VERSION: version })};\n`);
+});
+
 // Upstream Google Calendar feeds (diambil murni dari environment variable, tanpa hardcode)
 const CALENDAR_FEEDS: Record<string, string> = {
   pelajaran: normalizeEnvUrl(process.env.CALENDAR_FEED_PELAJARAN),
