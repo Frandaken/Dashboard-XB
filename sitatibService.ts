@@ -64,6 +64,23 @@ export interface SitatibOverviewPayload {
 
 const DEFAULT_BASE_URL = 'https://sitatib.sma.putranirmala.sch.id';
 const CACHE_TTL_MS = 30 * 1000; // 30 seconds so newly posted announcements appear automatically without stale 5-minute cache
+const SITATIB_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36 Edg/158.0.0.0';
+const SITATIB_HEADER_PROFILE_VERSION = 'edge-158-win10-v1';
+const SITATIB_BROWSER_HEADERS: Record<string, string> = {
+  'User-Agent': SITATIB_USER_AGENT,
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Ch-Ua': '"Chromium";v="158", "Not.A/Brand";v="24", "Microsoft Edge";v="158"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"Windows"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'same-origin',
+  'Sec-Fetch-User': '?1'
+};
 
 const normalizeEnv = (val?: string) => (val || '').trim().replace(/^["']|["']$/g, '');
 
@@ -1029,6 +1046,8 @@ export class SitatibService {
         raw.baseUrl !== cfg.baseUrl ||
         raw.username !== cfg.username ||
         raw.academicYearId !== cfg.academicYearId ||
+        raw.userAgent !== SITATIB_USER_AGENT ||
+        raw.headerProfile !== SITATIB_HEADER_PROFILE_VERSION ||
         !raw.cookies ||
         typeof raw.cookies !== 'object'
       ) {
@@ -1062,6 +1081,8 @@ export class SitatibService {
         username: cfg.username,
         academicYearId: cfg.academicYearId,
         academicYearLabel: this.academicYearLabel || null,
+        userAgent: SITATIB_USER_AGENT,
+        headerProfile: SITATIB_HEADER_PROFILE_VERSION,
         lastSessionAt: this.lastSessionAt,
         updatedAt: new Date().toISOString(),
         cookies: Object.fromEntries(this.cookies.entries())
@@ -1166,10 +1187,7 @@ export class SitatibService {
           redirect: 'manual',
           signal: controller.signal,
           headers: {
-            'User-Agent': 'DashboardXB-SITATIB-Proxy/1.0',
-            Accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            Pragma: 'no-cache',
+            ...SITATIB_BROWSER_HEADERS,
             ...(cookieHeader ? { Cookie: cookieHeader } : {}),
             ...extraHeaders
           }
@@ -1225,8 +1243,12 @@ export class SitatibService {
     }
 
     this.cookies.clear();
-    const loginPageUrl = `${cfg.baseUrl}/index.php/login`;
-    const loginPage = await this.requestWithCookies(loginPageUrl);
+    const loginPageUrl = `${cfg.baseUrl}/login`;
+    const loginPage = await this.requestWithCookies(loginPageUrl, {
+      headers: {
+        'Sec-Fetch-Site': 'none'
+      }
+    });
 
     const csrfMatch = loginPage.html.match(/name=["'](csrf_[^"']+)["'][^>]*value=["']([^"']+)["']/i)
       || loginPage.html.match(/value=["']([^"']+)["'][^>]*name=["'](csrf_[^"']+)["']/i);
@@ -1349,8 +1371,8 @@ export class SitatibService {
           redirect: 'manual',
           signal: controller.signal,
           headers: {
-            'User-Agent': 'DashboardXB-SITATIB-Proxy/1.0',
-            Accept: 'application/pdf,image/*,application/octet-stream,*/*;q=0.8',
+            ...SITATIB_BROWSER_HEADERS,
+            Accept: 'application/pdf,image/avif,image/webp,image/apng,image/*,application/octet-stream,*/*;q=0.8',
             ...(cookieHeader ? { Cookie: cookieHeader } : {})
           }
         });
