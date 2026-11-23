@@ -967,6 +967,148 @@ app.post('/api/push/broadcast', async (req, res) => {
   }
 });
 
+// Helper functions for parsing website agenda HTML
+function decodeHtmlEntities(input) {
+  if (!input) return '';
+  return input
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, num) => {
+      const code = parseInt(num, 10);
+      return Number.isFinite(code) ? String.fromCharCode(code) : '';
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      const code = parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCharCode(code) : '';
+    });
+}
+
+function stripTags(html) {
+  return decodeHtmlEntities(
+    (html || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|tr|h1|h2|h3|h4|h5|h6)>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+  )
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n')
+    .trim();
+}
+
+function parseWebsiteAgendaHtml(html) {
+  const items = [];
+  const articleMatches = html.match(/<article\b[^>]*class=["'][^"']*agenda-detail[^"']*["'][\s\S]*?<\/article>/gi) || [];
+  
+  for (const article of articleMatches) {
+    const dayMatch = article.match(/<div class="agenda-date">\s*<strong>([^<]+)<\/strong>\s*<span>([^<]+)<\/span>/i);
+    const rangeMatch = article.match(/<span class="agenda-range[^"]*">([\s\S]*?)<\/span>/i);
+    const titleMatch = article.match(/<h4>([\s\S]*?)<\/h4>/i);
+    const catMatch = article.match(/<span class="agenda-category[^"]*">([\s\S]*?)<\/span>/i);
+    const pMatch = article.match(/<p>([\s\S]*?)<\/p>/i);
+
+    const dayStr = dayMatch ? dayMatch[1].trim() : '';
+    const monthStr = dayMatch ? dayMatch[2].trim() : '';
+    const rangeStr = rangeMatch ? stripTags(rangeMatch[1]) : '';
+    const title = titleMatch ? stripTags(titleMatch[1]) : '';
+    const category = catMatch ? stripTags(catMatch[1]) : 'Kegiatan Sekolah';
+    const description = pMatch ? stripTags(pMatch[1]) : '';
+
+    let year = new Date().getFullYear();
+    const yearMatch = rangeStr.match(/\b(20\d{2})\b/) || html.match(/\b(20\d{2})\b/);
+    if (yearMatch) {
+      year = parseInt(yearMatch[1], 10);
+    }
+
+    const monthMap = {
+      'january': 1, 'jan': 1, 'januari': 1,
+      'february': 2, 'feb': 2, 'februari': 2,
+      'march': 3, 'mar': 3, 'maret': 3,
+      'april': 4, 'apr': 4,
+      'may': 5, 'mei': 5,
+      'june': 6, 'jun': 6, 'juni': 6,
+      'july': 7, 'jul': 7, 'juli': 7,
+      'august': 8, 'aug': 8, 'agustus': 8, 'ags': 8,
+      'september': 9, 'sep': 9,
+      'october': 10, 'oct': 10, 'oktober': 10, 'okt': 10,
+      'november': 11, 'nov': 11,
+      'december': 12, 'dec': 12, 'desember': 12, 'des': 12
+    };
+
+    const monthNum = monthMap[monthStr.toLowerCase()] || 1;
+    const dayNum = parseInt(dayStr, 10) || 1;
+    const isoDate = `${year}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+
+    if (title) {
+      items.push({
+        id: `web-${items.length + 1}`,
+        isoDate,
+        day: dayStr,
+        month: monthStr,
+        range: rangeStr,
+        title,
+        category,
+        description,
+        sourceUrl: 'https://sma.putranirmala.sch.id/index.php/agenda'
+      });
+    }
+  }
+
+  return items;
+}
+
+// Endpoint to fetch and parse SMA Putra Nirmala Website Agenda
+app.get('/api/website-agenda', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  const cacheKey = 'website-agenda';
+  const cached = cache.get(cacheKey);
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
+
+  if (!forceFresh && cached && cached.timestamp && Date.now() - cached.timestamp < 3 * 60 * 1000) {
+    return res.json({ ok: true, source: 'cache', items: cached.data });
+  }
+
+  try {
+    const html = await fetchWithRetry('https://sma.putranirmala.sch.id/index.php/agenda', {
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    }, 15000);
+
+    const items = parseWebsiteAgendaHtml(html);
+    cache.set(cacheKey, { data: items, timestamp: Date.now() });
+    return res.json({ ok: true, source: 'live', items });
+  } catch (err) {
+    console.warn('[WebsiteAgenda] Failed to fetch live agenda:', err?.message || err);
+    if (cached && cached.data) {
+      return res.json({ ok: true, source: 'stale-cache', items: cached.data, error: err.message });
+    }
+    return res.json({
+      ok: true,
+      source: 'fallback',
+      items: [
+        {
+          id: 'web-fallback-1',
+          isoDate: '2026-11-26',
+          day: '26',
+          month: 'November',
+          range: '26 November 2026',
+          title: 'Kegiatan Penanaman Pohon di Kebun Raya Kuningan',
+          category: 'Akademik',
+          description: '',
+          sourceUrl: 'https://sma.putranirmala.sch.id/index.php/agenda'
+        }
+      ],
+      error: err.message
+    });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on http://0.0.0.0:${PORT}`);
 });

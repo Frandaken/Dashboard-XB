@@ -224,6 +224,18 @@ export interface SitatibOverviewData {
   error?: string;
 }
 
+export interface WebsiteAgendaItem {
+  id: string;
+  isoDate: string;
+  day: string;
+  month: string;
+  range: string;
+  title: string;
+  category: string;
+  description: string;
+  sourceUrl: string;
+}
+
 export interface ClassDataStore {
   doaByDate: Record<string, DoaSchedule>;
   mbgByDate: Record<string, MbgSchedule>;
@@ -233,6 +245,7 @@ export interface ClassDataStore {
   tasksByDate: Record<string, TaskItem[]>;
   eventNoticesByDate: Record<string, CalendarEventNotice[]>;
   sitatibActivitiesByDate?: Record<string, SitatibClassActivity[]>;
+  websiteAgendaByDate?: Record<string, WebsiteAgendaItem[]>;
   birthdayByMonthDay: Record<string, string[]>;
   kasData?: KasDataStore;
   sitatibData?: SitatibOverviewData;

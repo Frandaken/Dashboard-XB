@@ -18,6 +18,7 @@ interface CalendarSectionProps {
   hasTaskFn: (iso: string) => boolean;
   hasEventNoticeFn?: (iso: string) => boolean;
   hasSitatibActivityFn?: (iso: string) => boolean;
+  hasWebsiteAgendaFn?: (iso: string) => boolean;
   hasBirthdayFn: (iso: string) => string[];
   birthdaysToday: string[];
 }
