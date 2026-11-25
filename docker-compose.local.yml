@@ -6,12 +6,14 @@ services:
       dockerfile: frontend/Dockerfile
       no_cache: true
       args:
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-${APP_VERSION:-}}
+        APP_VERSION: ${APP_VERSION:-${VITE_APP_VERSION:-}}
     container_name: dashboard-xb-frontend
     ports:
       - 8202:80
     environment:
-      - VITE_APP_VERSION=${VITE_APP_VERSION:-}
+      - VITE_APP_VERSION=${VITE_APP_VERSION:-${APP_VERSION:-}}
+      - APP_VERSION=${APP_VERSION:-${VITE_APP_VERSION:-}}
     restart: unless-stopped
     depends_on:
       backend-xb:
@@ -38,6 +40,8 @@ services:
       - DATA_DIR=/app/data
       - UPLOADS_DIR=/app/data/uploads
       - APP_URL=${APP_URL:-}
+      - VITE_APP_VERSION=${VITE_APP_VERSION:-${APP_VERSION:-}}
+      - APP_VERSION=${APP_VERSION:-${VITE_APP_VERSION:-}}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       - CALENDAR_FEED_PELAJARAN=${CALENDAR_FEED_PELAJARAN:-}
       - CALENDAR_FEED_BIRTHDAY=${CALENDAR_FEED_BIRTHDAY:-}
@@ -46,6 +50,15 @@ services:
       - SITATIB_USERNAME=${SITATIB_USERNAME:-}
       - SITATIB_PASSWORD=${SITATIB_PASSWORD:-}
       - SITATIB_ACADEMIC_YEAR_ID=${SITATIB_ACADEMIC_YEAR_ID:-3}
+      - KAS_PAYMENT_ENABLED=${KAS_PAYMENT_ENABLED:-true}
+      - KAS_QRIS_IMAGE_URL=${KAS_QRIS_IMAGE_URL:-}
+      - KAS_PAYMENT_BANK_NAME=${KAS_PAYMENT_BANK_NAME:-Bank Digital (QRIS)}
+      - KAS_PAYMENT_MERCHANT_NAME=${KAS_PAYMENT_MERCHANT_NAME:-Kas Kelas XB — SMA Putra Nirmala}
+      - KAS_PAYMENT_ACCOUNT_HOLDER=${KAS_PAYMENT_ACCOUNT_HOLDER:-}
+      - KAS_PAYMENT_NMID=${KAS_PAYMENT_NMID:-}
+      - KAS_PAYMENT_WEEKLY_AMOUNT=${KAS_PAYMENT_WEEKLY_AMOUNT:-3000}
+      - KAS_PAYMENT_TREASURER_WA=${KAS_PAYMENT_TREASURER_WA:-}
+      - KAS_PAYMENT_NOTE=${KAS_PAYMENT_NOTE:-}
     volumes:
       - ./data:/app/data
     healthcheck:

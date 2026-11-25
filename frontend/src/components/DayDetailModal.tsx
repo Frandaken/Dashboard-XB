@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, Music, BookOpen, PartyPopper, Clock, ChevronRight, Sun, Moon, Copy, Check } from 'lucide-react';
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment, CalendarEventNotice, SitatibClassActivity } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, TaskAttachment, CalendarEventNotice, SitatibClassActivity, WebsiteAgendaItem } from '../types';
 import { DOW_ID, MONTH_ID } from '../constants/demoData';
 import { parseISODateParts, getWIBDateParts } from '../utils/dateUtils';
 import { getSongForDate } from '../constants/songSchedule';
@@ -9,6 +9,7 @@ import { formatDailySummary, copyTextToClipboard } from '../utils/summaryFormatt
 import { TaskBanner } from './TaskBanner';
 import { EventNoticeBanner } from './EventNoticeBanner';
 import { SitatibActivityBanner } from './SitatibActivityBanner';
+import { WebsiteAgendaBanner } from './WebsiteAgendaBanner';
 import { ScheduleBlocks } from './ScheduleBlocks';
 import { SongLyricsModal } from './SongLyricsModal';
 import { AllSongsModal } from './AllSongsModal';
@@ -24,6 +25,7 @@ interface DayDetailModalProps {
   tasks?: TaskItem[];
   eventNotices?: CalendarEventNotice[];
   sitatibActivities?: SitatibClassActivity[];
+  websiteAgenda?: WebsiteAgendaItem[];
   birthdays?: string[];
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -43,6 +45,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   tasks = [],
   eventNotices = [],
   sitatibActivities = [],
+  websiteAgenda = [],
   birthdays = [],
   darkMode,
   onToggleDarkMode,
@@ -63,6 +66,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       tasks,
       eventNotices,
       sitatibActivities,
+      websiteAgenda,
       piket,
       mbg,
       iceBreaking,
@@ -73,7 +77,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [isoDate, doa, pelajaran, tasks, eventNotices, sitatibActivities, piket, mbg, iceBreaking, birthdays]);
+  }, [isoDate, doa, pelajaran, tasks, eventNotices, sitatibActivities, websiteAgenda, piket, mbg, iceBreaking, birthdays]);
 
   // Real-time tracking of app theme (Light mode / OLED black)
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -226,6 +230,14 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     }
                   : undefined
               }
+            />
+          )}
+
+          {/* Official School Website Agenda Banner */}
+          {websiteAgenda && websiteAgenda.length > 0 && (
+            <WebsiteAgendaBanner
+              items={websiteAgenda}
+              todayISO={getWIBDateParts().iso}
             />
           )}
 

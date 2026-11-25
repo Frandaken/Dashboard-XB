@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, Music, ShieldCheck, ChevronRight, RotateCw, Sparkles, Users, PartyPopper, Bell, Wallet, Sun, Moon, ClipboardList, Check, Settings, FerrisWheel, Scale } from 'lucide-react';
-import { APP_VERSION, APP_RELEASE_STATUS } from '../utils/version';
+import { useAppVersion, APP_RELEASE_STATUS } from '../utils/version';
 
 interface HamburgerMenuModalProps {
   isOpen: boolean;
@@ -40,6 +40,8 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
   onOpenSitatib,
   sitatibBadgeText
 }) => {
+  const appVersion = useAppVersion();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -442,11 +444,11 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
               SMA Putra Nirmala • Kelas XB
             </span>
             <span
-              title={`Versi Dashboard: ${APP_VERSION} (${APP_RELEASE_STATUS})`}
+              title={`Versi Dashboard: ${appVersion} (${APP_RELEASE_STATUS})`}
               className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-stone-100 dark:bg-[#202227] border border-stone-200/80 dark:border-stone-700/70 text-[11px] font-mono font-medium text-stone-700 dark:text-stone-200 shadow-2xs flex-shrink-0"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-              <span>{APP_VERSION}</span>
+              <span>{appVersion}</span>
               <span className="text-stone-400 dark:text-stone-500 font-sans text-[10px]">•</span>
               <span className="text-emerald-700 dark:text-emerald-400 font-sans text-[10px] font-semibold">{APP_RELEASE_STATUS}</span>
             </span>

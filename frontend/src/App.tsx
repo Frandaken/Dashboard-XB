@@ -33,16 +33,18 @@ import { MobileQuickActions } from './components/MobileQuickActions';
 import { EventNoticeBanner } from './components/EventNoticeBanner';
 import { SitatibSummaryBanner } from './components/SitatibSummaryBanner';
 import { SitatibActivityBanner } from './components/SitatibActivityBanner';
+import { WebsiteAgendaBanner } from './components/WebsiteAgendaBanner';
 import type { ReceiptLightboxData } from './components/ReceiptLightboxModal';
 import { NextLessonToast, NextLessonInfo } from './components/NextLessonToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from './components/PullToRefreshIndicator';
 import { validateFirestoreConnection } from './firebase';
-import { ClassDataStore, SitatibAttachment, SitatibOverviewData, TaskAttachment } from './types';
+import { ClassDataStore, SitatibAttachment, SitatibOverviewData, TaskAttachment, WebsiteAgendaItem } from './types';
 import { parseCSV, parseDoaRows, parseMbgRows, parsePiketRows, parseIceBreakingRows, parseKasData } from './utils/csvParser';
 import { parsePelajaranICS, parseBirthdayICS } from './utils/icalParser';
 import { buildSitatibActivitiesByDate, sortSitatibAnnouncementsByNearestDate } from './utils/sitatibUtils';
+import { buildWebsiteAgendaByDate, mergeWebsiteAgendaByDate } from './utils/websiteAgendaUtils';
 import { DEMO_CSV, DOW_ID, MONTH_ID } from './constants/demoData';
 import { KAS_DEMO_CSV } from './constants/kasDemoData';
 import { getWIBDateParts, parseISODateParts, stepISODate } from './utils/dateUtils';
@@ -150,6 +152,7 @@ export default function App() {
         tasksByDate: {},
         eventNoticesByDate: {},
         sitatibActivitiesByDate: {},
+        websiteAgendaByDate: {},
         birthdayByMonthDay: {},
         kasData
       };
@@ -163,6 +166,7 @@ export default function App() {
         tasksByDate: {},
         eventNoticesByDate: {},
         sitatibActivitiesByDate: {},
+        websiteAgendaByDate: {},
         birthdayByMonthDay: {}
       };
     }
@@ -291,6 +295,8 @@ export default function App() {
   const [previewAttachment, setPreviewAttachment] = useState<ReceiptLightboxData | null>(null);
   const inFlightSitatibRef = useRef<Promise<SitatibOverviewData | null> | null>(null);
   const lastSitatibSyncRef = useRef<number>(0);
+  const loadedWebsiteMonthsRef = useRef<Set<string>>(new Set());
+  const inFlightWebsiteMonthsRef = useRef<Set<string>>(new Set());
 
   const fetchWithRetry = useCallback(async (url: string, init?: RequestInit, retries: number = 2, timeoutMs: number = 25000): Promise<Response> => {
     let lastError: unknown;
@@ -374,6 +380,45 @@ export default function App() {
     return run;
   }, [fetchWithRetry]);
 
+  const fetchWebsiteAgenda = useCallback(async (
+    month?: string,
+    forceFresh: boolean = false
+  ): Promise<{ items: WebsiteAgendaItem[]; months: string[] } | null> => {
+    try {
+      const params = new URLSearchParams();
+      if (month) params.set('month', month);
+      if (forceFresh) params.set('fresh', '1');
+      params.set('t', String(Date.now()));
+      const res = await fetchWithRetry(
+        `/api/website-agenda?${params.toString()}`,
+        {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        },
+        1
+      );
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        return null;
+      }
+      const json = await res.json();
+      if (!json?.ok || !Array.isArray(json.items)) {
+        return null;
+      }
+      const months: string[] = Array.isArray(json.months) ? json.months : (month ? [month] : []);
+      months.forEach(m => loadedWebsiteMonthsRef.current.add(m));
+      return {
+        items: json.items as WebsiteAgendaItem[],
+        months
+      };
+    } catch {
+      return null;
+    }
+  }, [fetchWithRetry]);
+
   const openSitatibModal = useCallback((tab: 'announcements' | 'rules' | 'activities' = 'announcements') => {
     setSitatibInitialTab(tab);
     setIsSitatibModalOpen(true);
@@ -444,7 +489,8 @@ export default function App() {
       store.iceBreakingByDate[iso] ||
       (store.pelajaranByDate[iso] && store.pelajaranByDate[iso].length > 0) ||
       (store.eventNoticesByDate && store.eventNoticesByDate[iso] && store.eventNoticesByDate[iso].length > 0) ||
-      (store.sitatibActivitiesByDate && store.sitatibActivitiesByDate[iso] && store.sitatibActivitiesByDate[iso].length > 0)
+      (store.sitatibActivitiesByDate && store.sitatibActivitiesByDate[iso] && store.sitatibActivitiesByDate[iso].length > 0) ||
+      (store.websiteAgendaByDate && store.websiteAgendaByDate[iso] && store.websiteAgendaByDate[iso].length > 0)
     );
   }, []);
 
@@ -464,6 +510,9 @@ export default function App() {
     });
     Object.keys(store.sitatibActivitiesByDate || {}).forEach(d => {
       if (store.sitatibActivitiesByDate?.[d]?.length) availableDates.add(d);
+    });
+    Object.keys(store.websiteAgendaByDate || {}).forEach(d => {
+      if (store.websiteAgendaByDate?.[d]?.length) availableDates.add(d);
     });
 
     const sortedDates = Array.from(availableDates).sort();
@@ -507,7 +556,7 @@ export default function App() {
     const syncTag = `[Dashboard XB Sync @ ${new Date().toLocaleTimeString('id-ID')}]`;
     console.group(`${syncTag} Memulai sinkronisasi data (forceFresh=${forceFresh}, isSilent=${isSilent}, online=${typeof navigator !== 'undefined' ? navigator.onLine : 'unknown'}, origin=${typeof window !== 'undefined' ? window.location.origin : 'unknown'})`);
 
-    const totalSteps = (forceFresh ? 1 : 0) + 12;
+    const totalSteps = (forceFresh ? 1 : 0) + 13;
     let completedSteps = 0;
     const reportSyncStep = () => {
       completedSteps += 1;
@@ -653,9 +702,14 @@ export default function App() {
       const rangeStart = new Date(curYear - 1, 0, 1);
       const rangeEnd = new Date(curYear + 1, 11, 31);
 
-      const [, sitatibPayload, doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
+      if (forceFresh) {
+        loadedWebsiteMonthsRef.current.clear();
+      }
+
+      const [, sitatibPayload, websiteAgendaPayload, doaRes, mbgRes, piketRes, iceBreakingRes, pelajaranRes, birthdayRes, penunggakanRes, pengeluaranRes, pendapatanLainRes, rekapRes] = await Promise.all([
         probeHealth().finally(reportSyncStep),
         fetchSitatibOverview(true, isSilent).finally(reportSyncStep),
+        fetchWebsiteAgenda(undefined, forceFresh).finally(reportSyncStep),
         fetchEndpoint('/api/sheets/doa', 'doa').finally(reportSyncStep),
         fetchEndpoint('/api/sheets/mbg', 'mbg').finally(reportSyncStep),
         fetchEndpoint('/api/sheets/piket', 'piket').finally(reportSyncStep),
@@ -705,6 +759,9 @@ export default function App() {
       // Parse SITATIB class activities into a dedicated map strictly separate from iCal
       const sitatibActivitiesByDate = buildSitatibActivitiesByDate(sitatibPayload?.activities);
 
+      // Parse SMA Putra Nirmala Website agenda into its own dedicated map
+      const websiteAgendaByDate = buildWebsiteAgendaByDate(websiteAgendaPayload?.items);
+
       const failedCount = debugRows.filter(r => r.status === 'FAILED').length;
       const totalBirthdayNames = Object.values(birthdayByMonthDay).reduce((acc, list) => acc + list.length, 0);
       console.info(`${syncTag} Ringkasan Parsing (${Math.round(performance.now() - syncStartedAt)}ms, failed=${failedCount}/${debugRows.length}):`, {
@@ -712,6 +769,7 @@ export default function App() {
         tasksDates: Object.keys(tasksByDate).length,
         eventNoticesDates: Object.keys(eventNoticesByDate).length,
         sitatibActivityDates: Object.keys(sitatibActivitiesByDate).length,
+        websiteAgendaDates: Object.keys(websiteAgendaByDate).length,
         birthdayMonthDays: Object.keys(birthdayByMonthDay).length,
         birthdayTotalNames: totalBirthdayNames,
         doaDates: Object.keys(doaByDate).length,
@@ -743,6 +801,7 @@ export default function App() {
           tasksByDate: pelajaranRes.isFallback && hasPrevLive && Object.keys(prev.tasksByDate).length > 0 ? prev.tasksByDate : tasksByDate,
           eventNoticesByDate: pelajaranRes.isFallback && hasPrevLive && Object.keys(prev.eventNoticesByDate || {}).length > 0 ? prev.eventNoticesByDate : eventNoticesByDate,
           sitatibActivitiesByDate: sitatibPayload ? sitatibActivitiesByDate : (prev.sitatibActivitiesByDate || sitatibActivitiesByDate),
+          websiteAgendaByDate: websiteAgendaPayload ? websiteAgendaByDate : (prev.websiteAgendaByDate || websiteAgendaByDate),
           birthdayByMonthDay: birthdayRes.isFallback && hasPrevLive && Object.keys(prev.birthdayByMonthDay).length > 0 ? prev.birthdayByMonthDay : birthdayByMonthDay,
           kasData: kasAllFailed && prev.kasData ? prev.kasData : kasData,
           sitatibData: sitatibPayload ?? prev.sitatibData
@@ -759,6 +818,7 @@ export default function App() {
         tasksByDate,
         eventNoticesByDate,
         sitatibActivitiesByDate,
+        websiteAgendaByDate,
         birthdayByMonthDay,
         kasData,
         sitatibData: sitatibPayload ?? undefined
@@ -798,7 +858,28 @@ export default function App() {
 
     inFlightFetchRef.current = run;
     return run;
-  }, [defaultSchoolISO, fetchSitatibOverview, fetchWithRetry, findBestActiveDate, hasSchoolData]);
+  }, [defaultSchoolISO, fetchSitatibOverview, fetchWebsiteAgenda, fetchWithRetry, findBestActiveDate, hasSchoolData]);
+
+  // Lazily fetch Website agenda whenever user navigates calendar to a month outside the initial window
+  useEffect(() => {
+    const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+    if (loadedWebsiteMonthsRef.current.has(monthKey) || inFlightWebsiteMonthsRef.current.has(monthKey)) {
+      return;
+    }
+    inFlightWebsiteMonthsRef.current.add(monthKey);
+    void fetchWebsiteAgenda(monthKey, false)
+      .then(result => {
+        if (result && result.items.length > 0) {
+          setDataStore(prev => ({
+            ...prev,
+            websiteAgendaByDate: mergeWebsiteAgendaByDate(prev.websiteAgendaByDate, result.items)
+          }));
+        }
+      })
+      .finally(() => {
+        inFlightWebsiteMonthsRef.current.delete(monthKey);
+      });
+  }, [viewYear, viewMonth, fetchWebsiteAgenda]);
 
   useEffect(() => {
     // Initial load: use server 60s cache / deduplication to avoid hammering Google Sheets
@@ -920,6 +1001,10 @@ export default function App() {
     return dataStore.sitatibActivitiesByDate?.[activeISO] || [];
   }, [dataStore.sitatibActivitiesByDate, activeISO]);
 
+  const activeWebsiteAgenda = useMemo(() => {
+    return dataStore.websiteAgendaByDate?.[activeISO] || [];
+  }, [dataStore.websiteAgendaByDate, activeISO]);
+
   const activeMonthDayKey = `${String(activeInfo.month + 1).padStart(2, '0')}-${String(activeInfo.day).padStart(2, '0')}`;
   const activeBirthdays = dataStore.birthdayByMonthDay[activeMonthDayKey] || [];
 
@@ -943,6 +1028,10 @@ export default function App() {
     return Boolean(dataStore.sitatibActivitiesByDate?.[iso]?.length);
   };
 
+  const hasWebsiteAgendaForISO = (iso: string): boolean => {
+    return Boolean(dataStore.websiteAgendaByDate?.[iso]?.length);
+  };
+
   const hasDataForISO = (iso: string): boolean => {
     const info = parseISODateParts(iso);
     const md = `${String(info.month + 1).padStart(2, '0')}-${String(info.day).padStart(2, '0')}`;
@@ -954,6 +1043,7 @@ export default function App() {
       (dataStore.pelajaranByDate[iso] && dataStore.pelajaranByDate[iso].length > 0) ||
       hasEventNoticeForISO(iso) ||
       hasSitatibActivityForISO(iso) ||
+      hasWebsiteAgendaForISO(iso) ||
       hasTasksForISO(iso) ||
       (dataStore.birthdayByMonthDay[md] && dataStore.birthdayByMonthDay[md].length > 0)
     );
@@ -984,6 +1074,7 @@ export default function App() {
       ),
       eventNotices: dataStore.eventNoticesByDate?.[selectedISO] || [],
       sitatibActivities: dataStore.sitatibActivitiesByDate?.[selectedISO] || [],
+      websiteAgenda: dataStore.websiteAgendaByDate?.[selectedISO] || [],
       birthdays: dataStore.birthdayByMonthDay[md] || []
     };
   }, [selectedISO, dataStore, todayWIB.iso, currentWIBTime]);
@@ -1099,6 +1190,7 @@ export default function App() {
       tasks: dataStore.tasksByDate[activeISO] || [],
       eventNotices: activeEventNotices,
       sitatibActivities: activeSitatibActivities,
+      websiteAgenda: activeWebsiteAgenda,
       piket: activePiket,
       mbg: activeMbg,
       iceBreaking: activeIceBreaking,
@@ -1110,7 +1202,7 @@ export default function App() {
       setTimeout(() => setDailyCopied(false), 2000);
     }
     return ok;
-  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activeEventNotices, activeSitatibActivities, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
+  }, [activeISO, todayWIB.iso, activeDoa, activePelajaran, dataStore.tasksByDate, activeEventNotices, activeSitatibActivities, activeWebsiteAgenda, activePiket, activeMbg, activeIceBreaking, activeBirthdays]);
 
   const handleCopyWeeklySummary = useCallback(async () => {
     const text = formatWeeklySummary({
@@ -1596,6 +1688,14 @@ export default function App() {
                       />
                     )}
 
+                    {/* Official SMA Putra Nirmala Website Agenda Banner */}
+                    {activeWebsiteAgenda.length > 0 && (
+                      <WebsiteAgendaBanner
+                        items={activeWebsiteAgenda}
+                        todayISO={todayWIB.iso}
+                      />
+                    )}
+
                     {/* Penugasan Banner (Derived strictly from event DESCRIPTION in ical jadwal pelajaran) */}
                     {activeTasks.length > 0 && (
                       <TaskBanner
@@ -1667,6 +1767,7 @@ export default function App() {
                 hasTaskFn={hasTasksForISO}
                 hasEventNoticeFn={hasEventNoticeForISO}
                 hasSitatibActivityFn={hasSitatibActivityForISO}
+                hasWebsiteAgendaFn={hasWebsiteAgendaForISO}
                 hasBirthdayFn={getBirthdaysForISO}
                 birthdaysToday={activeBirthdays}
               />
@@ -1798,6 +1899,7 @@ export default function App() {
             tasks={selectedDetails.tasks}
             eventNotices={selectedDetails.eventNotices}
             sitatibActivities={selectedDetails.sitatibActivities}
+            websiteAgenda={selectedDetails.websiteAgenda}
             birthdays={selectedDetails.birthdays}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}

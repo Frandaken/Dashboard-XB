@@ -150,6 +150,25 @@ export interface KasDataStore {
   lastUpdated?: string;
 }
 
+export type KasPaymentVerificationMode = 'manual_spreadsheet';
+
+export interface KasPaymentConfig {
+  enabled: boolean;
+  providerType: 'qris';
+  bankName: string;
+  merchantName: string;
+  accountHolder?: string;
+  nmid?: string;
+  weeklyRate: number;
+  qrisImageUrl: string | null;
+  hasQrisImage: boolean;
+  imageSource?: 'env' | 'file' | 'none';
+  treasurerWhatsapp?: string;
+  customNote?: string;
+  verificationMode: KasPaymentVerificationMode;
+  verificationNotice: string;
+}
+
 export interface CalendarEventNotice {
   id: string;
   title: string;
@@ -227,11 +246,14 @@ export interface SitatibOverviewData {
 export interface WebsiteAgendaItem {
   id: string;
   isoDate: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD (inclusive)
   day: string;
   month: string;
   range: string;
   title: string;
   category: string;
+  timeLabel?: string;
   description: string;
   sourceUrl: string;
 }

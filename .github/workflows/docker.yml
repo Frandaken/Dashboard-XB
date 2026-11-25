@@ -26,7 +26,7 @@ jobs:
           file: frontend/Dockerfile
           push: true
           tags: ghcr.io/frandaken/dashboard-xb-frontend:latest
-          build-args: VITE_APP_VERSION=${{ vars.VITE_APP_VERSION || '' }}
+          build-args: VITE_APP_VERSION=${{ vars.VITE_APP_VERSION || vars.APP_VERSION || '' }}
 
       - uses: docker/build-push-action@v6
         with:

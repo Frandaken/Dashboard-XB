@@ -59,7 +59,14 @@ export default defineConfig(() => {
           runtimeCaching: [
             {
               urlPattern: /\/env-config\.js$/i,
-              handler: 'NetworkOnly'
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'runtime-env-config',
+                networkTimeoutSeconds: 3,
+                cacheableResponse: {
+                  statuses: [200]
+                }
+              }
             },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

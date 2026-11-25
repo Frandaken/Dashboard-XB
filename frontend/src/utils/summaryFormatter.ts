@@ -1,4 +1,4 @@
-import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, ClassDataStore, CalendarEventNotice, SitatibClassActivity } from '../types';
+import { DoaSchedule, MbgSchedule, PiketSchedule, PeriodItem, TaskItem, IceBreakingSchedule, ClassDataStore, CalendarEventNotice, SitatibClassActivity, WebsiteAgendaItem } from '../types';
 import { MONTH_ID } from '../constants/demoData';
 import { parseISODateParts, stepISODate } from './dateUtils';
 import { getSongForDate, SONG_LYRICS_DB } from '../constants/songSchedule';
@@ -21,6 +21,7 @@ export interface DailySummaryParams {
   tasks?: TaskItem[];
   eventNotices?: CalendarEventNotice[];
   sitatibActivities?: SitatibClassActivity[];
+  websiteAgenda?: WebsiteAgendaItem[];
   piket?: PiketSchedule;
   mbg?: MbgSchedule;
   iceBreaking?: IceBreakingSchedule;
@@ -71,6 +72,7 @@ export function formatDailySummary(params: DailySummaryParams): string {
     tasks = [],
     eventNotices = [],
     sitatibActivities = [],
+    websiteAgenda = [],
     piket,
     mbg,
     iceBreaking,
@@ -120,6 +122,18 @@ export function formatDailySummary(params: DailySummaryParams): string {
       const orgNote = act.organizer ? ` (${act.organizer})` : '';
       const descNote = act.description ? `\n  ℹ️ ${act.description.replace(/\n+/g, ' / ')}` : '';
       lines.push(`• *${act.title}*${timeNote}${orgNote}${descNote}`);
+    });
+    lines.push('');
+  }
+
+  // Official School Website Agenda
+  if (websiteAgenda && websiteAgenda.length > 0) {
+    lines.push('🌐 *AGENDA WEBSITE SMA PUTRA NIRMALA*');
+    websiteAgenda.forEach(item => {
+      const catNote = item.category ? ` [${item.category}]` : '';
+      const timeNote = item.timeLabel ? ` · ${item.timeLabel}` : '';
+      const descNote = item.description ? `\n  ℹ️ ${item.description.replace(/\n+/g, ' / ')}` : '';
+      lines.push(`• *${item.title}*${catNote}${timeNote}${descNote}`);
     });
     lines.push('');
   }

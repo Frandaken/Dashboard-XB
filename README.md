@@ -37,7 +37,7 @@ Aplikasi ini menyinkronkan jadwal pelajaran, penugasan berformat rich text, petu
 
 ### 5. 🏷️ Pengelolaan Nomor Versi Aplikasi
 Nomor versi aplikasi dikontrol langsung melalui file environment variable:
-- Cukup atur `VITE_APP_VERSION="v1.0.0"` di file `frontend/.env`.
+- Cukup atur `VITE_APP_VERSION="v1.0.0"` (atau `APP_VERSION`) di file `.env` root (Docker Compose membacanya otomatis saat container start tanpa perlu rebuild) atau di `frontend/.env` untuk development lokal.
 - Tampil sebagai badge versi elegan dengan status rilis stabil (`v1.0.0 • Stabil`) pada footer modal **Pengaturan** dan **Menu Navigasi**.
 
 ---
@@ -132,7 +132,7 @@ Salin `.env.example` ke `.env` untuk mengatur konfigurasi server:
 | `CALENDAR_FEED_BIRTHDAY` | URL iCal rahasia Google Calendar Ulang Tahun Siswa | `https://calendar.google.com/calendar/ical/...` |
 | `VAPID_PUBLIC_KEY` | Public key untuk Web Push Notifications | *(Auto-generated jika kosong)* |
 | `VAPID_PRIVATE_KEY` | Private key untuk Web Push Notifications | *(Auto-generated jika kosong)* |
-| `VITE_APP_VERSION` | Nomor versi dashboard (diatur di `frontend/.env`) | `v1.0.0` |
+| `VITE_APP_VERSION` | Nomor versi dashboard (diatur di `.env` root Docker Compose atau `frontend/.env`) | `v1.0.0` |
 
 ---
 

@@ -36,6 +36,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
   hasTaskFn,
   hasEventNoticeFn,
   hasSitatibActivityFn,
+  hasWebsiteAgendaFn,
   hasBirthdayFn,
   birthdaysToday
 }) => {
@@ -122,6 +123,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             const hasTask = hasTaskFn(iso);
             const hasNotice = hasEventNoticeFn ? hasEventNoticeFn(iso) : false;
             const hasSitatib = hasSitatibActivityFn ? hasSitatibActivityFn(iso) : false;
+            const hasWebsite = hasWebsiteAgendaFn ? hasWebsiteAgendaFn(iso) : false;
             const birthdays = hasBirthdayFn(iso);
             const hasBday = birthdays.length > 0;
 
@@ -139,8 +141,8 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             else if (isPreview) {
               cellClass += 'bg-stone-200 dark:bg-stone-700/80 text-stone-900 dark:text-stone-100 font-semibold ring-1 ring-stone-400 dark:ring-stone-500 z-10 shadow-xs';
             }
-            // Condition 4: Has data (school schedule, notice, sitatib activity, doa, mbg, piket)
-            else if (hasData || hasNotice || hasSitatib) {
+            // Condition 4: Has data (school schedule, notice, sitatib activity, website agenda, doa, mbg, piket)
+            else if (hasData || hasNotice || hasSitatib || hasWebsite) {
               cellClass += 'bg-stone-50/80 dark:bg-[#141518] text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-[#1D1E22] hover:border-emerald-500/30 font-medium';
             }
             // Condition 5: Normal empty day
@@ -167,7 +169,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
                 }}
                 className={cellClass}
                 aria-label={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel}`}
-                title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasNotice ? ' (Ada Acara/Kegiatan iCal)' : ''}${hasSitatib ? ' (Ada Kegiatan Kelas SITATIB)' : ''}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}
+                title={`${day} ${MONTH_ID[viewMonth]} ${viewYear}${statusLabel} • Lagu: ${songForDate ? songForDate : 'Tidak ada'}${hasNotice ? ' (Ada Acara/Kegiatan iCal)' : ''}${hasSitatib ? ' (Ada Kegiatan Kelas SITATIB)' : ''}${hasWebsite ? ' (Ada Agenda Website)' : ''}${hasTask ? ' (Ada Tugas)' : ''}${hasBday ? ` (Ulang Tahun: ${birthdays.join(', ')})` : ''}`}
               >
                 <span className="leading-none text-xs tabular-nums">{day}</span>
 
@@ -189,6 +191,15 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
                         isToday && isPreview ? 'bg-violet-200' : 'bg-violet-500 dark:bg-violet-400'
                       }`}
                       title="Ada Kegiatan Kelas (SITATIB)"
+                    />
+                  )}
+                  {/* Official School Website Agenda dot */}
+                  {hasWebsite && (
+                    <span
+                      className={`w-1 h-1 rounded-full ${
+                        isToday && isPreview ? 'bg-indigo-200' : 'bg-indigo-500 dark:bg-indigo-400'
+                      }`}
+                      title="Ada Agenda Website SMA Putra Nirmala"
                     />
                   )}
                   {/* Task indicator dot */}
@@ -230,6 +241,11 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
           <div className="flex items-center gap-1.5" title="Jadwal kegiatan kelas dari SITATIB (terpisah dari iCal)">
             <span className="w-2 h-2 rounded-full bg-violet-500 dark:bg-violet-400" />
             <span>SITATIB</span>
+          </div>
+
+          <div className="flex items-center gap-1.5" title="Agenda kegiatan dari Website SMA Putra Nirmala">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400" />
+            <span>Website</span>
           </div>
 
           <div className="flex items-center gap-1.5">

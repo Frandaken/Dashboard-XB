@@ -72,7 +72,32 @@ app.get(['/api/uploads/:filename', '/uploads/:filename'], (req, res) => {
   });
 });
 
-const normalizeEnvUrl = (val) => (val || '').trim().replace(/^["']|["']$/g, '');
+const normalizeEnvUrl = (val) => (val || '').replace(/\r/g, '').trim().replace(/^["']|["']$/g, '').trim();
+
+const resolveAppVersion = () =>
+  normalizeEnvUrl(process.env.VITE_APP_VERSION || process.env.APP_VERSION);
+
+// Runtime frontend environment config (juga tersedia di backend sebagai fallback)
+app.get('/env-config.js', (_req, res) => {
+  const version = resolveAppVersion();
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  return res.send(
+    `window.__APP_ENV__ = ${JSON.stringify({ VITE_APP_VERSION: version, APP_VERSION: version })};\n`
+  );
+});
+
+app.get('/api/version', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  return res.json({
+    ok: true,
+    version: resolveAppVersion()
+  });
+});
 
 // Upstream Google Calendar feeds (diambil murni dari environment variable, tanpa hardcode)
 const CALENDAR_FEEDS = {
@@ -251,14 +276,17 @@ async function fetchWithRetry(url, headers = {}, timeoutMs = 20000, fallbackUrl)
 
 // Health check endpoint (tanpa membocorkan URL private kalender)
 app.get('/api/health', (req, res) => {
+  const appVersion = resolveAppVersion();
   res.json({
     status: 'ok',
     service: 'dashboard-xb-backend',
+    version: appVersion || null,
     time: new Date().toISOString(),
     env: {
       pelajaranConfigured: Boolean(CALENDAR_FEEDS.pelajaran),
       birthdayConfigured: Boolean(CALENDAR_FEEDS.birthday),
-      sitatibConfigured: sitatibService.isConfigured()
+      sitatibConfigured: sitatibService.isConfigured(),
+      appVersionConfigured: Boolean(appVersion)
     },
     sheetsConfigured: Object.keys(SHEET_FEEDS)
   });
@@ -414,6 +442,9 @@ app.get('/api/sheets/:key', async (req, res) => {
 // Force refresh endpoint: mark cache stale without deleting fallback payloads
 app.post('/api/refresh', (req, res) => {
   for (const entry of cache.values()) {
+    entry.timestamp = 0;
+  }
+  for (const entry of websiteAgendaCache.values()) {
     entry.timestamp = 0;
   }
   sitatibService.clearCache();
@@ -623,6 +654,106 @@ app.post('/api/kas/upload-bukti', (req, res) => {
     console.error('Error handling upload-bukti:', err);
     return res.status(500).json({ error: err.message });
   }
+});
+
+// ==========================================
+// Kas Payment Framework (QRIS Bank Digital - Verifikasi Manual Spreadsheet)
+// ==========================================
+const QRIS_CANDIDATE_FILENAMES = ['qris.png', 'qris.jpg', 'qris.jpeg', 'qris.webp'];
+
+function findLocalQrisImagePath() {
+  const dirs = [
+    dataDir,
+    UPLOADS_DIR,
+    path.join(process.cwd(), 'data'),
+    path.join(process.cwd(), 'frontend', 'public', 'img'),
+    path.join(process.cwd(), 'frontend', 'dist', 'img')
+  ];
+  for (const dir of dirs) {
+    for (const filename of QRIS_CANDIDATE_FILENAMES) {
+      const candidate = path.join(dir, filename);
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
+
+function sanitizeSafeImageUrl(rawUrl) {
+  const trimmed = normalizeEnvUrl(rawUrl);
+  if (!trimmed) return null;
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://') || (trimmed.startsWith('/') && !trimmed.startsWith('//'))) {
+    return trimmed;
+  }
+  return null;
+}
+
+function sanitizeWhatsappNumber(raw) {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) return `62${digits.slice(1)}`;
+  return digits;
+}
+
+function buildKasPaymentConfig() {
+  const enabledRaw = normalizeEnvUrl(process.env.KAS_PAYMENT_ENABLED).toLowerCase();
+  const enabled = enabledRaw !== 'false' && enabledRaw !== '0';
+
+  const envImageUrl = sanitizeSafeImageUrl(process.env.KAS_QRIS_IMAGE_URL || '');
+  const localFile = findLocalQrisImagePath();
+  let qrisImageUrl = envImageUrl;
+  let imageSource = envImageUrl ? 'env' : 'none';
+
+  if (!qrisImageUrl && localFile) {
+    let mtime = 0;
+    try {
+      mtime = Math.floor(fs.statSync(localFile).mtimeMs);
+    } catch {}
+    qrisImageUrl = `/api/kas/qris-image${mtime ? `?v=${mtime}` : ''}`;
+    imageSource = 'file';
+  }
+
+  const parsedRate = parseInt(normalizeEnvUrl(process.env.KAS_PAYMENT_WEEKLY_AMOUNT), 10);
+  const weeklyRate = Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : 3000;
+
+  return {
+    enabled,
+    providerType: 'qris',
+    bankName: normalizeEnvUrl(process.env.KAS_PAYMENT_BANK_NAME) || 'Bank Digital (QRIS)',
+    merchantName: normalizeEnvUrl(process.env.KAS_PAYMENT_MERCHANT_NAME) || 'Kas Kelas XB — SMA Putra Nirmala',
+    accountHolder: normalizeEnvUrl(process.env.KAS_PAYMENT_ACCOUNT_HOLDER) || '',
+    nmid: normalizeEnvUrl(process.env.KAS_PAYMENT_NMID) || '',
+    weeklyRate,
+    qrisImageUrl,
+    hasQrisImage: Boolean(qrisImageUrl),
+    imageSource,
+    treasurerWhatsapp: sanitizeWhatsappNumber(process.env.KAS_PAYMENT_TREASURER_WA || ''),
+    customNote: normalizeEnvUrl(process.env.KAS_PAYMENT_NOTE) || '',
+    verificationMode: 'manual_spreadsheet',
+    verificationNotice:
+      'Verifikasi pembayaran dan pencatatan status lunas tetap dilakukan secara manual oleh Bendahara di Google Spreadsheet resmi kelas.'
+  };
+}
+
+app.get('/api/kas/payment-config', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  return res.json({
+    ok: true,
+    config: buildKasPaymentConfig()
+  });
+});
+
+app.get('/api/kas/qris-image', (_req, res) => {
+  const filePath = findLocalQrisImagePath();
+  if (!filePath) {
+    return res.status(404).json({
+      ok: false,
+      error: 'Gambar QRIS belum tersedia di server. Letakkan file qris.png/jpg/webp di folder data atau atur KAS_QRIS_IMAGE_URL.'
+    });
+  }
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  return res.sendFile(filePath);
 });
 
 // Explicit route for OpenGraph image (supporting /img/og, /img/og.jpg, /og-image.jpg, /og-image.png)
@@ -967,7 +1098,29 @@ app.post('/api/push/broadcast', async (req, res) => {
   }
 });
 
-// Helper functions for parsing website agenda HTML
+// ==========================================
+// SMA Putra Nirmala Official Website Agenda Scraper (/api/website-agenda)
+// ==========================================
+const WEBSITE_AGENDA_BASE_URL = 'https://sma.putranirmala.sch.id/index.php/agenda';
+const WEBSITE_AGENDA_CACHE_TTL_MS = 3 * 60 * 1000;
+const websiteAgendaCache = new Map();
+const websiteAgendaInFlight = new Map();
+
+const WEBSITE_MONTH_MAP = {
+  january: 1, jan: 1, januari: 1,
+  february: 2, feb: 2, februari: 2,
+  march: 3, mar: 3, maret: 3,
+  april: 4, apr: 4,
+  may: 5, mei: 5,
+  june: 6, jun: 6, juni: 6,
+  july: 7, jul: 7, juli: 7,
+  august: 8, aug: 8, agustus: 8, ags: 8, agu: 8, agt: 8,
+  september: 9, sep: 9, sept: 9,
+  october: 10, oct: 10, oktober: 10, okt: 10,
+  november: 11, nov: 11,
+  december: 12, dec: 12, desember: 12, des: 12
+};
+
 function decodeHtmlEntities(input) {
   if (!input) return '';
   return input
@@ -977,6 +1130,8 @@ function decodeHtmlEntities(input) {
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&ndash;/gi, '–')
+    .replace(/&mdash;/gi, '—')
     .replace(/&#(\d+);/g, (_, num) => {
       const code = parseInt(num, 10);
       return Number.isFinite(code) ? String.fromCharCode(code) : '';
@@ -1002,108 +1157,215 @@ function stripTags(html) {
     .trim();
 }
 
-function parseWebsiteAgendaHtml(html) {
-  const items = [];
-  const articleMatches = html.match(/<article\b[^>]*class=["'][^"']*agenda-detail[^"']*["'][\s\S]*?<\/article>/gi) || [];
-  
-  for (const article of articleMatches) {
-    const dayMatch = article.match(/<div class="agenda-date">\s*<strong>([^<]+)<\/strong>\s*<span>([^<]+)<\/span>/i);
-    const rangeMatch = article.match(/<span class="agenda-range[^"]*">([\s\S]*?)<\/span>/i);
-    const titleMatch = article.match(/<h4>([\s\S]*?)<\/h4>/i);
-    const catMatch = article.match(/<span class="agenda-category[^"]*">([\s\S]*?)<\/span>/i);
-    const pMatch = article.match(/<p>([\s\S]*?)<\/p>/i);
+function parseIndonesianDateToISO(text) {
+  const m = text.match(/(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})/);
+  if (!m) return null;
+  const day = parseInt(m[1], 10);
+  const month = WEBSITE_MONTH_MAP[m[2].toLowerCase()];
+  const year = parseInt(m[3], 10);
+  if (!month || !Number.isFinite(day) || day < 1 || day > 31) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
 
-    const dayStr = dayMatch ? dayMatch[1].trim() : '';
-    const monthStr = dayMatch ? dayMatch[2].trim() : '';
+function parseWebsiteAgendaHtml(html, monthKey) {
+  const items = [];
+  const articleMatches =
+    html.match(/<article\b[^>]*class=["'][^"']*agenda-detail[^"']*["'][\s\S]*?<\/article>/gi) || [];
+
+  const fallbackYear =
+    (monthKey && /^\d{4}-\d{2}$/.test(monthKey) ? parseInt(monthKey.slice(0, 4), 10) : null) ||
+    new Date(Date.now() + 7 * 3600 * 1000).getUTCFullYear();
+
+  for (let i = 0; i < articleMatches.length; i++) {
+    const article = articleMatches[i];
+    const idAttrMatch = article.match(/\bid=["']([^"']+)["']/i);
+    const domId = idAttrMatch ? idAttrMatch[1].trim() : '';
+
+    const dayMatch = article.match(
+      /<div\s+class=["']agenda-date["'][^>]*>\s*<strong>([^<]+)<\/strong>\s*<span>([^<]+)<\/span>/i
+    );
+    const rangeMatch = article.match(/<span\s+class=["']agenda-range[^"']*["'][^>]*>([\s\S]*?)<\/span>/i);
+    const titleMatch = article.match(/<h4[^>]*>([\s\S]*?)<\/h4>/i);
+    const catMatch = article.match(/<span\s+class=["']agenda-category[^"']*["'][^>]*>([\s\S]*?)<\/span>/i);
+    const pMatch = article.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+
+    const dayStr = dayMatch ? stripTags(dayMatch[1]) : '';
+    const monthStr = dayMatch ? stripTags(dayMatch[2]) : '';
     const rangeStr = rangeMatch ? stripTags(rangeMatch[1]) : '';
     const title = titleMatch ? stripTags(titleMatch[1]) : '';
     const category = catMatch ? stripTags(catMatch[1]) : 'Kegiatan Sekolah';
-    const description = pMatch ? stripTags(pMatch[1]) : '';
+    const rawDesc = pMatch ? stripTags(pMatch[1]) : '';
 
-    let year = new Date().getFullYear();
-    const yearMatch = rangeStr.match(/\b(20\d{2})\b/) || html.match(/\b(20\d{2})\b/);
-    if (yearMatch) {
-      year = parseInt(yearMatch[1], 10);
+    if (!title) continue;
+
+    const dateTokens = rangeStr.match(/\d{1,2}\s+[A-Za-z]+\s+20\d{2}/g) || [];
+    let startDate = dateTokens[0] ? parseIndonesianDateToISO(dateTokens[0]) : null;
+    let endDate = dateTokens[1] ? parseIndonesianDateToISO(dateTokens[1]) : startDate;
+
+    if (!startDate) {
+      const monthNum = WEBSITE_MONTH_MAP[monthStr.toLowerCase()] || 1;
+      const dayNum = parseInt(dayStr, 10) || 1;
+      startDate = `${fallbackYear}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      endDate = startDate;
+    }
+    if (!endDate || endDate < startDate) {
+      endDate = startDate;
     }
 
-    const monthMap = {
-      'january': 1, 'jan': 1, 'januari': 1,
-      'february': 2, 'feb': 2, 'februari': 2,
-      'march': 3, 'mar': 3, 'maret': 3,
-      'april': 4, 'apr': 4,
-      'may': 5, 'mei': 5,
-      'june': 6, 'jun': 6, 'juni': 6,
-      'july': 7, 'jul': 7, 'juli': 7,
-      'august': 8, 'aug': 8, 'agustus': 8, 'ags': 8,
-      'september': 9, 'sep': 9,
-      'october': 10, 'oct': 10, 'oktober': 10, 'okt': 10,
-      'november': 11, 'nov': 11,
-      'december': 12, 'dec': 12, 'desember': 12, 'des': 12
-    };
-
-    const monthNum = monthMap[monthStr.toLowerCase()] || 1;
-    const dayNum = parseInt(dayStr, 10) || 1;
-    const isoDate = `${year}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-
-    if (title) {
-      items.push({
-        id: `web-${items.length + 1}`,
-        isoDate,
-        day: dayStr,
-        month: monthStr,
-        range: rangeStr,
-        title,
-        category,
-        description,
-        sourceUrl: 'https://sma.putranirmala.sch.id/index.php/agenda'
-      });
+    let timeLabel;
+    let description = rawDesc;
+    if (rawDesc) {
+      const lines = rawDesc.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length > 0) {
+        const timeLineMatch = lines[0].match(/^waktu\s*:\s*(.+)$/i);
+        if (timeLineMatch) {
+          timeLabel = timeLineMatch[1].trim();
+          description = lines.slice(1).join('\n').trim();
+        }
+      }
     }
+
+    const effectiveMonth = startDate.slice(0, 7);
+    const stableId = domId || `web-${startDate}-${i + 1}`;
+    const sourceUrl = `${WEBSITE_AGENDA_BASE_URL}?month=${effectiveMonth}${domId ? `#${domId}` : ''}`;
+
+    items.push({
+      id: stableId,
+      isoDate: startDate,
+      startDate,
+      endDate,
+      day: dayStr || startDate.slice(8, 10),
+      month: monthStr,
+      range: rangeStr || `${dayStr} ${monthStr}`.trim(),
+      title,
+      category,
+      ...(timeLabel ? { timeLabel } : {}),
+      description,
+      sourceUrl
+    });
   }
 
   return items;
 }
 
+function getDefaultWebsiteAgendaMonths() {
+  const nowWib = new Date(Date.now() + 7 * 3600 * 1000);
+  const baseYear = nowWib.getUTCFullYear();
+  const baseMonth = nowWib.getUTCMonth();
+  const offsets = [-1, 0, 1, 2];
+  return offsets.map(offset => {
+    const d = new Date(Date.UTC(baseYear, baseMonth + offset, 1));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
+}
+
+async function fetchWebsiteAgendaForMonths(months) {
+  const results = await Promise.all(
+    months.map(async m => {
+      const url = `${WEBSITE_AGENDA_BASE_URL}?month=${m}`;
+      try {
+        const html = await fetchWithRetry(
+          url,
+          {
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
+          },
+          15000
+        );
+        return parseWebsiteAgendaHtml(html, m);
+      } catch (err) {
+        console.warn(`[WebsiteAgenda] Failed to fetch month ${m}:`, err?.message || err);
+        return null;
+      }
+    })
+  );
+
+  const succeeded = results.filter(r => r !== null);
+  if (succeeded.length === 0) {
+    throw new Error('Gagal mengambil data agenda dari website SMA Putra Nirmala');
+  }
+
+  const deduped = new Map();
+  for (const list of succeeded) {
+    for (const item of list) {
+      if (!deduped.has(item.id)) {
+        deduped.set(item.id, item);
+      }
+    }
+  }
+
+  const items = Array.from(deduped.values()).sort((a, b) => {
+    if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+    return a.title.localeCompare(b.title);
+  });
+
+  return { items, months };
+}
+
 // Endpoint to fetch and parse SMA Putra Nirmala Website Agenda
 app.get('/api/website-agenda', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-  const cacheKey = 'website-agenda';
-  const cached = cache.get(cacheKey);
-  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
+  const rawMonth = typeof req.query.month === 'string' ? req.query.month.trim() : '';
+  if (rawMonth && !/^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth)) {
+    return res.status(400).json({ ok: false, error: 'Parameter month harus berformat YYYY-MM' });
+  }
 
-  if (!forceFresh && cached && cached.timestamp && Date.now() - cached.timestamp < 3 * 60 * 1000) {
-    return res.json({ ok: true, source: 'cache', items: cached.data });
+  const targetMonths = rawMonth ? [rawMonth] : getDefaultWebsiteAgendaMonths();
+  const cacheKey = rawMonth ? `month:${rawMonth}` : `window:${targetMonths.join(',')}`;
+  const forceFresh = req.query.fresh === 'true' || req.query.fresh === '1';
+  const cached = websiteAgendaCache.get(cacheKey);
+
+  if (!forceFresh && cached && cached.timestamp > 0 && Date.now() - cached.timestamp < WEBSITE_AGENDA_CACHE_TTL_MS) {
+    res.setHeader('X-Cache', 'HIT');
+    return res.json({
+      ok: true,
+      source: 'cache',
+      months: cached.months,
+      items: cached.data,
+      syncedAt: new Date(cached.timestamp).toISOString()
+    });
   }
 
   try {
-    const html = await fetchWithRetry('https://sma.putranirmala.sch.id/index.php/agenda', {
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    }, 15000);
+    let inflight = !forceFresh ? websiteAgendaInFlight.get(cacheKey) : undefined;
+    if (!inflight) {
+      inflight = fetchWebsiteAgendaForMonths(targetMonths);
+      websiteAgendaInFlight.set(cacheKey, inflight);
+      inflight.finally(() => {
+        if (websiteAgendaInFlight.get(cacheKey) === inflight) {
+          websiteAgendaInFlight.delete(cacheKey);
+        }
+      });
+    }
 
-    const items = parseWebsiteAgendaHtml(html);
-    cache.set(cacheKey, { data: items, timestamp: Date.now() });
-    return res.json({ ok: true, source: 'live', items });
+    const { items, months } = await inflight;
+    const now = Date.now();
+    websiteAgendaCache.set(cacheKey, { data: items, months, timestamp: now });
+    res.setHeader('X-Cache', 'MISS');
+    return res.json({
+      ok: true,
+      source: 'live',
+      months,
+      items,
+      syncedAt: new Date(now).toISOString()
+    });
   } catch (err) {
     console.warn('[WebsiteAgenda] Failed to fetch live agenda:', err?.message || err);
     if (cached && cached.data) {
-      return res.json({ ok: true, source: 'stale-cache', items: cached.data, error: err.message });
+      res.setHeader('X-Cache', 'STALE');
+      return res.json({
+        ok: true,
+        source: 'stale-cache',
+        months: cached.months,
+        items: cached.data,
+        error: err.message
+      });
     }
-    return res.json({
-      ok: true,
-      source: 'fallback',
-      items: [
-        {
-          id: 'web-fallback-1',
-          isoDate: '2026-11-26',
-          day: '26',
-          month: 'November',
-          range: '26 November 2026',
-          title: 'Kegiatan Penanaman Pohon di Kebun Raya Kuningan',
-          category: 'Akademik',
-          description: '',
-          sourceUrl: 'https://sma.putranirmala.sch.id/index.php/agenda'
-        }
-      ],
+    return res.status(502).json({
+      ok: false,
+      source: 'error',
+      months: targetMonths,
+      items: [],
       error: err.message
     });
   }

@@ -26,12 +26,15 @@ import {
   Plus,
   BarChart3,
   ChevronDown,
-  Image as ImageIcon
+  Image as ImageIcon,
+  QrCode
 } from 'lucide-react';
-import { KasDataStore, KasStudentEntry, KasPengeluaranItem, KasPendapatanLainItem } from '../types';
+import { KasDataStore, KasPaymentConfig, KasStudentEntry, KasPengeluaranItem, KasPendapatanLainItem } from '../types';
 import { ReceiptLightboxModal, ReceiptLightboxData } from './ReceiptLightboxModal';
 import { UploadReceiptModal } from './UploadReceiptModal';
 import { KasTrendChart } from './KasTrendChart';
+import { KasPaymentPanel } from './KasPaymentPanel';
+import { DEFAULT_KAS_PAYMENT_CONFIG, fetchKasPaymentConfig } from '../config/kasPaymentConfig';
 
 interface KasMuridModalProps {
   isOpen: boolean;
@@ -43,7 +46,7 @@ interface KasMuridModalProps {
   onToggleDarkMode?: () => void;
 }
 
-type TabType = 'penunggakan' | 'pengeluaran' | 'pendapatan' | 'rekap' | 'tren';
+type TabType = 'penunggakan' | 'bayar' | 'pengeluaran' | 'pendapatan' | 'rekap' | 'tren';
 type FilterStatus = 'all' | 'nunggak' | 'lunas' | 'lebih';
 
 export const KasMuridModal: React.FC<KasMuridModalProps> = ({
@@ -74,6 +77,11 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
   const [activeReceipt, setActiveReceipt] = useState<ReceiptLightboxData | null>(null);
   const [uploadTarget, setUploadTarget] = useState<{ id: string; title: string; currentUrl?: string } | null>(null);
 
+  // Digital Bank QRIS Payment Framework config (manual verification in Google Spreadsheet)
+  const [paymentConfig, setPaymentConfig] = useState<KasPaymentConfig>(DEFAULT_KAS_PAYMENT_CONFIG);
+  const [isLoadingPaymentConfig, setIsLoadingPaymentConfig] = useState<boolean>(false);
+  const [paymentStudentAbsen, setPaymentStudentAbsen] = useState<number | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
     fetch('/api/kas/bukti-mapping')
@@ -90,6 +98,20 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
         }
       })
       .catch(err => console.warn('Failed to load bukti mapping:', err));
+
+    let active = true;
+    setIsLoadingPaymentConfig(true);
+    fetchKasPaymentConfig()
+      .then(cfg => {
+        if (active) setPaymentConfig(cfg);
+      })
+      .finally(() => {
+        if (active) setIsLoadingPaymentConfig(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [isOpen]);
 
   const handleUploadSuccess = (id: string, newUrl: string) => {
@@ -344,6 +366,21 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
                 Utama
               </span>
             </button>
+
+            {paymentConfig.enabled && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('bayar')}
+                className={`pb-2.5 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'bayar'
+                    ? 'border-emerald-700 text-emerald-800 dark:text-emerald-400 font-bold'
+                    : 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                }`}
+              >
+                <QrCode className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span>Bayar Kas (QRIS)</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -1045,6 +1082,24 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
               />
             </div>
           )}
+
+          {/* TAB 6: BAYAR KAS VIA BANK DIGITAL (QRIS STATIS, VERIFIKASI MANUAL SPREADSHEET) */}
+          {activeTab === 'bayar' && paymentConfig.enabled && (
+            <KasPaymentPanel
+              config={paymentConfig}
+              isLoadingConfig={isLoadingPaymentConfig}
+              students={students}
+              preselectedStudentAbsen={paymentStudentAbsen}
+              onZoomQris={(imageUrl, title, subtitle) => {
+                setActiveReceipt({
+                  url: imageUrl,
+                  title,
+                  subtitle,
+                  kind: 'image'
+                });
+              }}
+            />
+          )}
         </div>
 
         {/* MODAL FOOTER */}
@@ -1234,7 +1289,24 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
               </div>
             </div>
 
-            <div className="pt-2 border-t border-stone-200/80 dark:border-stone-800/80 flex justify-end">
+            <div className="pt-2 border-t border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between gap-2">
+              {paymentConfig.enabled ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const absen = selectedStudent.absen;
+                    setSelectedStudent(null);
+                    setPaymentStudentAbsen(absen);
+                    setActiveTab('bayar');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1E3A2F] dark:bg-emerald-700 text-white text-xs font-semibold hover:opacity-95 transition cursor-pointer"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Bayar via QRIS</span>
+                </button>
+              ) : (
+                <span />
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedStudent(null)}
@@ -1247,19 +1319,23 @@ export const KasMuridModal: React.FC<KasMuridModalProps> = ({
         </div>
       )}
 
-      {/* LIGHTBOX POPUP FOR RECEIPT / BUKTI NOTA */}
+      {/* LIGHTBOX POPUP FOR RECEIPT / BUKTI NOTA / QRIS ZOOM */}
       <ReceiptLightboxModal
         isOpen={!!activeReceipt}
         onClose={() => setActiveReceipt(null)}
         data={activeReceipt}
         darkMode={darkMode}
-        onReupload={(rcData) => {
-          setUploadTarget({
-            id: rcData.id || '',
-            title: rcData.title,
-            currentUrl: rcData.url
-          });
-        }}
+        onReupload={
+          activeReceipt?.id
+            ? rcData => {
+                setUploadTarget({
+                  id: rcData.id || '',
+                  title: rcData.title,
+                  currentUrl: rcData.url
+                });
+              }
+            : undefined
+        }
       />
 
       {/* UPLOAD / LINK RECEIPT MODAL */}
