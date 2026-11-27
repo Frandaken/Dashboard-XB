@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Copy, Check, Clock } from 'lucide-react';
 import { Header } from './components/Header';
@@ -281,6 +282,131 @@ export default function App() {
 
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [heroActiveTab, setHeroActiveTab] = useState<'schedule' | 'deadlines'>('schedule');
+
+  const [swipeOffsetX, setSwipeOffsetX] = useState<number>(0);
+  const [isSwipingHorizontally, setIsSwipingHorizontally] = useState<boolean>(false);
+  const [swipeHintDirection, setSwipeHintDirection] = useState<'prev' | 'next' | null>(null);
+  const [swipeReadyDirection, setSwipeReadyDirection] = useState<'prev' | 'next' | null>(null);
+
+  const swipeStateRef = useRef<{
+    startX: number;
+    startY: number;
+    lastX: number;
+    startTime: number;
+    axis: 'horizontal' | 'vertical' | null;
+    thresholdHapticFired: boolean;
+  } | null>(null);
+
+  const isInsideHorizontalScroller = (target: EventTarget | null, boundary: HTMLElement): boolean => {
+    let el = target instanceof HTMLElement ? target : null;
+    while (el && el !== boundary) {
+      const style = window.getComputedStyle(el);
+      const canScrollX =
+        (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+        el.scrollWidth > el.clientWidth + 2;
+      if (canScrollX) return true;
+      el = el.parentElement;
+    }
+    return false;
+  };
+
+  const resetSwipeState = () => {
+    swipeStateRef.current = null;
+    setIsSwipingHorizontally(false);
+    setSwipeOffsetX(0);
+    setSwipeHintDirection(null);
+    setSwipeReadyDirection(null);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    if (heroActiveTab !== 'schedule' || e.touches.length !== 1) return;
+    const boundary = e.currentTarget;
+    if (isInsideHorizontalScroller(e.target, boundary)) return;
+
+    const touch = e.touches[0];
+    swipeStateRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastX: touch.clientX,
+      startTime: Date.now(),
+      axis: null,
+      thresholdHapticFired: false
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLElement>) => {
+    const state = swipeStateRef.current;
+    if (!state || heroActiveTab !== 'schedule' || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - state.startX;
+    const dy = touch.clientY - state.startY;
+    state.lastX = touch.clientX;
+
+    if (state.axis === null) {
+      const distance = Math.hypot(dx, dy);
+      if (distance < 12) return;
+
+      if (Math.abs(dx) > Math.abs(dy) * 1.25) {
+        state.axis = 'horizontal';
+        setIsSwipingHorizontally(true);
+      } else {
+        state.axis = 'vertical';
+        return;
+      }
+    }
+
+    if (state.axis !== 'horizontal') return;
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+    const damped =
+      prefersReducedMotion
+        ? 0
+        : Math.sign(dx) * Math.min(48, Math.pow(Math.abs(dx), 0.82) * 1.35);
+    setSwipeOffsetX(damped);
+
+    const hintDir: 'prev' | 'next' | null =
+      dx >= 16 ? 'prev' : dx <= -16 ? 'next' : null;
+    setSwipeHintDirection(hintDir);
+
+    const readyDir: 'prev' | 'next' | null =
+      dx >= 56 ? 'prev' : dx <= -56 ? 'next' : null;
+
+    setSwipeReadyDirection(readyDir);
+    if (readyDir && !state.thresholdHapticFired) {
+      state.thresholdHapticFired = true;
+      triggerHaptic('threshold');
+    } else if (!readyDir && state.thresholdHapticFired) {
+      state.thresholdHapticFired = false;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    const state = swipeStateRef.current;
+    if (!state) return;
+
+    if (state.axis === 'horizontal') {
+      const dx = state.lastX - state.startX;
+      const elapsed = Math.max(1, Date.now() - state.startTime);
+      const velocity = Math.abs(dx) / elapsed;
+      const shouldCommit = Math.abs(dx) >= 56 || (Math.abs(dx) >= 32 && velocity >= 0.35);
+
+      if (shouldCommit) {
+        if (dx < 0) {
+          if (!state.thresholdHapticFired) triggerHaptic('light');
+          handleStepDay(1);
+        } else if (dx > 0) {
+          if (!state.thresholdHapticFired) triggerHaptic('light');
+          handleStepDay(-1);
+        }
+      }
+    }
+
+    resetSwipeState();
+  };
 
   const [isRandomPickerOpen, setIsRandomPickerOpen] = useState<boolean>(false);
   const [isGroupGeneratorOpen, setIsGroupGeneratorOpen] = useState<boolean>(false);
@@ -1325,6 +1451,13 @@ export default function App() {
         <SiswaListModal
           isOpen={isSiswaModalOpen}
           onClose={() => setIsSiswaModalOpen(false)}
+          dataStore={dataStore}
+          todayISO={todayWIB.iso}
+          onSelectDate={iso => {
+            handleGoHome();
+            handleSelectDate(iso);
+            setSelectedISO(null);
+          }}
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
         />
@@ -1459,12 +1592,51 @@ export default function App() {
             {/* LEFT: TODAY DASHBOARD (Col Span 7-8) */}
             <section
               id="hero-today-section"
+              onTouchStart={heroActiveTab === 'schedule' ? handleTouchStart : undefined}
+              onTouchMove={heroActiveTab === 'schedule' ? handleTouchMove : undefined}
+              onTouchEnd={heroActiveTab === 'schedule' ? handleTouchEnd : undefined}
+              onTouchCancel={heroActiveTab === 'schedule' ? resetSwipeState : undefined}
               className={`lg:col-span-7 xl:col-span-8 flex flex-col h-auto ${
                 isScrollableMode
-                  ? 'gap-3 w-full overflow-visible'
-                  : 'lg:h-full min-h-0 gap-2.5 w-full overflow-hidden'
+                  ? 'gap-3 w-full overflow-visible touch-pan-y select-none sm:select-auto'
+                  : 'lg:h-full min-h-0 gap-2.5 w-full overflow-hidden touch-pan-y select-none sm:select-auto'
               }`}
+              style={
+                heroActiveTab === 'schedule' && (isSwipingHorizontally || swipeOffsetX !== 0)
+                  ? {
+                      transform: `translate3d(${swipeOffsetX}px, 0, 0)`,
+                      transition: isSwipingHorizontally ? 'none' : 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)'
+                    }
+                  : undefined
+              }
             >
+              {/* Subtle directional edge hint while actively swiping */}
+              {heroActiveTab === 'schedule' && isSwipingHorizontally && swipeHintDirection && typeof document !== 'undefined' &&
+                createPortal(
+                  <div
+                    aria-hidden="true"
+                    className={`pointer-events-none fixed top-1/2 -translate-y-1/2 z-40 flex items-center gap-1 px-2.5 py-1.5 rounded-full border shadow-md backdrop-blur-xs text-xs font-semibold transition-colors ${
+                      swipeHintDirection === 'prev' ? 'left-3' : 'right-3'
+                    } ${
+                      swipeReadyDirection
+                        ? 'bg-[#1E3A2F] text-white border-emerald-500/50 dark:bg-emerald-700 dark:border-emerald-400/50'
+                        : 'bg-white/90 dark:bg-[#18191C]/90 text-stone-700 dark:text-stone-200 border-stone-200 dark:border-stone-700'
+                    }`}
+                  >
+                    {swipeHintDirection === 'prev' ? (
+                      <>
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Sebelumnya</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Berikutnya</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </div>,
+                  document.body
+                )}
               {/* Shortcut Grid: HANYA BERLAKU BILA SPACE HORIZONTAL KECIL (sm:hidden) */}
               <MobileQuickActions
                 onOpenSearch={() => setIsSearchOpen(true)}
@@ -1663,23 +1835,14 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* SITATIB Pengumuman Banner (Shown only when synced announcements exist) */}
+                    {/* 1. SITATIB Pengumuman Banner (Shown only when synced announcements exist) */}
                     <SitatibSummaryBanner
                       data={sitatibData}
                       onOpenModal={openSitatibModal}
                       onOpenAttachment={handleOpenSitatibAttachment}
                     />
 
-                    {/* Event Notice Banner (All-day / Multi-day events from iCal) */}
-                    {activeEventNotices.length > 0 && (
-                      <EventNoticeBanner
-                        notices={activeEventNotices}
-                        onOpenAttachment={handleOpenAttachment}
-                        todayISO={todayWIB.iso}
-                      />
-                    )}
-
-                    {/* SITATIB Class Activity Banner (Strictly separate from iCal) */}
+                    {/* 2. SITATIB Class Activity Banner (Strictly separate from iCal) */}
                     {activeSitatibActivities.length > 0 && (
                       <SitatibActivityBanner
                         activities={activeSitatibActivities}
@@ -1688,10 +1851,19 @@ export default function App() {
                       />
                     )}
 
-                    {/* Official SMA Putra Nirmala Website Agenda Banner */}
+                    {/* 3. Official SMA Putra Nirmala Website Agenda Banner */}
                     {activeWebsiteAgenda.length > 0 && (
                       <WebsiteAgendaBanner
                         items={activeWebsiteAgenda}
+                        todayISO={todayWIB.iso}
+                      />
+                    )}
+
+                    {/* Event Notice Banner (All-day / Multi-day events from iCal) */}
+                    {activeEventNotices.length > 0 && (
+                      <EventNoticeBanner
+                        notices={activeEventNotices}
+                        onOpenAttachment={handleOpenAttachment}
                         todayISO={todayWIB.iso}
                       />
                     )}
@@ -1716,8 +1888,6 @@ export default function App() {
                       isoDate={activeISO}
                       isToday={activeISO === todayWIB.iso}
                       scrollableLayout={isScrollableMode}
-                      onSwipePrevDay={() => handleStepDay(-1)}
-                      onSwipeNextDay={() => handleStepDay(1)}
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -1936,6 +2106,12 @@ export default function App() {
           <SiswaListModal
             isOpen={isSiswaModalOpen}
             onClose={() => setIsSiswaModalOpen(false)}
+            dataStore={dataStore}
+            todayISO={todayWIB.iso}
+            onSelectDate={iso => {
+              handleSelectDate(iso);
+              setSelectedISO(null);
+            }}
             darkMode={darkMode}
             onToggleDarkMode={toggleDarkMode}
           />

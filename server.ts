@@ -1498,15 +1498,27 @@ function injectAbsoluteMeta(html: string, req: express.Request): string {
 
 async function startServer() {
   process.env.DISABLE_HMR = 'true';
+  let viteServer: Awaited<ReturnType<typeof createViteServer>> | null = null;
+  let viteReadyPromise: Promise<Awaited<ReturnType<typeof createViteServer>>> | null = null;
+
   if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
+    viteReadyPromise = createViteServer({
       root: path.resolve('frontend'),
       server: {
         middlewareMode: true,
+        allowedHosts: true,
         hmr: false,
         ws: false,
       },
       appType: 'spa',
+    }).then(vite => {
+      viteServer = vite;
+      return vite;
+    });
+
+    // Prevent unhandled rejection if Vite fails while booting in parallel
+    viteReadyPromise.catch(err => {
+      console.error('Failed to initialize Vite dev server:', err);
     });
 
     // Custom HTML handler to inject dynamic OpenGraph absolute URLs for social bots (WhatsApp, FB, etc.)
@@ -1523,6 +1535,7 @@ async function startServer() {
       if (!isHtml) return next();
 
       try {
+        const vite = viteServer || await viteReadyPromise!;
         const indexPath = path.resolve('frontend', 'index.html');
         let template = fs.readFileSync(indexPath, 'utf-8');
         template = await vite.transformIndexHtml(url, template);
@@ -1538,7 +1551,14 @@ async function startServer() {
       }
     });
 
-    app.use(vite.middlewares);
+    app.use((req, res, next) => {
+      if (viteServer) {
+        return viteServer.middlewares(req, res, next);
+      }
+      viteReadyPromise!
+        .then(vite => vite.middlewares(req, res, next))
+        .catch(next);
+    });
   } else {
     const distPath = fs.existsSync(path.join(process.cwd(), 'frontend', 'dist'))
       ? path.join(process.cwd(), 'frontend', 'dist')
@@ -1571,28 +1591,50 @@ async function startServer() {
     }
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Classroom dashboard server running on http://0.0.0.0:${PORT}`);
-  });
+  const server = http.createServer(app);
+  let listenRetries = 0;
 
-  server.on('error', (err: any) => {
-    if (err.code === 'EADDRINUSE') {
-      console.warn(`Port ${PORT} is already occupied. Exiting gracefully without crash.`);
-      process.exit(0);
-    } else {
-      console.error('Unhandled server error:', err);
-      process.exit(1);
-    }
-  });
-
-  const handleShutdown = () => {
-    server.close(() => {
-      process.exit(0);
+  const listenOnPort = () => {
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Classroom dashboard server running on http://0.0.0.0:${PORT}`);
     });
+  };
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE' && listenRetries < 5) {
+      listenRetries += 1;
+      console.warn(`Port ${PORT} busy during restart (attempt ${listenRetries}/5), retrying in 400ms...`);
+      setTimeout(listenOnPort, 400);
+      return;
+    }
+    console.error('Unhandled server error:', err);
+    process.exit(1);
+  });
+
+  listenOnPort();
+
+  let shuttingDown = false;
+  const handleShutdown = () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    const forceTimer = setTimeout(() => process.exit(0), 1500);
+    forceTimer.unref();
+
+    server.close(() => {
+      Promise.resolve(viteServer?.close())
+        .catch(() => {})
+        .finally(() => process.exit(0));
+    });
+    if (typeof server.closeAllConnections === 'function') {
+      server.closeAllConnections();
+    }
   };
 
   process.on('SIGTERM', handleShutdown);
   process.on('SIGINT', handleShutdown);
 }
 
-startServer();
+startServer().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
